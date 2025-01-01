@@ -1,0 +1,37 @@
+# ninja log v6
+75	90	1735671973902503000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/CMakeFiles/googletest-populate-complete	cae6f16380c05e20
+38	47	1735671973859328000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	4894d52bd0972a5e
+28	38	1735671973850032000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	2e7ac4ab9455c1cc
+0	10	1735670821945722708	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	2bb49db0168ab24b
+10	994	1735670822930012140	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-download	903bc221470c06cd
+75	90	1735671973902503000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	cae6f16380c05e20
+1	28	1735671973813305411	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	452c951a599b7b90
+47	56	1735671973868280000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	989386ffeefb5568
+65	75	1735671973887276000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	5671b484204c2dec
+10	994	1735670822930012140	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-download	903bc221470c06cd
+1	28	1735671973813305411	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	452c951a599b7b90
+38	47	1735671973859328000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	4894d52bd0972a5e
+28	38	1735671973850032000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	2e7ac4ab9455c1cc
+0	10	1735670821945722708	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	2bb49db0168ab24b
+75	90	1735671973902503000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	cae6f16380c05e20
+56	65	1735671973877705000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	61dcb8aaa1a1a676
+56	65	1735671973877705000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	61dcb8aaa1a1a676
+47	56	1735671973868280000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	989386ffeefb5568
+75	90	1735671973902503000	CMakeFiles/googletest-populate-complete	cae6f16380c05e20
+65	75	1735671973887276000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	5671b484204c2dec
+1	31	1735673384594395702	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	452c951a599b7b90
+1	31	1735673384594395702	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	452c951a599b7b90
+31	43	1735673384636327000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	2e7ac4ab9455c1cc
+31	43	1735673384636327000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	2e7ac4ab9455c1cc
+43	54	1735673384647124000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	4894d52bd0972a5e
+43	54	1735673384647124000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	4894d52bd0972a5e
+54	64	1735673384657461000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	989386ffeefb5568
+54	64	1735673384657461000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	989386ffeefb5568
+64	76	1735673384669152000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	61dcb8aaa1a1a676
+64	76	1735673384669152000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	61dcb8aaa1a1a676
+76	87	1735673384679934000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	5671b484204c2dec
+76	87	1735673384679934000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	5671b484204c2dec
+87	104	1735673384697009000	CMakeFiles/googletest-populate-complete	cae6f16380c05e20
+87	104	1735673384697009000	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	cae6f16380c05e20
+87	104	1735673384697009000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/CMakeFiles/googletest-populate-complete	cae6f16380c05e20
+87	104	1735673384697009000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	cae6f16380c05e20

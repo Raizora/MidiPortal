@@ -1,0 +1,67 @@
+# ninja log v6
+59	4966	1735671385885073273	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_gui_extra/juce_gui_extra.mm.o	1c2bac5ad3061a35
+12730	12759	1735671398556825566	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o	fcfd06183b32bb47
+7744	7767	1735671393570439384	lib/libgmock.a	4ae1bd920b4ce0ba
+59	194	1735671385885756812	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_graphics/juce_graphics_Sheenbidi.c.o	125d59029d35f933
+12722	12754	1735671398548209564	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o	46b2f09239ec1d1
+12573	12674	1735671398496655305	plugin/AudioPlugin_artefacts/JuceLibraryCode/AudioPlugin_VST3/PkgInfo	428b5ad516e7d852
+9	42	1735673041854026865	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/CMakeFiles/cmake.verify_globs	79f0d138ec8b62bb
+12723	12754	1735671398549155060	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o	f283eec123382e65
+226	4307	1735671386052522202	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_core/juce_core.mm.o	aa45316d1304bd85
+195	226	1735671386020969224	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_core/juce_core_CompilationTime.cpp.o	28eac12048619b93
+58	89	1735671385884793816	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o	cd5d988bd1ba1c56
+12726	12753	1735671398552516878	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o	a27fb9de9f9bf272
+12573	12671	1735671398496659971	plugin/AudioPlugin_artefacts/JuceLibraryCode/AudioPlugin_Standalone/PkgInfo	7b1e536fc69eaeac
+4307	7535	1735671390133800061	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_devices/juce_audio_devices.mm.o	9ef0037faa7c9f51
+6978	6993	1735671392803989246	plugin/AudioPlugin_artefacts/Debug/Standalone/YourPluginName.app/Contents/Resources/RecentFilesMenuTemplate.nib	f69be2029c799893
+6525	7744	1735671392351674603	_deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o	c47f0d210b0c98fb
+12702	12726	1735671398528123075	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o	f01b889246067030
+12672	12699	1735671398498786045	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o	142b1ace1870b64b
+12672	12697	1735671398498035965	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o	1e155026c79583d3
+2439	6525	1735671388265264810	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_utils/juce_audio_utils.mm.o	6eb28664e16432d6
+12573	13225	1735671399050980931	test/AudioPluginTest	324534e22154fcf3
+12673	12701	1735671398499258876	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o	81270a7c03bc660d
+93	2439	1735671385919557989	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_events/juce_events.mm.o	47f069af574a6e2f
+2184	3580	1735671388010272165	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_data_structures/juce_data_structures.mm.o	1d4aed715751cb9e
+7782	7800	1735671393608784247	lib/libgmock_main.a	b1fe87bb6e4bff8f
+12701	12723	1735671398526957705	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o	71b9578930b27c6d
+2242	5091	1735671388068779726	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_basics/juce_audio_basics.mm.o	254610d4c30411d9
+4966	7026	1735671390792137160	plugin/CMakeFiles/juce_vst3_helper.dir/__/libs/juce/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.mm.o	ccead0fc368e333
+12726	12753	1735671398552162962	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o	4c01a4044e582a91
+7026	7160	1735671392852739019	plugin/juce_vst3_helper	206b4a36a6d4e4fb
+59	6729	1735671385884939191	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_processors/juce_audio_processors.mm.o	55dd71d6d229cb30
+12699	12731	1735671398525239130	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o	7a6b34c15bc0f726
+12731	16158	1735671398557424271	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o	390c264ff0e0eccf
+7393	7441	1735671393219202854	lib/libgtest.a	72c5846e50d5e806
+58	93	1735671385884566318	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o	65eed2e2e3437ddc
+12671	12698	1735671398497807216	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o	a0e3db60956dc236
+59	7087	1735671385885481272	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.o	a74345f91d1b1658
+6993	7782	1735671392819810339	_deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o	34f0c36fa1d4e6ec
+12697	12722	1735671398523030723	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o	d9a1e895176885a6
+12138	12573	1735671397964502618	plugin/AudioPlugin_artefacts/Debug/libYourPluginName_SharedCode.a	e8bbec4160bc979a
+7479	7509	1735671393305130786	lib/libgtest_main.a	d369228b4877e58d
+12674	12703	1735671398500171496	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o	e2d106e71072c532
+12699	12726	1735671398525603836	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o	62d8443c406887ad
+12703	12730	1735671398529125320	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o	2c14e92ed593e7c4
+12573	12671	1735671398496659971	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/plugin/AudioPlugin_artefacts/JuceLibraryCode/AudioPlugin_Standalone/PkgInfo	7b1e536fc69eaeac
+58	2184	1735671385883921029	plugin/CMakeFiles/AudioPlugin.dir/source/PluginProcessor.cpp.o	40ebed53d0c273da
+12573	13225	1735671399050980931	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/test/AudioPluginTest[1]_tests.cmake	324534e22154fcf3
+12672	12699	1735671398498351380	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o	9505ca2718cc664a
+12723	12755	1735671398549743807	plugin/CMakeFiles/AudioPlugin_VST3.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o	5f94be5dd6d9956b
+16158	16841	1735671401984620428	plugin/AudioPlugin_artefacts/Debug/VST3/YourPluginName.vst3/Contents/MacOS/YourPluginName	3500bfeb05e29db9
+57	2242	1735671385883510197	plugin/CMakeFiles/AudioPlugin.dir/source/PluginEditor.cpp.o	f0b130585ba8941a
+3580	7274	1735671389406602658	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_audio_formats/juce_audio_formats.mm.o	857bf4ba06e303da
+5091	7393	1735671390917605242	_deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o	767df4840e4f06e2
+6729	7479	1735671392555790777	_deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o	c31d3e781c73855b
+14232	14395	1735671400058571777	plugin/AudioPlugin_artefacts/Debug/Standalone/YourPluginName.app/Contents/MacOS/YourPluginName	da4aab5d4bd748ac
+7087	8571	1735671392913817776	test/CMakeFiles/AudioPluginTest.dir/source/AudioProcessorTest.cpp.o	459b148cd8a4145e
+38	51	1735671378749235773	clean	ad90e366ad70d77b
+12573	12674	1735671398496655305	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/plugin/AudioPlugin_artefacts/JuceLibraryCode/AudioPlugin_VST3/PkgInfo	428b5ad516e7d852
+12573	13225	1735671399050980931	test/AudioPluginTest[1]_tests.cmake	324534e22154fcf3
+59	12138	1735671385885209731	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_gui_basics/juce_gui_basics.mm.o	f783a9da85a92cbc
+89	6977	1735671385915694797	plugin/CMakeFiles/AudioPlugin.dir/__/libs/juce/modules/juce_graphics/juce_graphics.mm.o	9e7a6dc95de207cc
+12672	14232	1735671398498159464	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o	a6c0dd65f1e6691c
+12673	12702	1735671398499672499	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o	c8d08beee8dc727a
+12698	12723	1735671398524453675	plugin/CMakeFiles/AudioPlugin_Standalone.dir/__/libs/juce/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o	d37593873ce75d83
+3	35	1735673394251413470	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/CMakeFiles/cmake.verify_globs	79f0d138ec8b62bb
+2	37	1735673402371168837	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/CMakeFiles/cmake.verify_globs	79f0d138ec8b62bb

@@ -1,0 +1,37 @@
+# ninja log v6
+1	28	1735671973391236211	juce-populate-prefix/src/juce-populate-stamp/juce-populate-update	b51ccd1ec2cda4b9
+48	57	1735671973447225000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-build	e4c3dc017157fc64
+0	23	1735670802587745672	juce-populate-prefix/src/juce-populate-stamp/juce-populate-mkdir	285a13a171a82f09
+1	28	1735671973391236211	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-update	b51ccd1ec2cda4b9
+23	8513	1735670811078177066	juce-populate-prefix/src/juce-populate-stamp/juce-populate-download	c4306be5b7412ac3
+23	8513	1735670811078177066	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-download	c4306be5b7412ac3
+0	23	1735670802587745672	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-mkdir	285a13a171a82f09
+28	39	1735671973429003000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch	a2ba0c65b969ac84
+39	48	1735671973438289000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure	34bfcf7a5ede14c2
+75	88	1735671973478079000	CMakeFiles/juce-populate-complete	e427dab97ba8bc2
+48	57	1735671973447225000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-build	e4c3dc017157fc64
+57	66	1735671973456488000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-install	61be21a0d26e07ee
+75	88	1735671973478079000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/CMakeFiles/juce-populate-complete	e427dab97ba8bc2
+66	75	1735671973465405000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-test	435cd6fd2ef24110
+66	75	1735671973465405000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-test	435cd6fd2ef24110
+75	88	1735671973478079000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-done	e427dab97ba8bc2
+39	48	1735671973438289000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure	34bfcf7a5ede14c2
+28	39	1735671973429003000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch	a2ba0c65b969ac84
+57	66	1735671973456488000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-install	61be21a0d26e07ee
+75	88	1735671973478079000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-done	e427dab97ba8bc2
+0	32	1735673384166062365	juce-populate-prefix/src/juce-populate-stamp/juce-populate-update	b51ccd1ec2cda4b9
+0	32	1735673384166062365	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-update	b51ccd1ec2cda4b9
+32	42	1735673384207607000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch	a2ba0c65b969ac84
+32	42	1735673384207607000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch	a2ba0c65b969ac84
+42	51	1735673384216710000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure	34bfcf7a5ede14c2
+42	51	1735673384216710000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure	34bfcf7a5ede14c2
+51	60	1735673384225532000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-build	e4c3dc017157fc64
+51	60	1735673384225532000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-build	e4c3dc017157fc64
+60	69	1735673384234689000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-install	61be21a0d26e07ee
+60	69	1735673384234689000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-install	61be21a0d26e07ee
+69	78	1735673384243684000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-test	435cd6fd2ef24110
+69	78	1735673384243684000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-test	435cd6fd2ef24110
+78	91	1735673384256550000	CMakeFiles/juce-populate-complete	e427dab97ba8bc2
+78	91	1735673384256550000	juce-populate-prefix/src/juce-populate-stamp/juce-populate-done	e427dab97ba8bc2
+78	91	1735673384256550000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/CMakeFiles/juce-populate-complete	e427dab97ba8bc2
+78	91	1735673384256550000	/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-done	e427dab97ba8bc2

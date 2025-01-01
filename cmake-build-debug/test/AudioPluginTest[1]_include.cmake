@@ -1,0 +1,5 @@
+if(EXISTS "/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/test/AudioPluginTest[1]_tests.cmake")
+  include("/Users/jbenchia/JUCE Projects/MidiPortal/cmake-build-debug/test/AudioPluginTest[1]_tests.cmake")
+else()
+  add_test(AudioPluginTest_NOT_BUILT AudioPluginTest_NOT_BUILT)
+endif()
