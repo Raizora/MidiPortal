@@ -1,75 +1,81 @@
-# 🐺 WolfSound's Audio Plugin Template
+MidiPortal
 
-![Cmake workflow success badge](https://github.com/JanWilczek/audio-plugin-template/actions/workflows/cmake.yml/badge.svg)
+**Peer through the MidiPortal to observe all traffic on your system.**
 
-Want to create an audio plugin (e.g., a VST3 plugin) with C++ but don't know how to go about?
+MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
 
-Heard about the [JUCE C++ framework](https://github.com/juce-framework/JUCE) but not sure how to start a JUCE project?
+Features:
 
-Want to use CMake with JUCE but don't know how?
+    Real-Time Monitoring: Observe MIDI messages as they traverse your system. 
+    Cross-Platform Support: Built with JUCE for compatibility with macOS, Windows, and Linux.
+    Highly Customizable: Modular design serves as a foundation for future functionality. 
+    Lightweight Design: Optimized for performance with minimal system resource usage. 
+    Robust Tooling: Effortless management of third-party dependencies using the CPM package manager. 
+    Ready-to-go unit testing with GoogleTest. 
+    Highest warning levels enforced with “treat warnings as errors” for maximum safety.
 
-Want to be able to easily integrate third-party C++ libraries to your project?
+Roadmap:
 
-Want to unit test your audio plugin?
+    Visualize incoming and outgoing MIDI messages.
+    Filter and categorize MIDI traffic by device, channel, or message type.	
+    Planned Enhancements:
+    Add educational and analytical tools.
+    Expand to include MIDI manipulation and visualization features.
+    Integrate with iLumidi for an all-encompassing audio-visual experience.
+    Automatic log management for MIDI traffic.
 
-Want to ensure maximum safety of your software?
+Requirements:
 
-And all this with a click of a button?
+    C++: Version 23 or higher.
+    JUCE Framework: Version 8.0.4.
+    CMake: Version 3.30.5 or higher.
+    CLion: Recommended IDE for development.
+    Cursor: Optional AI-powered coding assistant.
 
-Well, this template allows you to immediately start your JUCE C++ framework audio plugin project with a CMake-based project structure. It involves
+Getting Started
 
-* clear repo structure
-* C++ 23 standard
-* effortless handling of third-party dependencies with the CPM package manager; use the C++ libraries you want together with JUCE
-* highest warning level and "treat warnings as errors"
-* ready-to-go unit test project with GoogleTest
+1.	Clone the repository:
 
-Additionally
+	git clone https://github.com/Raizora/MidiPortal.git
+	cd MidiPortal
 
-* continuous integration made easy with Github actions: build and run tests on the main branch and on every pull request
-* automatic clang-format on C++ files run on every commit; don't worry about code formatting anymore!
+2.	Run CMake to configure and build the project:
 
-I am personally using this template all the time.
+	cmake -S . -B build
+	cmake --build build
 
-Feel free to propose suggestions 😉
+The first build will download dependencies like CPM, JUCE, and GoogleTest.
 
-## Usage
 
-This is a template repository which means you can right click "Use this template" on GitHub and create your own repo out of it.
+3.	Alternatively, use bundled CMake presets:
 
-After cloning it locally, you can proceed with the usual CMake workflow.
+	cmake --preset default # Uses the Ninja build system
+	cmake --build build
+	ctest --preset default
 
-In the main repo directory execute
+Presets available: default, release, and Xcode.
 
-```bash
-$ cmake -S . -B build
-$ cmake --build build
-```
+4.	Enable automatic code formatting on every commit:
 
-The first run will take the most time because the dependencies (CPM, JUCE, and googletest) need to be downloaded.
+	pre-commit install
 
-Alternatively, you can use bundled CMake presets:
+Note: This requires pre-commit. Install it with:
 
-```bash
-$ cmake --preset default # uses the Ninja build system
-$ cmake --build build
-$ ctest --preset default
-```
+	pip install pre-commit
 
-Existing presets are `default`, `release`, and `Xcode`.
+Usage
 
-To run clang-format on every commit, in the main directory execute
+This repository provides a modular, ready-to-extend framework for monitoring MIDI traffic.
 
-```bash
-pre-commit install
-```
+Initial Setup:
 
-(for this you may need to install `pre-commit` with `pip`: `pip install pre-commit`).
+Modify the default plugin name YourPluginName throughout the project to match your requirements.
 
-Don't forget to change "YourPluginName" to, well, your plugin name everywhere 😉
+Customization:
 
-## How was this template built?
+Easily integrate third-party libraries alongside JUCE using the CPM package manager. 
+Update configurations in the CMakeLists.txt file to tailor the project to your workflow.
 
-See how I create this template step by step in this video:
+Contribution and Acknowledgments:
 
-[![Audio plugin template tutorial video](http://img.youtube.com/vi/Uq7Hwt18s3s/0.jpg)](https://www.youtube.com/watch?v=Uq7Hwt18s3s "Audio plugin template tutorial video")
+    Thank you to WolfSound for providing the free, unrestricted, public quickstart JUCE/CMake template, which served as the foundation for this project.
