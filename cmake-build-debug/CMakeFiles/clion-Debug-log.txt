@@ -1,0 +1,11 @@
+/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" -S /Users/jbenchia/JUCE_Projects/MidiPortal -B /Users/jbenchia/JUCE_Projects/MidiPortal/cmake-build-debug
+-- CPM: Adding package JUCE@8.0.4 (8.0.4)
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- CPM: Adding package GOOGLETEST@1.15.2 (v1.15.2)
+-- Configuring done (1.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/jbenchia/JUCE_Projects/MidiPortal/cmake-build-debug
