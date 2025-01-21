@@ -21,4 +21,6 @@ target_link_libraries(MidiPortalShared
         juce::juce_gui_basics
         juce::juce_audio_processors
         juce::juce_audio_devices
+        juce::juce_analytics
+        juce::juce_audio_utils
 )

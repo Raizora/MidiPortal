@@ -36,7 +36,7 @@ target_link_libraries(MidiPortalStandalone
         juce::juce_analytics
         juce::juce_audio_basics
         juce::juce_audio_devices
-        #juce::juce_audio_formats
+        juce::juce_audio_formats
         #juce::juce_audio_plugin_client
         juce::juce_audio_processors
         juce::juce_audio_utils
