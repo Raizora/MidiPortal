@@ -2,9 +2,11 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_basics/juce_audio_basics.h> // Added for MidiMessage
 #include <memory>
 #include <utility>
 #include <vector>
+#include "MidiLogger.h"
 
 namespace MidiPortal {
 
@@ -18,26 +20,29 @@ public:
   void addMidiMessage(const juce::MidiMessage& message);
 
 private:
-    // Forward declare the MidiInputCallback class
-    class MidiInputCallback;
+  // Forward declare the MidiInputCallback class
+  class MidiInputCallback;
   std::unique_ptr<MidiInputCallback> midiInputCallback;
 
-    // MIDI input management
-    juce::OwnedArray<juce::MidiInput> midiInputs;
+  // MIDI input management
+  juce::OwnedArray<juce::MidiInput> midiInputs;
 
-    // MIDI message storage
-    struct TimestampedMidiMessage {
-        juce::MidiMessage message;
-        juce::Time timestamp;
+  // MIDI logger
+  std::unique_ptr<MidiPortal::MidiLogger> midiLogger; // To manage logging functionality
 
-        TimestampedMidiMessage(juce::MidiMessage  msg, const juce::Time& time)
-            : message(std::move(msg)), timestamp(time) {}
+  // MIDI message storage
+  struct TimestampedMidiMessage {
+      juce::MidiMessage message;
+      juce::Time timestamp;
+
+      TimestampedMidiMessage(juce::MidiMessage  msg, const juce::Time& time)
+        : message(std::move(msg)), timestamp(time) {}
 };
 
-    std::vector<TimestampedMidiMessage> midiMessages;
-    static constexpr size_t maxMessages = 1000; // Maximum number of messages to store
+  std::vector<TimestampedMidiMessage> midiMessages;
+  static constexpr size_t maxMessages = 1000; // Maximum number of messages to store
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 
-} // namespace MidiPortalfsffs
+} // namespace MidiPortal

@@ -4,6 +4,8 @@ set(JUCE_PATH "/Users/jbenchia/JUCE Projects/JUCE")  # Update this path accordin
 add_library(MidiPortalShared
         source/MainComponent.cpp
         source/MainComponent.h
+        source/MidiLogger.cpp
+        source/MidiLogger.h
 )
 
 # Set include directories for the shared library
