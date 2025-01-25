@@ -1,5 +1,4 @@
-MidiPortal
-
+MidiPortal - Version 0.0.2
 **Peer through the MidiPortal to observe all traffic on your system.**
 
 MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
@@ -23,6 +22,15 @@ Roadmap:
     Expand to include MIDI manipulation and visualization features.
     Integrate with iLumidi for an all-encompassing audio-visual experience.
     Automatic log management for MIDI traffic.
+
+## Version History
+
+- **0.0.2**:
+    - Implemented `MidiLogger` for real-time MIDI logging to file.
+    - Validated core functionality: MIDI monitoring and traffic logging.
+    - Established a functional prototype of MidiPortal.
+- **0.0.1**:
+    - Initial setup with JUCE framework and basic MIDI message handling.
 
 Requirements:
 

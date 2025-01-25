@@ -75,8 +75,24 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
 
       // Log the received MIDI message to a file using the logger.
       juce::Logger::writeToLog("Logging MIDI message: " + message.getDescription()); // Log for debugging
-
       midiLogger->logMessage(message); // Log the message to the file
+
+      // Translate MIDI data to visuals using Rust
+      if (message.isNoteOn()) {
+
+        uint8_t note = static_cast<uint8_t>(message.getNoteNumber());
+        uint8_t velocity = message.getVelocity();
+
+        // Call Rust function for color and opacity
+        auto [hue, saturation, value, opacity] = midi_note_to_color_with_opacity(note, velocity);
+        auto [x, y] = generate_position();
+
+        // Convert HSV to JUCE Colour
+        juce::Colour color = juce::Colour::fromHSV(hue, saturation, value, opacity);
+
+        // Add to visual notes for rendering
+        visualNotes.push_back({ { x * static_cast<float>(getWidth()), y * static_cast<float>(getHeight()) }, color, opacity });        repaint();
+      }
 
       // Trigger a repaint of the GUI to reflect the latest MIDI message.
       repaint(); // Update the display with the new message
@@ -84,10 +100,17 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
 }
 
 void MainComponent::paint(juce::Graphics& g) {
-  g.fillAll(juce::Colours::black);
+  g.fillAll(juce::Colours::black); // Clear the background
+
+  // Draw each visual note
+  for (const auto& note : visualNotes) {
+    g.setColour(note.color.withAlpha(note.opacity));
+    g.fillEllipse(note.position.x - 10.0f, note.position.y - 10.0f, 20.0f, 20.0f);
+  }
+
   g.setColour(juce::Colours::white);
-  g.drawText("MidiPortal", getLocalBounds(), juce::Justification::centred, true);
   g.setFont(20.0f);
+  g.drawText("MidiPortal", getLocalBounds(), juce::Justification::centred, true);
 }
 
 void MainComponent::resized() {

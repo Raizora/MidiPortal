@@ -1,3 +1,4 @@
+include(cmake/cpm.cmake)
 # Mandatory line, sets the minimum version of CMake that should be used with this repository.
 # I specified 3.22 because I trust it. However, currently I have 3.26 installed on my machine.
 # To verify your version run
@@ -11,24 +12,16 @@ project(MidiPortal)
 # Currently, JUCE supports only C++ 20 cross-platform.
 set(CMAKE_CXX_STANDARD 23)
 
-# I like to download the dependencies to the same folder as the project.
-# If you want to install them system wide, set CPM_SOURCE_CACHE with the path to the dependencies
-# either as an environment variable or pass it to the cmake script with -DCPM_SOURCE_CACHE=<path>.
+# Specify the path to JUCE
+set(JUCE_PATH "/Users/jbenchia/JUCE" CACHE PATH "Path to JUCE")
+
+# Add JUCE as a subdirectory
+add_subdirectory("${JUCE_PATH}" "${CMAKE_BINARY_DIR}/JUCE")
+
+# Set Googletest path or fetch dynamically
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 
-# Downloads CPM if not already downloaded. CPM is an easy-to-use package manager nicely integrated with CMake.
-include(cmake/cpm.cmake)
-
-# This commands downloads AND configures JUCE. It sets up some variables, like JUCE_SOURCE_DIR.
-CPMAddPackage(
-        NAME JUCE
-        GIT_TAG 8.0.4
-        VERSION 8.0.4
-        GITHUB_REPOSITORY juce-framework/JUCE
-        SOURCE_DIR ${LIB_DIR}/juce
-)
-
-# Adds googletest.
+# Add Googletest
 CPMAddPackage(
         NAME GOOGLETEST
         GITHUB_REPOSITORY google/googletest

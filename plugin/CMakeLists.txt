@@ -85,4 +85,12 @@ else()
 endif()
 
 # In Visual Studio this command provides a nice grouping of source files in "filters".
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+#source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+# Ensure JUCE_SOURCE_DIR points to the manually downloaded JUCE location
+set(JUCE_SOURCE_DIR "${JUCE_PATH}")
+
+# Update the source_group command
+source_group(TREE "${JUCE_SOURCE_DIR}" FILES "${JUCE_SOURCE_DIR}/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.mm")
+message("JUCE_SOURCE_DIR: ${JUCE_SOURCE_DIR}")
+message("CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")

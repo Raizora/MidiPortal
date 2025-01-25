@@ -8,6 +8,23 @@
 #include <vector>
 #include "MidiLogger.h"
 
+// Define C-compatible structs
+struct ColorWithOpacity {
+  float hue;
+  float saturation;
+  float value;
+  float opacity;
+};
+
+struct Position {
+  float x;
+  float y;
+};
+
+// Use C-compatible linkage
+extern "C" ColorWithOpacity midi_note_to_color_with_opacity(uint8_t note, uint8_t velocity);
+extern "C" Position generate_position();
+
 namespace MidiPortal {
 
 class MainComponent : public juce::Component {
@@ -32,12 +49,20 @@ private:
 
   // MIDI message storage
   struct TimestampedMidiMessage {
-      juce::MidiMessage message;
-      juce::Time timestamp;
+    juce::MidiMessage message;
+    juce::Time timestamp;
 
-      TimestampedMidiMessage(juce::MidiMessage  msg, const juce::Time& time)
-        : message(std::move(msg)), timestamp(time) {}
-};
+    TimestampedMidiMessage(juce::MidiMessage  msg, const juce::Time& time)
+      : message(std::move(msg)), timestamp(time) {}
+  };
+
+  struct VisualNote {
+    juce::Point<float> position;
+    juce::Colour color;
+    float opacity;
+  };
+
+  std::vector<VisualNote> visualNotes; // Stores the visuals for MIDI messages
 
   std::vector<TimestampedMidiMessage> midiMessages;
   static constexpr size_t maxMessages = 1000; // Maximum number of messages to store
