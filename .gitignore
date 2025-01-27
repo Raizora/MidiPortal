@@ -7,6 +7,12 @@ release-build/
 out/
 vs-build/
 
+# macOS system files
+.DS_Store
+
+# JetBrains IDE files
+.idea/
+
 # Prerequisites
 *.d
 
@@ -455,3 +461,4 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+rust/target/.rustc_info.json
