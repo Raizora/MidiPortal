@@ -44,8 +44,15 @@ jobs:
         working-directory: rust
         run: cargo build --release
 
+      - name: Clone JUCE (Temporary Fix)
+        run: |
+          git clone --branch 8.0.4 --depth 1 https://github.com/juce-framework/JUCE.git juce
+
+      - name: Verify JUCE Download
+        run: ls -la juce || echo "JUCE not found"
+
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B cmake-build-ninja
+        run: cmake -G Ninja -DJUCE_SOURCE_DIR=juce -S . -B cmake-build-ninja
 
       - name: Build Project
         run: cmake --build cmake-build-ninja
