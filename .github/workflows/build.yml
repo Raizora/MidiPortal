@@ -35,6 +35,15 @@ jobs:
           sudo apt-get update  # Ensures package lists are fresh
           sudo apt-get install ninja-build g++ libasound2-dev
 
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build Rust Library
+        working-directory: rust
+        run: cargo build --release
+
       - name: Configure CMake
         run: cmake -G Ninja -S . -B cmake-build-ninja
 
