@@ -12,6 +12,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,7 +20,7 @@ jobs:
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: "3.30.5"
+          cmake-version: '3.30.5'
 
       - name: Cache CMake dependencies
         uses: actions/cache@v3
@@ -30,7 +31,9 @@ jobs:
             juce-cache-${{ runner.os }}-
 
       - name: Install dependencies
-        run: sudo apt-get install ninja-build
+        run: |
+          sudo apt-get update  # Ensures package lists are fresh
+          sudo apt-get install ninja-build g++ libasound2-dev
 
       - name: Configure CMake
         run: cmake -G Ninja -S . -B cmake-build-ninja
@@ -39,4 +42,4 @@ jobs:
         run: cmake --build cmake-build-ninja
 
       - name: Run Tests
-        run: ctest --test-dir cmake-build-ninja
+        run: ctest --test-dir cmake-build-ninja --output-on-failure
