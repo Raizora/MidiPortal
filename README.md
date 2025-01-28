@@ -1,89 +1,136 @@
-MidiPortal - Version 0.0.2
+# **MidiPortal - Version 0.0.2**
 **Peer through the MidiPortal to observe all traffic on your system.**
 
-MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
+MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real-time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
 
-Features:
+---
 
-    Real-Time Monitoring: Observe MIDI messages as they traverse your system. 
-    Cross-Platform Support: Built with JUCE for compatibility with macOS, Windows, and Linux.
-    Highly Customizable: Modular design serves as a foundation for future functionality. 
-    Lightweight Design: Optimized for performance with minimal system resource usage. 
-    Robust Tooling: Effortless management of third-party dependencies using the CPM package manager. 
-    Ready-to-go unit testing with GoogleTest. 
-    Highest warning levels enforced with “treat warnings as errors” for maximum safety.
+## **Features**
+- **Real-Time Monitoring**: Observe MIDI messages as they traverse your system.
+- **Cross-Platform Support**: Built with JUCE for compatibility with macOS, Windows, and Linux.
+- **Highly Customizable**: Modular design serves as a foundation for future functionality.
+- **Lightweight Design**: Optimized for performance with minimal system resource usage.
+- **Robust Tooling**: Effortless management of third-party dependencies using the CPM package manager.
+- **Unit Testing**: Ready-to-go unit testing with GoogleTest.
+- **Enforced Code Quality**: Highest warning levels with “treat warnings as errors” for maximum safety.
 
-Roadmap:
+---
 
-    Visualize incoming and outgoing MIDI messages.
-    Filter and categorize MIDI traffic by device, channel, or message type.	
-    Planned Enhancements:
-    Add educational and analytical tools.
-    Expand to include MIDI manipulation and visualization features.
-    Integrate with iLumidi for an all-encompassing audio-visual experience.
-    Automatic log management for MIDI traffic.
+## **Roadmap**
+- Visualize incoming and outgoing MIDI messages.
+- Filter and categorize MIDI traffic by device, channel, or message type.
+- **Planned Enhancements**:
+  - Add educational and analytical tools.
+  - Expand to include MIDI manipulation and visualization features.
+  - Integrate with iLumidi for an all-encompassing audio-visual experience.
+  - Automatic log management for MIDI traffic.
 
-## Version History
+---
 
-- **0.0.2**:
-    - Implemented `MidiLogger` for real-time MIDI logging to file.
-    - Validated core functionality: MIDI monitoring and traffic logging.
-    - Established a functional prototype of MidiPortal.
-- **0.0.1**:
-    - Initial setup with JUCE framework and basic MIDI message handling.
+## **Version History**
+### **0.0.2**:
+- Implemented `MidiLogger` for real-time MIDI logging to file.
+- Validated core functionality: MIDI monitoring and traffic logging.
+- Established a functional prototype of MidiPortal.
 
-Requirements:
+### **0.0.1**:
+- Initial setup with JUCE framework and basic MIDI message handling.
 
-    C++: Version 23 or higher.
-    JUCE Framework: Version 8.0.4.
-    CMake: Version 3.30.5 or higher.
-    CLion: Recommended IDE for development.
-    Cursor: Optional AI-powered coding assistant.
+---
 
-Getting Started
+## **Requirements**
+### **System Requirements**
+- **C++**: Version 23 or higher.
+- **JUCE Framework**: Version 8.0.4.
+- **CMake**: Version 3.26 or higher (minimum of 3.30.5 recommended).
+- **Rust**: Stable version 1.84 or higher.
+- **Cargo**: Rust's package manager and build system.
+- **Ninja**: A fast build system for CMake.
+- **CLion (Recommended)**: IDE for development.
+- **Python (Optional)**: For pre-commit hooks.
 
-1.	Clone the repository:
+---
 
-	git clone https://github.com/Raizora/MidiPortal.git
-	cd MidiPortal
+## **Getting Started**
 
-2.	Run CMake to configure and build the project:
+### **1. Clone the Repository**
+```bash
+git clone https://github.com/Raizora/MidiPortal.git
+cd MidiPortal
+```
 
-	cmake -S . -B build
-	cmake --build build
+### **2. Build Rust Library**
+Navigate to the `rust` directory and build the Rust library:
+```bash
+cd rust
+cargo build --release
+cd ..
+```
 
-The first build will download dependencies like CPM, JUCE, and GoogleTest.
+### **3. Configure CMake**
+Use Ninja to configure the build system:
+```bash
+cmake -G Ninja -S . -B cmake-build-ninja
+```
 
+### **4. Build the Project**
+Compile the project:
+```bash
+cmake --build cmake-build-ninja
+```
 
-3.	Alternatively, use bundled CMake presets:
+### **5. Run the Targets**
+- Run `MidiPortalStandalone`:
+  ```bash
+  ./cmake-build-ninja/standalone/MidiPortalStandalone
+  ```
+- Run the `AudioPlugin`:
+  ```bash
+  ./cmake-build-ninja/plugin/AudioPlugin_Standalone
+  ```
 
-	cmake --preset default # Uses the Ninja build system
-	cmake --build build
-	ctest --preset default
+---
 
-Presets available: default, release, and Xcode.
+## **Advanced Build Options**
 
-4.	Enable automatic code formatting on every commit:
+### **Using CMake Presets**
+```bash
+cmake --preset default  # Uses the Ninja build system
+cmake --build build
+ctest --preset default
+```
 
-	pre-commit install
+Presets available: `default`, `release`, and `Xcode`.
 
-Note: This requires pre-commit. Install it with:
+---
 
-	pip install pre-commit
+## **Code Quality**
 
-Usage
+### **Enable Automatic Code Formatting**
+Enable automatic code formatting on every commit:
+```bash
+pre-commit install
+```
 
-This repository provides a modular, ready-to-extend framework for monitoring MIDI traffic.
+> **Note**: Requires `pre-commit`. Install it with:
+> ```bash
+> pip install pre-commit
+> ```
 
-Initial Setup:
+---
 
-Modify the default plugin name YourPluginName throughout the project to match your requirements.
+## **Customization**
+- Modify the default plugin name (`YourPluginName`) throughout the project to match your requirements.
+- Easily integrate third-party libraries alongside JUCE using the CPM package manager.
+- Update configurations in the `CMakeLists.txt` file to tailor the project to your workflow.
 
-Customization:
+---
 
-Easily integrate third-party libraries alongside JUCE using the CPM package manager. 
-Update configurations in the CMakeLists.txt file to tailor the project to your workflow.
+## **Contribution and Acknowledgments**
+Special thanks to WolfSound for providing the free, unrestricted, public quickstart JUCE/CMake template, which served as the foundation for this project.
 
-Contribution and Acknowledgments:
+---
 
-    Thank you to WolfSound for providing the free, unrestricted, public quickstart JUCE/CMake template, which served as the foundation for this project.
+### **Final Thoughts**
+This README ensures that anyone pulling the repository has everything they need to build, run, and understand the purpose and future plans for MidiPortal.
+
