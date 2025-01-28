@@ -12,6 +12,7 @@ vs-build/
 
 # JetBrains IDE files
 .idea/
+cmake-build-ninja/
 
 # Prerequisites
 *.d
