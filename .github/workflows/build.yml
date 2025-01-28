@@ -12,32 +12,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up CMake
-        uses: jwlawson/actions-setup-cmake@v1
+        uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: '3.26'
+          cmake-version: "3.30.5"
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build g++ libasound2-dev
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: Cache CMake dependencies
+        uses: actions/cache@v3
         with:
-          toolchain: stable
+          path: ~/.cache/CPM
+          key: juce-cache-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            juce-cache-${{ runner.os }}-
 
-      - name: Build Rust Library
-        working-directory: rust
-        run: cargo build --release
+      - name: Install dependencies
+        run: sudo apt-get install ninja-build
 
       - name: Configure CMake
         run: cmake -G Ninja -S . -B cmake-build-ninja
 
       - name: Build Project
         run: cmake --build cmake-build-ninja
+
+      - name: Run Tests
+        run: ctest --test-dir cmake-build-ninja
