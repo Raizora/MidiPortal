@@ -1,3 +1,14 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - experimental
+  pull_request:
+    branches:
+      - main
+      - development
+
 jobs:
   build:
     runs-on: ubuntu-latest
