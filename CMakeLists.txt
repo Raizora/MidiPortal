@@ -13,7 +13,11 @@ project(MidiPortal)
 set(CMAKE_CXX_STANDARD 23)
 
 # Specify the path to JUCE
-set(JUCE_PATH "/Users/jbenchia/JUCE" CACHE PATH "Path to JUCE")
+if(DEFINED ENV{GITHUB_ACTIONS})
+    set(JUCE_PATH "${CMAKE_SOURCE_DIR}/juce" CACHE PATH "Path to JUCE")
+else()
+    set(JUCE_PATH "/Users/jbenchia/JUCE" CACHE PATH "Path to JUCE")
+endif()
 
 # Add JUCE as a subdirectory
 add_subdirectory("${JUCE_PATH}" "${CMAKE_BINARY_DIR}/JUCE")
