@@ -14,48 +14,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.30.5'
-
-      - name: Cache CMake dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/CPM
-          key: juce-cache-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: |
-            juce-cache-${{ runner.os }}-
-
-      - name: Install dependencies
+      # Step 2: Install dependencies
+      - name: Install Dependencies
         run: |
-          sudo apt-get update  # Ensures package lists are fresh
-          sudo apt-get install ninja-build g++ libasound2-dev
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake git
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup update
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Build Rust Library
-        working-directory: rust
-        run: cargo build --release
-
-      - name: Clone JUCE (Temporary Fix)
-        run: |
-          git clone --branch 8.0.4 --depth 1 https://github.com/juce-framework/JUCE.git juce
-
-      - name: Verify JUCE Download
-        run: ls -la juce || echo "JUCE not found"
-
+      # Step 3: Configure CMake
       - name: Configure CMake
-        run: cmake -G Ninja -DJUCE_SOURCE_DIR=juce -S . -B cmake-build-ninja
+        run: cmake -G Ninja -S . -B build
 
+      # Step 4: Build the project
       - name: Build Project
-        run: cmake --build cmake-build-ninja
+        run: cmake --build build
 
+      # Step 5: Run Tests
       - name: Run Tests
-        run: ctest --test-dir cmake-build-ninja --output-on-failure
+        run: ctest --test-dir build
