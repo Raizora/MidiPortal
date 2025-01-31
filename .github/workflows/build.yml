@@ -46,7 +46,7 @@ jobs:
           git clone --branch 8.0.4 --depth 1 https://github.com/juce-framework/JUCE.git juce
 
       - name: Configure CMake
-        run: cmake -G Ninja -DJUCE_SOURCE_DIR=juce -S . -B cmake-build-ninja
+        run: cmake -G Ninja -DJUCE_SOURCE_DIR=${{ github.workspace }}/juce -S . -B cmake-build-ninja
 
       - name: Build Project
         run: cmake --build cmake-build-ninja
