@@ -15,7 +15,7 @@ StandaloneWindow::StandaloneWindow()
   setUsingNativeTitleBar(true);
   setVisible(true);
 }
-
+// Testing comments for github actions
 void StandaloneWindow::closeButtonPressed() {
   juce::JUCEApplication::getInstance()->systemRequestedQuit();
 }
