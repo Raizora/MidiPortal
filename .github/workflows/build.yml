@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - experimental
+      - ci-test
   pull_request:
     branches:
-      - main
-      - development
+      - experimental
+      - ci-test
+  workflow_dispatch:  # 👈 Manually trigger from GitHub UI
 
 jobs:
   build:
