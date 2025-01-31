@@ -8,14 +8,33 @@ project(MidiPortalStandalone VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Ensure GTK3 is found before building
+# Ensure GTK3 and WebKit2GTK are found before building
+find_program(PKG_CONFIG_EXECUTABLE NAMES pkg-config PATHS /opt/homebrew/bin NO_DEFAULT_PATH)
+if(NOT PKG_CONFIG_EXECUTABLE)
+    message(FATAL_ERROR "pkg-config not found! Set PKG_CONFIG_EXECUTABLE manually.")
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
-# Include GTK3 headers and link its libraries
+# Handle WebKit differently on macOS vs Linux
+if(APPLE)
+    find_library(WEBKIT_LIBRARY WebKit)
+    mark_as_advanced(WEBKIT_LIBRARY)
+else()
+    pkg_check_modules(WEBKIT2 REQUIRED webkit2gtk-4.1)
+endif()
+
+# Include GTK3 and WebKit2GTK headers and link their libraries
 include_directories(${GTK3_INCLUDE_DIRS})
 link_directories(${GTK3_LIBRARY_DIRS})
 add_definitions(${GTK3_CFLAGS_OTHER})
+
+if(NOT APPLE)
+    include_directories(${WEBKIT2_INCLUDE_DIRS})
+    link_directories(${WEBKIT2_LIBRARY_DIRS})
+    add_definitions(${WEBKIT2_CFLAGS_OTHER})
+endif()
 
 # Create an executable for the standalone app
 add_executable(MidiPortalStandalone
@@ -32,6 +51,10 @@ target_include_directories(MidiPortalStandalone
         ${CMAKE_CURRENT_SOURCE_DIR}/../shared/source
         ${GTK3_INCLUDE_DIRS}  # Ensure GTK3 include paths are set
 )
+
+if(NOT APPLE)
+    target_include_directories(MidiPortalStandalone PRIVATE ${WEBKIT2_INCLUDE_DIRS})
+endif()
 
 # Find and link the Rust library (midi_visuals)
 find_library(MIDI_VISUALS_LIB NAMES midi_visuals)
@@ -54,7 +77,7 @@ target_compile_definitions(MidiPortalStandalone
         JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1  # Enables custom standalone app support in JUCE
 )
 
-# Link the shared library, JUCE modules, and GTK3 to the standalone app
+# Link the shared library, JUCE modules, GTK3, and WebKit2 to the standalone app
 target_link_libraries(MidiPortalStandalone
         PRIVATE
         MidiPortalShared
@@ -80,3 +103,10 @@ target_link_libraries(MidiPortalStandalone
         juce::juce_osc
         ${GTK3_LIBRARIES}  # ✅ Ensures GTK3 is linked
 )
+
+# Ensure correct WebKit linking on macOS vs Linux
+if(APPLE)
+    target_link_libraries(MidiPortalStandalone PRIVATE ${WEBKIT_LIBRARY})
+else()
+    target_link_libraries(MidiPortalStandalone PRIVATE ${WEBKIT2_LIBRARIES})
+endif()
