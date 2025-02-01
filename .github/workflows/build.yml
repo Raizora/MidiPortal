@@ -19,22 +19,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Add Debian Sid Repository for WebKitGTK
+        run: |
+          echo "Adding Debian Sid repository for WebKitGTK..."
+          echo "deb http://deb.debian.org/debian sid main" | sudo tee /etc/apt/sources.list.d/debian-sid.list
+          
+          echo "Configuring apt preferences to prevent system-wide Sid usage..."
+          echo -e "Package: *\nPin: release a=sid\nPin-Priority: 100" | sudo tee /etc/apt/preferences.d/debian-sid
+
+          echo "Fetching Missing GPG Keys..."
+          sudo mkdir -p /etc/apt/keyrings
+          sudo wget -O /etc/apt/keyrings/debian-archive-keyring.gpg http://ftp.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2024.1_all.deb
+
+          sudo apt-get update
+
       - name: Check Available WebKitGTK Versions
         run: |
-          sudo apt update
-          apt-cache search webkit | grep webkit
+          sudo apt-get update
+          apt-cache search webkit | grep webkit || echo "No WebKitGTK versions found!"
 
       - name: Install Dependencies
         run: |
-          sudo apt-get update
-          echo "Adding Debian Sid repository for WebKitGTK..."
-          echo "deb http://deb.debian.org/debian sid main" | sudo tee /etc/apt/sources.list.d/debian-sid.list
-
-          echo "Fetching and Adding Missing GPG Keys..."
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9 6ED0E7B82643E131 || \
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0E98404D386FA1D9 6ED0E7B82643E131 || \
-          sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 0E98404D386FA1D9 6ED0E7B82643E131
-
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ninja-build cmake git g++ \
@@ -44,8 +49,10 @@ jobs:
             libgl1-mesa-dev libglu1-mesa-dev \
             libcurl4-openssl-dev \
             libgtk-3-dev libgtk-4-dev \
-            libpango1.0-dev libglib2.0-dev libgdk-pixbuf2.0-dev libatk1.0-dev \
-            webkit2gtk-4.0 webkit2gtk-4.1 libwebkit2gtk-4.0-dev
+            libpango1.0-dev libglib2.0-dev libgdk-pixbuf2.0-dev libatk1.0-dev
+
+          echo "Attempting WebKitGTK installation from Debian Sid..."
+          sudo apt-get install -y -t sid webkit2gtk-4.0 webkit2gtk-4.1 libwebkit2gtk-4.0-dev || echo "WebKitGTK installation failed!"
 
       - name: Verify WebKitGTK Installation
         run: |
