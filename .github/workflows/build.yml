@@ -27,8 +27,8 @@ jobs:
           echo "Configuring apt preferences to prevent system-wide Sid usage..."
           echo -e "Package: *\nPin: release a=sid\nPin-Priority: 100" | sudo tee /etc/apt/preferences.d/debian-sid
 
-          echo "Blocking base-files from being replaced (prevents dpkg errors)..."
-          echo -e "Package: base-files\nPin: release a=sid\nPin-Priority: -10" | sudo tee /etc/apt/preferences.d/block-base-files
+          echo "Blocking base-files and other critical packages from Debian Sid..."
+          echo -e "Package: base-files libc6 locales tzdata multiarch-support dpkg\nPin: release a=sid\nPin-Priority: -10" | sudo tee /etc/apt/preferences.d/block-critical
 
           echo "Fetching Missing GPG Keys..."
           sudo apt-get update || true
