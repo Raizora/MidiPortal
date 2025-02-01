@@ -19,10 +19,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Add Missing Public Keys for Debian Sid
+        run: |
+          echo "Adding missing GPG keys..."
+          sudo apt-get install -y --no-install-recommends gnupg2
+          sudo mkdir -p /usr/share/keyrings
+          curl -fsSL http://ftp.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2024.1_all.deb -o keyring.deb
+          sudo dpkg -i keyring.deb || echo "Failed to install keyring, continuing..."
+          rm keyring.deb
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9 || echo "Key 0E98404D386FA1D9 failed"
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 || echo "Key 6ED0E7B82643E131 failed"
+
       - name: Add Debian Sid Repository for WebKitGTK (Safeguarded)
         run: |
           echo "Adding Debian Sid repository for WebKitGTK..."
-          echo "deb http://deb.debian.org/debian sid main" | sudo tee /etc/apt/sources.list.d/debian-sid.list
+          echo "deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian sid main" | sudo tee /etc/apt/sources.list.d/debian-sid.list
 
           echo "Configuring apt preferences to prevent system-wide Sid usage..."
           echo -e "Package: *\nPin: release a=sid\nPin-Priority: 100" | sudo tee /etc/apt/preferences.d/debian-sid
@@ -30,23 +41,8 @@ jobs:
           echo "Blocking base-files and other critical packages from Debian Sid..."
           echo -e "Package: base-files libc6 locales tzdata multiarch-support dpkg\nPin: release a=sid\nPin-Priority: -10" | sudo tee /etc/apt/preferences.d/block-critical
 
-          echo "Fetching Missing GPG Keys..."
+          echo "Updating package lists..."
           sudo apt-get update || true
-          sudo apt-get install -y --no-install-recommends gnupg2
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9 6ED0E7B82643E131
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 04EE7237B7D453EC DCC9EFBF77E11517
-
-          echo "Installing Debian Archive Keyring..."
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends debian-archive-keyring 
-
-          echo "Final package list update..."
-          sudo apt-get update
-
-      - name: Check Available WebKitGTK Versions
-        run: |
-          sudo apt-get update
-          apt-cache search webkit | grep webkit || echo "No WebKitGTK versions found!"
 
       - name: Install Dependencies
         run: |
@@ -62,9 +58,9 @@ jobs:
             libpango1.0-dev libglib2.0-dev libgdk-pixbuf2.0-dev libatk1.0-dev
 
           echo "Fixing any broken dependencies..."
-          sudo apt-get --fix-broken install -y || true  # ✅ Auto-fixes package conflicts
+          sudo apt-get --fix-broken install -y || true
 
-          echo "Attempting WebKitGTK installation from Debian Sid (without breaking system packages)..."
+          echo "Installing WebKitGTK from Debian Sid..."
           sudo apt-get install -y -t sid --no-install-recommends webkit2gtk-4.0 webkit2gtk-4.1 libwebkit2gtk-4.0-dev || echo "WebKitGTK installation failed!"
 
       - name: Verify WebKitGTK Installation
@@ -76,7 +72,7 @@ jobs:
 
           echo "Checking GTK 3.0:"
           pkg-config --cflags gtk+-3.0 || { echo "gtk+-3.0 not found"; exit 1; }
-          
+
           echo "Checking GTK 4.0:"
           pkg-config --cflags gtk4 || { echo "gtk4 not found"; exit 1; }
 
