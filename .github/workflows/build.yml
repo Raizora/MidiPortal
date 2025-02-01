@@ -27,10 +27,11 @@ jobs:
           echo "Configuring apt preferences to prevent system-wide Sid usage..."
           echo -e "Package: *\nPin: release a=sid\nPin-Priority: 100" | sudo tee /etc/apt/preferences.d/debian-sid
 
-          echo "Fetching Missing GPG Keys..."
-          sudo mkdir -p /etc/apt/keyrings
-          sudo wget -O /etc/apt/keyrings/debian-archive-keyring.gpg http://ftp.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2024.1_all.deb
+          echo "Installing Debian Archive Keyring..."
+          sudo apt-get update
+          sudo apt-get install -y debian-archive-keyring  # ✅ Fixes missing GPG key issue
 
+          echo "Updating package list..."
           sudo apt-get update
 
       - name: Check Available WebKitGTK Versions
