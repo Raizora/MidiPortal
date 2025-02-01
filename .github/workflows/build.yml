@@ -19,71 +19,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Add Missing Public Keys for Debian Sid
-        run: |
-          echo "Adding missing GPG keys..."
-          sudo apt-get install -y --no-install-recommends gnupg2
-          sudo mkdir -p /usr/share/keyrings
-          curl -fsSL http://ftp.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2024.1_all.deb -o keyring.deb
-          sudo dpkg -i keyring.deb || echo "Failed to install keyring, continuing..."
-          rm keyring.deb
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9 || echo "Key 0E98404D386FA1D9 failed"
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 || echo "Key 6ED0E7B82643E131 failed"
-
-      - name: Add Debian Sid Repository for WebKitGTK (Safeguarded)
-        run: |
-          echo "Adding Debian Sid repository for WebKitGTK..."
-          echo "deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian sid main" | sudo tee /etc/apt/sources.list.d/debian-sid.list
-
-          echo "Configuring apt preferences to prevent system-wide Sid usage..."
-          echo -e "Package: *\nPin: release a=sid\nPin-Priority: 100" | sudo tee /etc/apt/preferences.d/debian-sid
-
-          echo "Blocking base-files and other critical packages from Debian Sid..."
-          echo -e "Package: base-files libc6 locales tzdata multiarch-support dpkg\nPin: release a=sid\nPin-Priority: -10" | sudo tee /etc/apt/preferences.d/block-critical
-
-          echo "Updating package lists..."
-          sudo apt-get update || true
-
-      - name: Install Dependencies
+      - name: Debug WebKitGTK Installation
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ninja-build cmake git g++ \
-            libasound2-dev libfreetype6-dev fontconfig \
-            libx11-dev libxrandr-dev libxcursor-dev \
-            libxext-dev libxinerama-dev \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libcurl4-openssl-dev \
-            libgtk-3-dev libgtk-4-dev \
-            libpango1.0-dev libglib2.0-dev libgdk-pixbuf2.0-dev libatk1.0-dev
+          apt-cache search webkit | grep webkit
 
-          echo "Fixing any broken dependencies..."
-          sudo apt-get --fix-broken install -y || true
-
-          echo "Installing WebKitGTK from Debian Sid..."
-          sudo apt-get install -y -t sid --no-install-recommends webkit2gtk-4.0 webkit2gtk-4.1 libwebkit2gtk-4.0-dev || echo "WebKitGTK installation failed!"
-
-      - name: Verify WebKitGTK Installation
+      - name: Install Linux Dependencies
         run: |
-          echo "Checking WebKitGTK with pkg-config..."
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev || echo "WebKitGTK 4.0 not found, proceeding without it." \
+            ninja-build
+
+      - name: Debug WebKitGTK Detection
+        run: |
+          echo "Checking WebKitGTK versions..."
           pkg-config --modversion webkit2gtk-4.1 || echo "webkit2gtk-4.1 NOT FOUND"
           pkg-config --modversion webkit2gtk-4.0 || echo "webkit2gtk-4.0 NOT FOUND"
-          pkg-config --modversion webkit2gtk-5.0 || echo "webkit2gtk-5.0 NOT FOUND"
+          
+          echo "Checking pkg-config paths..."
+          pkg-config --cflags webkit2gtk-4.0 || echo "No include paths found for webkit2gtk-4.0"
+          pkg-config --cflags webkit2gtk-4.1 || echo "No include paths found for webkit2gtk-4.1"
+          
+          echo "Checking for missing dependencies..."
+          ldd /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.0.so || echo "Missing WebKitGTK shared libraries!"
 
-          echo "Checking GTK 3.0:"
-          pkg-config --cflags gtk+-3.0 || { echo "gtk+-3.0 not found"; exit 1; }
-
-          echo "Checking GTK 4.0:"
-          pkg-config --cflags gtk4 || { echo "gtk4 not found"; exit 1; }
-
-          echo "GTK 3.0 Path: $(pkg-config --cflags gtk+-3.0)"
-          echo "GTK 4.0 Path: $(pkg-config --cflags gtk4)"
-
-          if [ ! -f /usr/include/gtk-3.0/gtk/gtk.h ]; then
-            echo "Error: GTK3 headers are missing!"
-            find /usr/include -name "gtk.h"
-            exit 1
-          fi
+      - name: Verify Ninja Installation
+        run: |
+          ninja --version || { echo "Ninja NOT found!"; exit 1; }
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -94,15 +58,17 @@ jobs:
         working-directory: rust
         run: cargo build --release
 
-      - name: Clone JUCE (Proper Branch Tracking)
+      - name: Clone JUCE
         run: |
           git clone --branch 8.0.4 https://github.com/juce-framework/JUCE.git juce
           cd juce
           git checkout 8.0.4
-          git config --global advice.detachedHead false  # Suppress warning
+          git config --global advice.detachedHead false
 
       - name: Configure CMake
-        run: cmake -G Ninja -DJUCE_SOURCE_DIR=${{ github.workspace }}/juce -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig -S . -B cmake-build-ninja
+        run: |
+          cmake -G Ninja -DJUCE_SOURCE_DIR=${{ github.workspace }}/juce -S . -B cmake-build-ninja
+          cat cmake-build-ninja/CMakeCache.txt | grep CMAKE_GENERATOR
 
       - name: Build Project
         run: cmake --build cmake-build-ninja
