@@ -27,6 +27,10 @@ jobs:
           echo "Configuring apt preferences to prevent system-wide Sid usage..."
           echo -e "Package: *\nPin: release a=sid\nPin-Priority: 100" | sudo tee /etc/apt/preferences.d/debian-sid
 
+          echo "Importing Missing GPG Keys..."
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131
+
           echo "Installing Debian Archive Keyring..."
           sudo apt-get update
           sudo apt-get install -y debian-archive-keyring  # ✅ Fixes missing GPG key issue
