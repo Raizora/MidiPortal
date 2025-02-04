@@ -463,3 +463,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 rust/target/.rustc_info.json
+.specstory/
