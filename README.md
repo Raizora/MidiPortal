@@ -127,5 +127,119 @@ pre-commit install
 ## **Contribution and Acknowledgments**
 Special thanks to **WolfSound** for providing the free, unrestricted, public quickstart JUCE/CMake template, which served as the foundation for this project.
 
+## **Common Issues & Fixes**
+
+This section documents some of the most common issues encountered when building and running **MidiPortal**, along with their fixes.
+
+---
+
+### **1️⃣ Missing Build Targets (`MidiPortalStandalone` or `MidiPortalShared`)**
+**Issue:**
+- Running `cmake --build out/build --target help` does not list `MidiPortalStandalone` or `MidiPortalShared`.
+- The project builds but the executable is missing.
+
+**Fix:**
+1. **Invalidate CLion's Cache & Restart**
+  - **File > Invalidate Caches & Restart**
+  - Check **"Clear CMake Cache"** and restart CLion.
+
+2. **Manually Clean CMake Cache & Rebuild**
+   ```bash
+   rm -rf out/build
+   cmake -G Ninja -S . -B out/build \
+       -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+       -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+       -DCMAKE_BUILD_TYPE=Debug
+   cmake --build out/build --parallel
+   ```
+
+3. **Verify the Target Exists**
+   ```bash
+   cmake --build out/build --target help
+   ```
+   If `MidiPortalStandalone` is still missing, check if `add_subdirectory(standalone)` exists in `CMakeLists.txt`.
+
+---
+
+### **2️⃣ Duplicate Target Error (`add_library cannot create target "MidiPortalShared"`)**
+**Issue:**
+- CMake throws an error that `MidiPortalShared` already exists.
+- Happens when `add_subdirectory(shared)` is uncommented in the root `CMakeLists.txt`.
+
+**Fix:**
+1. **Keep `add_subdirectory(shared)` Commented Out** (Only `standalone` and `plugin` should include `shared`).
+   ```cmake
+   # add_subdirectory(shared)  # Keep this commented!
+   ```
+
+2. **Modify `shared/CMakeLists.txt` to Prevent Duplicate Definitions**
+   ```cmake
+   if (NOT TARGET MidiPortalShared)
+       add_library(MidiPortalShared
+           source/MainComponent.cpp
+           source/MainComponent.h
+           source/MidiLogger.cpp
+           source/MidiLogger.h
+       )
+   endif()
+   ```
+
+---
+
+### **3️⃣ CLion CMake Cache Not Reloading**
+**Issue:**
+- Changes to `CMakeLists.txt` are not reflected in CLion.
+
+**Fix:**
+1. **Manually Reload CMake in CLion**
+  - **File > Reload CMake Project** (`Cmd + Shift + S`)
+  - If this fails, remove and re-add the CMake profile:
+    - **Settings > Build, Execution, Deployment > CMake**
+    - Delete the existing profile, then re-add it with:
+      - **CMake Generator**: `Ninja`
+      - **C++ Standard**: `C++23`
+      - **C Compiler**: `/opt/homebrew/opt/llvm/bin/clang`
+      - **C++ Compiler**: `/opt/homebrew/opt/llvm/bin/clang++`
+
+2. **Manually Run CMake Again**
+   ```bash
+   rm -rf cmake-build-debug
+   cmake -G Ninja -S . -B cmake-build-debug \
+       -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+       -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+       -DCMAKE_BUILD_TYPE=Debug
+   ```
+
+---
+
+### **4️⃣ CMake Fails to Detect Changes in `CMakeLists.txt`**
+**Issue:**
+- `cmake --build out/build --target help` still shows old configurations.
+
+**Fix:**
+1. **Remove the CMake Cache and Force a Full Rebuild**
+   ```bash
+   rm -rf CMakeCache.txt CMakeFiles/
+   cmake -G Ninja -S . -B out/build \
+       -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+       -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+       -DCMAKE_BUILD_TYPE=Debug
+   ```
+2. **If Using CLion, Restart and Reload the Project**
+  - **File > Invalidate Caches & Restart**
+  - **File > Reload CMake Project**
+
+---
+
+### **Final Notes**
+If you continue to have issues, ensure you:
+✅ Run `cmake --build out/build --target help` to verify targets.
+✅ Clear CMake and CLion caches if targets go missing.
+✅ Keep `add_subdirectory(shared)` **commented out** in the root `CMakeLists.txt`.
+
+This should help prevent and quickly fix the most common build issues in **MidiPortal**! 🚀
+
+
+
 ### **Final Thoughts**
 This README ensures that **anyone pulling the repository** has everything they need to **build, run, and understand** the purpose and future plans for **MidiPortal**.
