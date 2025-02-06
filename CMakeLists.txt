@@ -1,7 +1,5 @@
 include(cmake/cpm.cmake)
 # Mandatory line, sets the minimum version of CMake that should be used with this repository.
-# I specified 3.22 because I trust it. However, currently I have 3.26 installed on my machine.
-# To verify your version run
 # $ cmake --version
 cmake_minimum_required(VERSION 3.30.5)
 
@@ -9,7 +7,6 @@ cmake_minimum_required(VERSION 3.30.5)
 project(MidiPortal)
 
 # Always use the newest C++ standard on green-field projects if possible.
-# Currently, JUCE supports only C++ 20 cross-platform.
 set(CMAKE_CXX_STANDARD 23)
 
 # Specify the path to JUCE
@@ -41,7 +38,7 @@ CPMAddPackage(
 enable_testing()
 
 # Add shared target (shared logic used by both the plugin and standalone app)
-#add_subdirectory(shared)
+add_subdirectory(shared)
 
 # Add standalone target (for building the standalone application)
 add_subdirectory(standalone)
@@ -51,3 +48,7 @@ add_subdirectory(plugin)
 
 # Adds all the targets configured in the "test" folder.
 #add_subdirectory(test)
+
+# Near the top of the root CMakeLists.txt, add:
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+

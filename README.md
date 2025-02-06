@@ -10,7 +10,7 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - **Lightweight Design**: Optimized for performance with minimal system resource usage.
 - **Robust Tooling**: Effortless management of third-party dependencies using the CPM package manager.
 - **Unit Testing**: Ready-to-go unit testing with GoogleTest.
-- **Enforced Code Quality**: Highest warning levels with “treat warnings as errors” for maximum safety.
+- **Enforced Code Quality**: Highest warning levels with "treat warnings as errors" for maximum safety.
 
 ## **Roadmap**
 - Visualize incoming and outgoing MIDI messages.
@@ -243,3 +243,23 @@ This should help prevent and quickly fix the most common build issues in **MidiP
 
 ### **Final Thoughts**
 This README ensures that **anyone pulling the repository** has everything they need to **build, run, and understand** the purpose and future plans for **MidiPortal**.
+
+# Information specific to MidiPortal.Cursor
+
+## Project Structure
+
+- `shared/`: Common code used by both standalone and plugin versions
+  - MIDI processing logic
+  - Visualization components
+  - Rust FFI interface
+- `standalone/`: Standalone application target
+- `plugin/`: VST3/AU plugin target
+- `rust/`: Rust components for MIDI visualization
+
+## Building
+
+Prerequisites:
+- CMake 3.30.5 or higher
+- JUCE
+- Rust toolchain
+- Ninja build system

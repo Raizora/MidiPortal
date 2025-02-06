@@ -1,8 +1,8 @@
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_basics/juce_audio_basics.h> // Added for MidiMessage
+#include "juce_gui_basics/juce_gui_basics.h"
+#include "juce_audio_devices/juce_audio_devices.h"
+#include "juce_audio_basics/juce_audio_basics.h" // Added for MidiMessage
 #include <memory>
 #include <utility>
 #include <vector>

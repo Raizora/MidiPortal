@@ -20,8 +20,11 @@ public:
   // Public method to log MIDI messages
   void logMessage(const juce::MidiMessage& message);
 
+  void setDeviceName(const juce::String& name) { deviceName = name; }
+
 private:
   std::ofstream logFile; // File stream for logging
+  juce::String deviceName;
 };
 
 } // namespace MidiPortal

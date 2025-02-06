@@ -464,3 +464,14 @@ FodyWeavers.xsd
 *.sln.iml
 rust/target/.rustc_info.json
 .specstory/
+
+# JUCE specific
+**/JuceLibraryCode/
+**/.vst3/
+**/.aax/
+**/.au/
+**/.vst/
+*.vst3
+*.aax
+*.au
+*.vst

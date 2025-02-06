@@ -26,19 +26,28 @@ MidiLogger::~MidiLogger() {
 }
 
 void MidiLogger::logMessage(const juce::MidiMessage& message) {
-  if (logFile.is_open()) {
-    // Get the current timestamp
-    auto timestamp = juce::Time::getCurrentTime().toString(true, true);
-
-    // Write the timestamp and MIDI message description to the log file
-    logFile << "[" << timestamp.toStdString() << "] "
-            << message.getDescription().toStdString() << "\n";
-
-    // Flush the stream to ensure data is immediately written to the file
-    logFile.flush(); // X - Ensures logs are not buffered in memory
-  } else {
-    juce::Logger::writeToLog("Failed to write MIDI message: Log file not open");
-  }
+    juce::String description;
+    description << "MIDI [";
+    
+    // Identify message type
+    if (message.getRawData()[0] == 0xFE)
+        description << "Active Sensing";
+    else if (message.getRawData()[0] == 0xF0)
+        description << "SysEx";
+    else if (message.isNoteOn())
+        description << "Note On";
+    else if (message.isNoteOff())
+        description << "Note Off";
+    else
+        description << "Other";
+    
+    description << "] from device: " << deviceName << " - Raw: ";
+    
+    // Add raw data
+    for (int i = 0; i < message.getRawDataSize(); ++i)
+        description << juce::String::formatted("%02x ", message.getRawData()[i]);
+        
+    DBG(description);
 }
 
 } // namespace MidiPortal

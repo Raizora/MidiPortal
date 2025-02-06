@@ -14,9 +14,10 @@ namespace MidiPortal {
 class MainComponent::MidiInputCallback : public juce::MidiInputCallback {
 public:
   explicit MidiInputCallback(MainComponent& parentOwner) : owner(parentOwner) {}
-  void handleIncomingMidiMessage(juce::MidiInput* /*source*/,
+  void handleIncomingMidiMessage(juce::MidiInput* source,
                                  const juce::MidiMessage& message) override {
-      juce::MessageManager::callAsync([this, message]() { // Ensure thread safety for GUI updates
+      juce::MessageManager::callAsync([this, message, sourceName = source->getName()]() {
+          owner.midiLogger->setDeviceName(sourceName);
           owner.addMidiMessage(message);
       });
   }
@@ -35,12 +36,13 @@ MainComponent::MainComponent() {
   // Set up MIDI Input
   auto availableMidiDevices = juce::MidiInput::getAvailableDevices();
     for (auto& device : availableMidiDevices) {
-      juce::Logger::writeToLog("Initialized MIDI device: " + device.name); // Log the device name
+      juce::Logger::writeToLog("Initialized MIDI device: " + device.name);
 
       auto input = juce::MidiInput::openDevice(device.identifier, midiInputCallback.get());
       if (input != nullptr) {
-          midiInputs.add(std::move(input)); // Store active MIDI inputs
-          midiInputs.getLast()->start(); // Start receiving MIDI messages
+          midiLogger->setDeviceName(device.name);
+          midiInputs.add(std::move(input));
+          midiInputs.getLast()->start();
       }
   }
 
