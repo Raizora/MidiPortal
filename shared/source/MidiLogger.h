@@ -22,9 +22,24 @@ public:
 
   void setDeviceName(const juce::String& name) { deviceName = name; }
 
+  struct TimingStats {
+    double currentBPM;
+    double averageBPM;
+    double jitter;  // timing variation
+    int clockCount;
+    double lastClockTime;
+  };
+
+  // Get current timing statistics
+  TimingStats getTimingStats() const { return stats; }
+
 private:
   std::ofstream logFile; // File stream for logging
   juce::String deviceName;
+  TimingStats stats;
+  
+  // Helper method to update timing statistics
+  void updateTimingStats(const juce::MidiMessage& message, double timeStamp);
 };
 
 } // namespace MidiPortal
