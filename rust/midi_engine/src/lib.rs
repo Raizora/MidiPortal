@@ -1,3 +1,5 @@
+//! MidiPortal Rust Engine v0.1.1
+//! Core MIDI processing with safety features
 use std::ffi::CString;
 use thiserror::Error;
 
