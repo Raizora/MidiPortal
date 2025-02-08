@@ -70,6 +70,31 @@ impl RustMidiStats {
     }
 }
 
+// Safe resource cleanup
+impl Drop for RustMidiStats {
+    fn drop(&mut self) {
+        // Ensure any resources are properly cleaned up
+        self.note_tracker.clear();
+        // Add any other cleanup needed
+    }
+}
+
+// Safe cloning
+impl Clone for RustMidiStats {
+    fn clone(&self) -> Self {
+        Self {
+            current_bpm: self.current_bpm,
+            average_bpm: self.average_bpm,
+            jitter: self.jitter,
+            clock_count: self.clock_count,
+            last_clock_time: self.last_clock_time,
+            note_tracker: self.note_tracker.clone(),
+            mpe_config: self.mpe_config.clone(),
+            mpe_init: self.mpe_init.clone(),
+        }
+    }
+}
+
 // Add these constants at the top
 const MAX_MIDI_MESSAGE_SIZE: usize = 1024;  // Maximum sysex size
 const MIN_MIDI_MESSAGE_SIZE: usize = 1;     // Smallest possible MIDI message
