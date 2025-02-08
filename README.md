@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.0.2**
+# **MidiPortal - Version 0.0.5**
 **Peer through the MidiPortal to observe all traffic on your system.**
 
 MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real-time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
@@ -31,6 +31,13 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 
 ### **0.0.1**:
 - Initial setup with JUCE framework and basic MIDI message handling.
+
+### **0.0.5**:
+- Added Rust-powered MIDI processing engine
+- Implemented comprehensive safety features
+- Added FFI interface for C++/Rust integration
+- Added note tracking and MPE support
+- Established protected branch structure
 
 ## **Requirements**
 ### **System Requirements**
@@ -263,3 +270,29 @@ Prerequisites:
 - JUCE
 - Rust toolchain
 - Ninja build system
+
+## New Features
+- Rust-powered MIDI processing engine with:
+  - Comprehensive safety features and error handling
+  - FFI interface for C++ integration
+  - MIDI message validation and processing
+  - Note tracking and expression monitoring
+  - MPE (MIDI Polyphonic Expression) support
+
+## Architecture
+- `rust/midi_engine/`: Core MIDI processing in Rust
+  - `lib.rs`: FFI interface and safety features
+  - `midi_processor.rs`: MIDI message handling
+  - `note_tracker.rs`: Note and expression tracking
+  - `mpe.rs`: MPE configuration and zones
+
+## Safety Features
+- Input validation and bounds checking
+- Memory safety with proper FFI
+- Error handling and reporting
+- Resource cleanup (Drop implementations)
+- Safe state management (Clone support)
+
+## Branch Structure
+- `cursor-main`: Stable, protected branch with working features
+- `cursor-development`: Active development branch

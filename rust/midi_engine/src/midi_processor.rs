@@ -1,3 +1,5 @@
+//! MIDI message processing module v0.1.1
+//! Part of MidiPortal Rust Engine
 use crate::{MidiError, RustMidiStats};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
