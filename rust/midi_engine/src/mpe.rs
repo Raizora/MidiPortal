@@ -1,3 +1,6 @@
+//! MPE support module v0.1.1
+//! Part of MidiPortal Rust Engine
+
 use crate::MidiError;
 
 #[derive(Debug, Clone)]

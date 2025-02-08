@@ -295,4 +295,7 @@ impl ExpressionStats {
             self.pitch_bend_activity * 100.0
         )
     }
-} 
+}
+
+//! Note tracking module v0.1.1
+//! Part of MidiPortal Rust Engine 
