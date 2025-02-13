@@ -475,3 +475,4 @@ rust/target/.rustc_info.json
 *.aax
 *.au
 *.vst
+.cursor/
