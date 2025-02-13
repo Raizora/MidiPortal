@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <cstddef>
 
 extern "C" {
     // Match Rust's MidiStats struct

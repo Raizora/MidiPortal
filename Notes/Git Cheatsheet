@@ -1,0 +1,81 @@
+# Commonly Used Git Commands for MidiPortal Project
+
+## Branch Management
+cd ~/JUCE_Projects/MidiPortal        # Navigate to the MidiPortal Repository
+git branch                           # List local branches
+git branch -r                        # List remote branches
+git checkout experimental            # Switch to experimental branch
+git checkout main                    # Switch to main branch
+git checkout -b new-branch           # Create and switch to a new branch
+git fetch origin                      # Fetch latest updates from remote
+git pull origin experimental         # Pull latest changes from experimental branch
+git push origin experimental         # Push local changes to experimental branch
+
+## Committing Changes
+git status                           # Check status of working directory
+git add .                            # Stage all changes
+git add README.md                    # Stage specific file
+git commit -m "Commit message"       # Commit changes with a message
+git commit --amend                   # Edit last commit message
+
+## Pushing & Merging
+git push origin experimental         # Push changes to experimental branch
+git merge experimental               # Merge experimental into current branch
+git merge --abort                    # Abort a merge in case of conflicts
+
+## Resolving Conflicts
+git status                           # Identify conflicting files
+git add <file>                        # Mark conflict as resolved
+git commit                           # Commit resolved merge
+
+## Undoing Changes
+git reset --soft HEAD~1              # Undo last commit, keep changes staged
+git reset --hard HEAD~1              # Undo last commit, discard changes
+git checkout -- <file>                # Discard local changes in a file
+
+## Managing Remote Repositories
+git remote -v                        # Show remote repository URLs
+git remote add origin <repo-url>     # Add a new remote repository
+git push -u origin experimental      # Push experimental branch to remote and track it
+
+## Deleting Branches
+git branch -d old-branch             # Delete local branch
+git push origin --delete old-branch  # Delete remote branch
+
+## CI/CD Related
+git push origin experimental         # Push changes to trigger GitHub Actions
+git log --oneline --graph --all      # View commit history graph
+
+# ----------------------------------------
+# Git Command Combos for MidiPortal Project
+# ----------------------------------------
+
+# 1. Add, Commit, and Push All Changes
+git add . && git commit -m "Your commit message" && git push origin experimental
+
+# 2. Add a Specific File, Commit, and Push
+git add <file-name> && git commit -m "Updated <file-name>" && git push origin experimental
+
+# 3. Amend Last Commit and Push (If You Forgot Something)
+git commit --amend --no-edit && git push --force origin experimental
+
+# 4. Fetch Latest Changes and Merge Into Experimental
+git fetch origin && git merge origin/experimental
+
+# 5. Stash Changes, Pull Latest, Apply Stash
+git stash && git pull origin experimental && git stash pop
+
+# 6. Hard Reset to Remote (Dangerous, Be Careful!)
+git fetch origin && git reset --hard origin/experimental
+
+# 7. Create a New Branch, Switch to It, and Push to Remote
+git checkout -b new-feature-branch && git push -u origin new-feature-branch
+
+# 8. Delete a Local and Remote Branch
+git branch -d old-branch && git push origin --delete old-branch
+
+# 9. Undo Last Commit (But Keep Changes Staged)
+git reset --soft HEAD~1
+
+# 10. View Log Graph (Clean Commit History)
+git log --oneline --graph --all --decorate
