@@ -1,38 +1,37 @@
-# Clean the build directory
+# Build Commands
+
+# Initial Setup
+Build Rust library first:
+cd rust && cargo build --release && cd ..
+
+Configure and build with Ninja:
 rm -rf build
+cmake -B build -G Ninja
+cmake --build build
 
-# Create build directory
-mkdir build
+# Quick Rebuild (when only C++ changed)
+cmake --build build
 
-# Change to build directory
-cd build
+# Debug Build
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
 
-# Configure CMake in Debug mode
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+# Release Build
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 
-# Configure CMake in Release mode
-cmake -DCMAKE_BUILD_TYPE=Release ..
+# Run Commands
 
-# Build using all available CPU cores
-cmake --build . -j
+# Run Standalone (Debug)
+./build/standalone/MidiPortalStandalone
 
-# Build specifically in Debug configuration
-cmake --build . --config Debug
+# Run Standalone (Release)
+./build/standalone/MidiPortalStandalone_artefacts/Release/MidiPortalStandalone
 
-# Build specifically in Release configuration
-cmake --build . --config Release
+# Run Plugin (Debug)
+./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
-# Full clean rebuild in Debug mode
-rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && cmake --build . -j
-
-# Full clean rebuild in Release mode
-rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build . -j
-
-# Quick rebuild (without cleaning)
-cd build && cmake --build . -j
-
-# Run Debug build
-standalone/Debug/MidiPortal
-
-# Run Release build
-standalone/Release/MidiPortal
+# Run Plugin (Release)
+./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
