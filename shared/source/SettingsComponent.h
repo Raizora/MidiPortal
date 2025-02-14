@@ -2,7 +2,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 
-class SettingsComponent : public juce::Component {
+class SettingsComponent : public juce::Component,
+                         private juce::Timer  // To poll for device changes
+{
 public:
     struct MidiFilterSettings {
         bool logNotes = true;
@@ -19,60 +21,239 @@ public:
 
     SettingsComponent()
     {
-        // Input Devices Section
-        addAndMakeVisible(inputDevicesGroup);
-        inputDevicesGroup.setText("MIDI Input Devices");
+        // Set up viewport for scrolling
+        addAndMakeVisible(viewport);
+        viewport.setViewedComponent(new ContentComponent(), true);
         
-        // Logging Devices Section
-        addAndMakeVisible(loggingDevicesGroup);
-        loggingDevicesGroup.setText("Logging Devices");
+        // Start checking for device changes
+        startTimer(1000);  // Check every second
         
-        // Get available MIDI devices and create checkboxes
-        auto devices = juce::MidiInput::getAvailableDevices();
-        for (const auto& device : devices)
-        {
-            // Device listening checkbox
-            auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton(device.name));
-            listenBox->setToggleState(true, juce::dontSendNotification);
-            addAndMakeVisible(listenBox);
-            
-            // Device logging checkbox
-            auto* logBox = deviceLogBoxes.add(new juce::ToggleButton(device.name));
-            logBox->setToggleState(true, juce::dontSendNotification);
-            addAndMakeVisible(logBox);
-        }
-        
-        setSize(600, 400);
+        // Get content size and constrain to reasonable limits
+        auto* content = dynamic_cast<ContentComponent*>(viewport.getViewedComponent());
+        int preferredHeight = juce::jmin(content->getHeight(), 800);  // Max 800px tall
+        setSize(600, preferredHeight);
     }
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(10);
-        
-        // Layout groups
-        auto inputArea = area.removeFromTop(200);
-        inputDevicesGroup.setBounds(inputArea);
-        
-        auto loggingArea = area.removeFromTop(200);
-        loggingDevicesGroup.setBounds(loggingArea);
-        
-        // Layout checkboxes
-        auto inputInnerArea = inputArea.reduced(10);
-        auto loggingInnerArea = loggingArea.reduced(10);
-        
-        for (int i = 0; i < deviceListenBoxes.size(); ++i)
+        viewport.setBounds(getLocalBounds());
+    }
+
+    void timerCallback() override
+    {
+        auto* content = dynamic_cast<ContentComponent*>(viewport.getViewedComponent());
+        if (content != nullptr)
         {
-            deviceListenBoxes[i]->setBounds(inputInnerArea.removeFromTop(24));
-            deviceLogBoxes[i]->setBounds(loggingInnerArea.removeFromTop(24));
+            content->checkDeviceListChanges();
         }
     }
 
 private:
-    juce::GroupComponent inputDevicesGroup;
-    juce::GroupComponent loggingDevicesGroup;
-    
-    juce::OwnedArray<juce::ToggleButton> deviceListenBoxes;
-    juce::OwnedArray<juce::ToggleButton> deviceLogBoxes;
-    
+    // Inner content component that holds all the controls
+    class ContentComponent : public juce::Component
+    {
+    public:
+        ContentComponent()
+        {
+            // Input Devices Section
+            addAndMakeVisible(inputDevicesGroup);
+            inputDevicesGroup.setText("MIDI Input Devices");
+            inputDevicesGroup.setColour(juce::GroupComponent::textColourId, juce::Colours::black);
+            
+            // Logging Devices Section
+            addAndMakeVisible(loggingDevicesGroup);
+            loggingDevicesGroup.setText("Logging Devices");
+            loggingDevicesGroup.setColour(juce::GroupComponent::textColourId, juce::Colours::black);
+            
+            // Input Filters Section
+            addAndMakeVisible(inputFiltersGroup);
+            inputFiltersGroup.setText("Input Filters");
+            inputFiltersGroup.setColour(juce::GroupComponent::textColourId, juce::Colours::black);
+            
+            // Logging Filters Section
+            addAndMakeVisible(loggingFiltersGroup);
+            loggingFiltersGroup.setText("Logging Filters");
+            loggingFiltersGroup.setColour(juce::GroupComponent::textColourId, juce::Colours::black);
+            
+            // Get available MIDI devices and create checkboxes
+            auto devices = juce::MidiInput::getAvailableDevices();
+            for (const auto& device : devices)
+            {
+                // Device listening checkbox
+                auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton(device.name));
+                listenBox->setToggleState(true, juce::dontSendNotification);
+                addAndMakeVisible(listenBox);
+                
+                // Device logging checkbox
+                auto* logBox = deviceLogBoxes.add(new juce::ToggleButton(device.name));
+                logBox->setToggleState(true, juce::dontSendNotification);
+                addAndMakeVisible(logBox);
+            }
+            
+            // Add filter checkboxes for both input and logging
+            for (const auto& type : messageTypes)
+            {
+                // Input filter checkbox
+                auto* inputBox = inputFilterBoxes.add(new juce::ToggleButton(type));
+                inputBox->setToggleState(true, juce::dontSendNotification);
+                addAndMakeVisible(inputBox);
+                
+                // Logging filter checkbox
+                auto* logBox = loggingFilterBoxes.add(new juce::ToggleButton(type));
+                logBox->setToggleState(true, juce::dontSendNotification);
+                addAndMakeVisible(logBox);
+            }
+            
+            // Set colors for device checkboxes
+            for (auto* box : deviceListenBoxes)
+                box->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+            for (auto* box : deviceLogBoxes)
+                box->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+            
+            // Set colors for filter checkboxes
+            for (auto* box : inputFilterBoxes)
+                box->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+            for (auto* box : loggingFilterBoxes)
+                box->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+            
+            // Calculate total height needed
+            int totalHeight = 40;  // Initial padding
+            totalHeight += static_cast<int>(deviceListenBoxes.size()) * 24 + 60;
+            totalHeight += static_cast<int>(deviceLogBoxes.size()) * 24 + 60;
+            totalHeight += static_cast<int>((messageTypes.size() + 2) / 3) * 24 + 60;
+            totalHeight += static_cast<int>((messageTypes.size() + 2) / 3) * 24 + 60;  // Logging filters section
+            
+            setSize(580, totalHeight);  // Set content size
+        }
+
+        void resized() override
+        {
+            auto area = getLocalBounds().reduced(10);
+            
+            // Calculate device section heights based on content
+            int deviceRowHeight = 24;
+            int devicePadding = 60;
+            int deviceSectionHeight = (deviceListenBoxes.size() * deviceRowHeight) + devicePadding;
+            
+            // Calculate filter section height
+            int filterRowHeight = 24;
+            int filterPadding = 60;
+            int filterRows = static_cast<int>((messageTypes.size() + 2) / 3);  // +2 for rounding up
+            int filterSectionHeight = (filterRows * filterRowHeight) + filterPadding;
+            
+            auto inputDeviceArea = area.removeFromTop(deviceSectionHeight);
+            inputDevicesGroup.setBounds(inputDeviceArea);
+            
+            auto loggingDeviceArea = area.removeFromTop(deviceSectionHeight);
+            loggingDevicesGroup.setBounds(loggingDeviceArea);
+            
+            // Layout filter sections
+            auto inputFilterArea = area.removeFromTop(filterSectionHeight);
+            inputFiltersGroup.setBounds(inputFilterArea);
+            
+            auto loggingFilterArea = area.removeFromTop(filterSectionHeight);
+            loggingFiltersGroup.setBounds(loggingFilterArea);
+            
+            // Layout device checkboxes
+            layoutDeviceBoxes(deviceListenBoxes, inputDeviceArea.reduced(10));
+            layoutDeviceBoxes(deviceLogBoxes, loggingDeviceArea.reduced(10));
+            
+            // Layout filter checkboxes
+            layoutFilterBoxes(inputFilterBoxes, inputFilterArea.reduced(10));
+            layoutFilterBoxes(loggingFilterBoxes, loggingFilterArea.reduced(10));
+        }
+
+        void checkDeviceListChanges()
+        {
+            auto currentDevices = juce::MidiInput::getAvailableDevices();
+            
+            // Check if device list has changed
+            bool devicesChanged = currentDevices.size() != deviceListenBoxes.size();
+            if (!devicesChanged)
+            {
+                for (int i = 0; i < currentDevices.size(); ++i)
+                {
+                    if (deviceListenBoxes[i]->getButtonText() != currentDevices[i].name)
+                    {
+                        devicesChanged = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Update UI if needed
+            if (devicesChanged)
+            {
+                deviceListenBoxes.clear(true);
+                deviceLogBoxes.clear(true);
+                
+                for (const auto& device : currentDevices)
+                {
+                    auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton(device.name));
+                    listenBox->setToggleState(true, juce::dontSendNotification);
+                    listenBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+                    addAndMakeVisible(listenBox);
+                    
+                    auto* logBox = deviceLogBoxes.add(new juce::ToggleButton(device.name));
+                    logBox->setToggleState(true, juce::dontSendNotification);
+                    logBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+                    addAndMakeVisible(logBox);
+                }
+                
+                resized();  // Relayout with new devices
+            }
+        }
+
+    private:
+        // Helper to layout device checkboxes vertically
+        void layoutDeviceBoxes(juce::OwnedArray<juce::ToggleButton>& boxes, juce::Rectangle<int> area)
+        {
+            area.removeFromTop(10);  // Add padding at top
+            for (int i = 0; i < boxes.size(); ++i)
+            {
+                boxes[i]->setBounds(area.removeFromTop(24));
+            }
+        }
+        
+        // Helper to layout filter checkboxes in a grid
+        void layoutFilterBoxes(juce::OwnedArray<juce::ToggleButton>& boxes, juce::Rectangle<int> area)
+        {
+            area.removeFromTop(10);  // Add padding at top
+            int boxesPerRow = 3;
+            int boxWidth = area.getWidth() / boxesPerRow;
+            
+            for (int i = 0; i < boxes.size(); ++i)
+            {
+                int row = i / boxesPerRow;
+                int col = i % boxesPerRow;
+                boxes[i]->setBounds(area.getX() + col * boxWidth,
+                                  area.getY() + row * 24,
+                                  boxWidth - 10,
+                                  20);
+            }
+        }
+        
+        // Groups
+        juce::GroupComponent inputDevicesGroup;
+        juce::GroupComponent loggingDevicesGroup;
+        juce::GroupComponent inputFiltersGroup;
+        juce::GroupComponent loggingFiltersGroup;
+        
+        // Device checkboxes
+        juce::OwnedArray<juce::ToggleButton> deviceListenBoxes;
+        juce::OwnedArray<juce::ToggleButton> deviceLogBoxes;
+        
+        // Filter checkboxes
+        juce::OwnedArray<juce::ToggleButton> inputFilterBoxes;
+        juce::OwnedArray<juce::ToggleButton> loggingFilterBoxes;
+        
+        const std::vector<juce::String> messageTypes = {
+            "Notes", "Control Change", "Program Change",
+            "Pitch Bend", "Aftertouch", "Clock",
+            "System Common", "System Exclusive"
+        };
+    };
+
+    juce::Viewport viewport;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 }; 

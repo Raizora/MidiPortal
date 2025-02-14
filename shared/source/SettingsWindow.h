@@ -10,9 +10,15 @@ public:
     {
         auto* content = new SettingsComponent();
         setContentOwned(content, true);
-        centreWithSize(400, 300);
+        
+        // Set minimum size
+        setResizeLimits(400, 300, 1200, 1000);  // min width, min height, max width, max height
+        
+        // Center on screen with content's preferred size
+        centreWithSize(content->getWidth(), content->getHeight());
+        
         setVisible(true);
-        setResizable(true, true);
+        setResizable(true, false);  // Resizable but no resize border
     }
 
     void closeButtonPressed() override
