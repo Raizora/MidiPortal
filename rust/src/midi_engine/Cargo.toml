@@ -1,0 +1,18 @@
+[package]
+name = "midi_engine"
+version = "0.1.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# For FFI
+cxx = "1.0"
+# For MIDI message handling
+midly = "0.5"
+# For logging
+log = "0.4"
+# For error handling
+thiserror = "1.0"
+env_logger = "0.10"  # For testing

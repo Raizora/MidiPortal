@@ -35,27 +35,27 @@ if(NOT TARGET MidiPortalShared)
     # Debug: Print the extracted target directory
     message("Rust library target directory: ${RUST_LIBRARY_PATH}")
 
-    # Locate the Rust library
-    find_library(MIDI_VISUALS_LIB NAMES midi_visuals PATHS "${RUST_LIBRARY_PATH}/release" NO_DEFAULT_PATH)
+    # Add these debug messages
+    message(STATUS "Looking for Rust library in: ${CMAKE_SOURCE_DIR}/rust/target/release")
+    find_library(MIDI_VISUALS_LIB 
+        NAMES midi_visuals
+        PATHS "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
+        REQUIRED
+        NO_DEFAULT_PATH
+    )
+    message(STATUS "MIDI_VISUALS_LIB = ${MIDI_VISUALS_LIB}")
 
-    # Check if the library was found
-    if (NOT MIDI_VISUALS_LIB)
-        message(FATAL_ERROR "Rust library 'midi_visuals' not found at ${RUST_LIBRARY_PATH}/release")
-    else()
-        message("Rust library 'midi_visuals' found at ${MIDI_VISUALS_LIB}")
-    endif()
-
-    # Link the Rust library to the shared target
-    target_link_libraries(MidiPortalShared PRIVATE ${MIDI_VISUALS_LIB})
-
-    # Link JUCE modules to the shared library
+    # Link libraries in correct order
     target_link_libraries(MidiPortalShared
-            PUBLIC
-            juce::juce_gui_basics
-            juce::juce_audio_processors
-            juce::juce_audio_devices
-            juce::juce_analytics
-            juce::juce_audio_utils
+        PRIVATE
+        ${MIDI_VISUALS_LIB}  # Must be first
+        PUBLIC
+        juce::juce_core
+        juce::juce_gui_basics
+        juce::juce_audio_processors
+        juce::juce_audio_devices
+        juce::juce_analytics
+        juce::juce_audio_utils
     )
 
     target_compile_definitions(MidiPortalShared
@@ -71,5 +71,17 @@ if(NOT TARGET MidiPortalShared)
         JUCE_MODULE_AVAILABLE_juce_audio_processors=1
         JUCE_MODULE_AVAILABLE_juce_audio_utils=1
         JUCE_MODULE_AVAILABLE_juce_analytics=1
+    )
+
+    # Make sure RustMidiEngine.h is included in the build
+    target_sources(MidiPortalShared 
+        PRIVATE
+        source/RustMidiEngine.h
+    )
+
+    # Add the Rust library directory to runtime path
+    set_target_properties(MidiPortalShared PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
     )
 endif()

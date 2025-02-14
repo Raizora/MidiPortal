@@ -1,4 +1,9 @@
+mod midi_engine;  // Add this at the top
+
 use rand::Rng; // Import the random number generator
+
+// Re-export what we need
+pub use midi_engine::{process_midi_message, RustMidiStats, ProcessResult};
 
 #[repr(C)] // Ensures C-compatible memory layout
 pub struct ColorWithOpacity {

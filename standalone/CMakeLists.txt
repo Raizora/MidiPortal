@@ -80,6 +80,7 @@ target_compile_definitions(MidiPortalStandalone
 # Link the shared library, JUCE modules, GTK3, and WebKit2 to the standalone app
 target_link_libraries(MidiPortalStandalone
         PRIVATE
+        ${MIDI_VISUALS_LIB}  # Make sure this is first
         MidiPortalShared
         juce::juce_analytics
         juce::juce_audio_basics
