@@ -3,7 +3,8 @@
 #include <map>
 
 class SettingsComponent : public juce::Component,
-                         private juce::Timer  // To poll for device changes
+                         private juce::Timer,
+                         private juce::Button::Listener
 {
 public:
     struct MidiFilterSettings {
@@ -21,6 +22,21 @@ public:
 
     SettingsComponent()
     {
+        // Add control buttons
+        addAndMakeVisible(rescanButton);
+        addAndMakeVisible(applyButton);
+        addAndMakeVisible(autoScanToggle);
+        
+        rescanButton.setColour(juce::TextButton::textColourOffId, juce::Colours::blueviolet);
+        applyButton.setColour(juce::TextButton::textColourOffId, juce::Colours::blueviolet);
+        autoScanToggle.setColour(juce::ToggleButton::textColourId, juce::Colours::blueviolet);
+        
+        rescanButton.addListener(this);
+        applyButton.addListener(this);
+        autoScanToggle.addListener(this);
+        
+        autoScanToggle.setToggleState(true, juce::dontSendNotification);
+        
         // Set up viewport for scrolling
         addAndMakeVisible(viewport);
         viewport.setViewedComponent(new ContentComponent(), true);
@@ -36,7 +52,17 @@ public:
 
     void resized() override
     {
-        viewport.setBounds(getLocalBounds());
+        auto area = getLocalBounds().reduced(10);
+        
+        // Layout control buttons at bottom
+        auto buttonArea = area.removeFromBottom(40);
+        auto toggleArea = buttonArea.removeFromRight(200);
+        
+        rescanButton.setBounds(buttonArea.removeFromLeft(150).reduced(5));
+        applyButton.setBounds(buttonArea.removeFromLeft(150).reduced(5));
+        autoScanToggle.setBounds(toggleArea.reduced(5));
+        
+        viewport.setBounds(area);
     }
 
     void timerCallback() override
@@ -46,6 +72,65 @@ public:
         {
             content->checkDeviceListChanges();
         }
+    }
+
+    void buttonClicked(juce::Button* button) override
+    {
+        if (button == &rescanButton)
+        {
+            auto* content = dynamic_cast<ContentComponent*>(viewport.getViewedComponent());
+            if (content)
+            {
+                // Schedule the device check after a short delay
+                juce::Timer::callAfterDelay(100, [this, content]()
+                {
+                    content->checkDeviceListChanges();
+                    showDeviceStatus();
+                });
+            }
+        }
+        else if (button == &applyButton)
+        {
+            applySettings();
+        }
+        else if (button == &autoScanToggle)
+        {
+            if (autoScanToggle.getToggleState())
+                startTimer(1000);
+            else
+                stopTimer();
+        }
+    }
+
+    void showDeviceStatus()
+    {
+        juce::String message;
+        auto devices = juce::MidiInput::getAvailableDevices();
+        
+        if (devices.isEmpty())
+            message = "No MIDI devices found";
+        else
+        {
+            message = "Connected MIDI devices:\n\n";
+            for (auto& device : devices)
+                message += "• " + device.name + "\n";
+        }
+        
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::MessageBoxIconType::InfoIcon,
+            "MIDI Device Status",
+            message
+        );
+    }
+
+    void applySettings()
+    {
+        // TODO: Apply settings to MainComponent
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::MessageBoxIconType::InfoIcon,
+            "Settings Applied",
+            "MIDI device and filter settings have been updated."
+        );
     }
 
 private:
@@ -165,15 +250,40 @@ private:
 
         void checkDeviceListChanges()
         {
+            // Ensure we're not in the middle of a device update
+            static bool isChecking = false;
+            if (isChecking)
+                return;
+            
+            isChecking = true;
+            juce::ScopedValueSetter<bool> scope(isChecking, false);  // Auto-reset when function exits
+            
+            if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+            {
+                juce::MessageManager::callAsync([this]() { checkDeviceListChanges(); });
+                return;
+            }
+            
+            if (!isVisible())  // Don't check if component isn't visible
+                return;
+            
             auto currentDevices = juce::MidiInput::getAvailableDevices();
             
             // Check if device list has changed
-            bool devicesChanged = currentDevices.size() != deviceListenBoxes.size();
-            if (!devicesChanged)
+            bool devicesChanged = static_cast<int>(currentDevices.size()) != deviceListenBoxes.size();
+            if (!devicesChanged && !deviceListenBoxes.isEmpty())
             {
-                for (int i = 0; i < currentDevices.size(); ++i)
+                int minSize = static_cast<int>(currentDevices.size());
+                if (deviceListenBoxes.size() < minSize)
+                    minSize = deviceListenBoxes.size();
+                
+                for (int i = 0; i < minSize; ++i)
                 {
-                    if (deviceListenBoxes[i]->getButtonText() != currentDevices[i].name)
+                    if (deviceListenBoxes[i] != nullptr && 
+                        deviceListenBoxes[i]->getButtonText().isNotEmpty() &&
+                        i < currentDevices.size() &&  // Bounds check
+                        currentDevices[i].name.isNotEmpty() &&
+                        deviceListenBoxes[i]->getButtonText() != currentDevices[i].name)
                     {
                         devicesChanged = true;
                         break;
@@ -184,6 +294,7 @@ private:
             // Update UI if needed
             if (devicesChanged)
             {
+                juce::MessageManagerLock mml;  // Ensure UI updates happen on message thread
                 deviceListenBoxes.clear(true);
                 deviceLogBoxes.clear(true);
                 
@@ -255,5 +366,9 @@ private:
     };
 
     juce::Viewport viewport;
+    juce::TextButton rescanButton {"Rescan MIDI Devices"};
+    juce::TextButton applyButton {"Apply Changes"};
+    juce::ToggleButton autoScanToggle {"Auto-scan for devices"};
+    //juce::Label statusLabel;  // For showing status messages
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 }; 
