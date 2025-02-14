@@ -307,3 +307,29 @@ Prerequisites:
 ## Branch Structure
 - `cursor-main`: Stable, protected branch with working features
 - `cursor-development`: Active development branch
+
+## New Features
+- Rust-powered MIDI processing engine with:
+  - Comprehensive safety features and error handling
+  - FFI interface for C++ integration
+  - MIDI message validation and processing
+  - Note tracking and expression monitoring
+  - MPE (MIDI Polyphonic Expression) support
+
+## Architecture
+- `rust/midi_engine/`: Core MIDI processing in Rust
+  - `lib.rs`: FFI interface and safety features
+  - `midi_processor.rs`: MIDI message handling
+  - `note_tracker.rs`: Note and expression tracking
+  - `mpe.rs`: MPE configuration and zones
+
+## Safety Features
+- Input validation and bounds checking
+- Memory safety with proper FFI
+- Error handling and reporting
+- Resource cleanup (Drop implementations)
+- Safe state management (Clone support)
+
+## Branch Structure
+- `cursor-main`: Stable, protected branch with working features
+- `cursor-development`: Active development branch
