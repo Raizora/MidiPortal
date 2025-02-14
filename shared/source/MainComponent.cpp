@@ -7,6 +7,7 @@
 #include <fstream> // Include for file operations
 #include <iostream> // Include for console output
 #include "MidiLogger.h"
+#include "SettingsComponent.h"
 
 namespace MidiPortal {
 
@@ -32,6 +33,11 @@ MainComponent::MainComponent() {
   midiInputCallback = std::make_unique<MidiInputCallback>(*this);
   midiLogger = std::make_unique<MidiPortal::MidiLogger>("MidiTraffic.log");
 
+  // Set up menu bar
+  juce::MenuBarModel::setMacMainMenu(this);
+  
+  // Initialize settings component
+  settingsComponent = std::make_unique<SettingsComponent>();
 
   // Set up MIDI Input
   auto availableMidiDevices = juce::MidiInput::getAvailableDevices();
@@ -57,12 +63,27 @@ MainComponent::MainComponent() {
 #if JUCE_MAC
   juce::Process::setDockIconVisible(true); // Ensures the app is visible in the macOS dock
   juce::Process::makeForegroundProcess(); // Activates the app explicitly
+
+  // Set up Mac main menu
+  juce::PopupMenu applicationMenu;
+  applicationMenu.addItem(1, "Preferences...", true, false);
+  juce::MenuBarModel::setMacMainMenu(this, &applicationMenu);
 #endif
-
-
 }
 
-MainComponent::~MainComponent() = default;
+MainComponent::~MainComponent() {
+  // Clean up menu bar
+  juce::MenuBarModel::setMacMainMenu(nullptr);
+  
+  // Clean up MIDI inputs
+  midiInputs.clear();
+  
+  // The rest will be cleaned up automatically by unique_ptr destructors:
+  // - midiInputCallback
+  // - midiLogger
+  // - settingsComponent
+  // - settingsWindow
+}
 
 void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
     juce::MessageManager::callAsync([this, message]() {

@@ -7,27 +7,16 @@
 #include <utility>
 #include <vector>
 #include "MidiLogger.h"
-
-// Define C-compatible structs
-struct ColorWithOpacity {
-  float hue;
-  float saturation;
-  float value;
-  float opacity;
-};
-
-struct Position {
-  float x;
-  float y;
-};
-
-// Use C-compatible linkage
-extern "C" ColorWithOpacity midi_note_to_color_with_opacity(uint8_t note, uint8_t velocity);
-extern "C" Position generate_position();
+#include "../include/RustBindings.h"
+#include "SettingsComponent.h"
+#include "SettingsWindow.h"
+#include <juce_gui_extra/juce_gui_extra.h>  // For DialogWindow
 
 namespace MidiPortal {
 
-class MainComponent : public juce::Component {
+class MainComponent : public juce::Component,
+                     public juce::MenuBarModel  // Add this
+{
 public:
   MainComponent();
   ~MainComponent() override;
@@ -35,6 +24,26 @@ public:
   void paint(juce::Graphics& g) override;
   void resized() override;
   void addMidiMessage(const juce::MidiMessage& message);
+
+  // Add these required MenuBarModel methods
+  juce::StringArray getMenuBarNames() override
+  {
+    return { "File" };
+  }
+  
+  juce::PopupMenu getMenuForIndex(int /*index*/, const juce::String& /*name*/) override
+  {
+    return {};  // Empty menu for now until we have file operations
+  }
+  
+  void menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/) override
+  {
+    if (menuItemID == 1)  // Preferences
+    {
+      if (settingsWindow == nullptr)
+        settingsWindow.reset(new SettingsWindow("MidiPortal Preferences", settingsComponent));
+    }
+  }
 
 private:
   // Forward declare the MidiInputCallback class
@@ -66,6 +75,9 @@ private:
 
   std::vector<TimestampedMidiMessage> midiMessages;
   static constexpr size_t maxMessages = 1000; // Maximum number of messages to store
+
+  std::unique_ptr<SettingsComponent> settingsComponent;
+  std::unique_ptr<juce::DialogWindow> settingsWindow;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

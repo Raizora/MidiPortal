@@ -42,13 +42,18 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 ## **Requirements**
 ### **System Requirements**
 - **C++**: Version 23 or higher.
-- **JUCE Framework**: Version 8.0.4.
+- **JUCE Framework**: Version 8.0.6.
 - **CMake**: Version 3.31.5 or higher.
 - **Rust**: Stable version 1.84 or higher.
 - **Cargo**: Rust's package manager and build system.
 - **Ninja**: Version 1.12.1 or higher (for fast builds).
 - **CLion (Recommended)**: IDE for development.
 - **Python 3.13.2 (Optional)**: For pre-commit hooks.
+- **SQLite**: Version 3.49.0 (for data storage)
+- **OpenSSL**: Version 3.4.1
+- **Node.js**: Version 23.7.0 (for build scripts)
+- **XZ Utils**: Version 5.6.4
+- **LibX11**: Version 1.8.11
 
 ## **Getting Started**
 
