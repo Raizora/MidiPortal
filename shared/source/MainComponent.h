@@ -41,7 +41,7 @@ public:
     if (menuItemID == 1)  // Preferences
     {
       if (settingsWindow == nullptr)
-        settingsWindow.reset(new SettingsWindow("MidiPortal Preferences", settingsComponent));
+        settingsWindow.reset(new SettingsWindow("MidiPortal Preferences"));
     }
   }
 

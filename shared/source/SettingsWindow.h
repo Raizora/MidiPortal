@@ -5,10 +5,11 @@
 class SettingsWindow : public juce::DialogWindow
 {
 public:
-    SettingsWindow(const juce::String& name, std::unique_ptr<SettingsComponent>& settings)
+    SettingsWindow(const juce::String& name)
         : DialogWindow(name, juce::Colours::lightgrey, true, true)
     {
-        setContentOwned(settings.get(), true);
+        auto* content = new SettingsComponent();
+        setContentOwned(content, true);
         centreWithSize(400, 300);
         setVisible(true);
         setResizable(true, true);
