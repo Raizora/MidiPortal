@@ -79,3 +79,18 @@ git reset --soft HEAD~1
 
 # 10. View Log Graph (Clean Commit History)
 git log --oneline --graph --all --decorate
+
+1. Create a Temporary Branch: This will save your current state.
+    git checkout -b temp-save
+
+2. Continue Working: You can now make changes, try new things, etc.
+
+3. Revert to the Saved State: If you want to go back to the saved state, you can switch back to the temporary branch.
+   git checkout temp-save
+
+4. Save Again or Merge Changes: If you decide to keep the changes you made, you can merge them back into your main branch or save them in the temporary branch.
+   git checkout main
+   git merge temp-save
+
+5. Delete the Temporary Branch: Once you're done and no longer need the temporary save, you can delete the branch.
+   git branch -d temp-save
