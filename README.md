@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 # **MidiPortal - Version 0.0.6**
+=======
 **Peer through the MidiPortal to observe all traffic on your system.**
 
 MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real-time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
@@ -40,12 +41,15 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - Added note tracking and MPE support
 - Established protected branch structure
 
+<<<<<<< HEAD
 ### **0.0.6**:
 - Added macOS menu bar integration
 - Added preferences window with device selection
 - Implemented proper memory management
 - Added foundation for MIDI filtering system
 
+=======
+>>>>>>> cursor-main
 ## **Requirements**
 ### **System Requirements**
 - **C++**: Version 23 or higher.
@@ -308,6 +312,7 @@ Prerequisites:
 ## Branch Structure
 - `cursor-main`: Stable, protected branch with working features
 - `cursor-development`: Active development branch
+<<<<<<< HEAD
 
 ## New Features
 - Rust-powered MIDI processing engine with:
