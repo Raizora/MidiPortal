@@ -1,0 +1,37 @@
+# Build Commands
+
+# Initial Setup
+Build Rust library first:
+cd rust && cargo build --release && cd ..
+
+Configure and build with Ninja:
+rm -rf build
+cmake -B build -G Ninja
+cmake --build build
+
+# Quick Rebuild (when only C++ changed)
+cmake --build build
+
+# Debug Build
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+
+# Release Build
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+
+# Run Commands
+
+# Run Standalone (Debug)
+./build/standalone/MidiPortalStandalone
+
+# Run Standalone (Release)
+./build/standalone/MidiPortalStandalone_artefacts/Release/MidiPortalStandalone
+
+# Run Plugin (Debug)
+./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Run Plugin (Release)
+./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin

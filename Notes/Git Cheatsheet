@@ -4,12 +4,12 @@
 cd ~/JUCE_Projects/MidiPortal        # Navigate to the MidiPortal Repository
 git branch                           # List local branches
 git branch -r                        # List remote branches
-git checkout experimental            # Switch to experimental branch
+git checkout cursor-development            # Switch to cursor-development branch
 git checkout main                    # Switch to main branch
 git checkout -b new-branch           # Create and switch to a new branch
 git fetch origin                      # Fetch latest updates from remote
-git pull origin experimental         # Pull latest changes from experimental branch
-git push origin experimental         # Push local changes to experimental branch
+git pull origin cursor-development         # Pull latest changes from cursor-development branch
+git push origin cursor-development         # Push local changes to cursor-development branch
 
 ## Committing Changes
 git status                           # Check status of working directory
@@ -19,8 +19,8 @@ git commit -m "Commit message"       # Commit changes with a message
 git commit --amend                   # Edit last commit message
 
 ## Pushing & Merging
-git push origin experimental         # Push changes to experimental branch
-git merge experimental               # Merge experimental into current branch
+git push origin cursor-development         # Push changes to cursor-development branch
+git merge cursor-development               # Merge cursor-development into current branch
 git merge --abort                    # Abort a merge in case of conflicts
 
 ## Resolving Conflicts
@@ -36,14 +36,14 @@ git checkout -- <file>                # Discard local changes in a file
 ## Managing Remote Repositories
 git remote -v                        # Show remote repository URLs
 git remote add origin <repo-url>     # Add a new remote repository
-git push -u origin experimental      # Push experimental branch to remote and track it
+git push -u origin cursor-development      # Push cursor-development branch to remote and track it
 
 ## Deleting Branches
 git branch -d old-branch             # Delete local branch
 git push origin --delete old-branch  # Delete remote branch
 
 ## CI/CD Related
-git push origin experimental         # Push changes to trigger GitHub Actions
+git push origin cursor-development         # Push changes to trigger GitHub Actions
 git log --oneline --graph --all      # View commit history graph
 
 # ----------------------------------------
@@ -51,22 +51,22 @@ git log --oneline --graph --all      # View commit history graph
 # ----------------------------------------
 
 # 1. Add, Commit, and Push All Changes
-git add . && git commit -m "Your commit message" && git push origin experimental
+git add . && git commit -m "Your commit message" && git push origin cursor-development
 
 # 2. Add a Specific File, Commit, and Push
-git add <file-name> && git commit -m "Updated <file-name>" && git push origin experimental
+git add <file-name> && git commit -m "Updated <file-name>" && git push origin cursor-development
 
 # 3. Amend Last Commit and Push (If You Forgot Something)
-git commit --amend --no-edit && git push --force origin experimental
+git commit --amend --no-edit && git push --force origin cursor-development
 
-# 4. Fetch Latest Changes and Merge Into Experimental
-git fetch origin && git merge origin/experimental
+# 4. Fetch Latest Changes and Merge Into cursor-development
+git fetch origin && git merge origin/cursor-development
 
 # 5. Stash Changes, Pull Latest, Apply Stash
-git stash && git pull origin experimental && git stash pop
+git stash && git pull origin cursor-development && git stash pop
 
 # 6. Hard Reset to Remote (Dangerous, Be Careful!)
-git fetch origin && git reset --hard origin/experimental
+git fetch origin && git reset --hard origin/cursor-development
 
 # 7. Create a New Branch, Switch to It, and Push to Remote
 git checkout -b new-feature-branch && git push -u origin new-feature-branch

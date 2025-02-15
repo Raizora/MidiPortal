@@ -1,4 +1,6 @@
-# **MidiPortal - Version 0.0.5**
+<<<<<<< HEAD
+# **MidiPortal - Version 0.0.6**
+=======
 **Peer through the MidiPortal to observe all traffic on your system.**
 
 MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize and analyze MIDI traffic in real-time. Designed as a lightweight tool, MidiPortal serves as the foundation for future enhancements, ultimately building toward the full iLumidi application.
@@ -39,16 +41,30 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - Added note tracking and MPE support
 - Established protected branch structure
 
+<<<<<<< HEAD
+### **0.0.6**:
+- Added macOS menu bar integration
+- Added preferences window with device selection
+- Implemented proper memory management
+- Added foundation for MIDI filtering system
+
+=======
+>>>>>>> cursor-main
 ## **Requirements**
 ### **System Requirements**
 - **C++**: Version 23 or higher.
-- **JUCE Framework**: Version 8.0.4.
-- **CMake**: Version 3.26 or higher (minimum of 3.30.5 recommended).
+- **JUCE Framework**: Version 8.0.6.
+- **CMake**: Version 3.31.5 or higher.
 - **Rust**: Stable version 1.84 or higher.
 - **Cargo**: Rust's package manager and build system.
-- **Ninja**: A fast build system for CMake.
+- **Ninja**: Version 1.12.1 or higher (for fast builds).
 - **CLion (Recommended)**: IDE for development.
-- **Python (Optional)**: For pre-commit hooks.
+- **Python 3.13.2 (Optional)**: For pre-commit hooks.
+- **SQLite**: Version 3.49.0 (for data storage)
+- **OpenSSL**: Version 3.4.1
+- **Node.js**: Version 23.7.0 (for build scripts)
+- **XZ Utils**: Version 5.6.4
+- **LibX11**: Version 1.8.11
 
 ## **Getting Started**
 
@@ -296,3 +312,32 @@ Prerequisites:
 ## Branch Structure
 - `cursor-main`: Stable, protected branch with working features
 - `cursor-development`: Active development branch
+<<<<<<< HEAD
+
+## New Features
+- Rust-powered MIDI processing engine with:
+  - Comprehensive safety features and error handling
+  - FFI interface for C++ integration
+  - MIDI message validation and processing
+  - Note tracking and expression monitoring
+  - MPE (MIDI Polyphonic Expression) support
+
+## Architecture
+- `rust/midi_engine/`: Core MIDI processing in Rust
+  - `lib.rs`: FFI interface and safety features
+  - `midi_processor.rs`: MIDI message handling
+  - `note_tracker.rs`: Note and expression tracking
+  - `mpe.rs`: MPE configuration and zones
+
+## Safety Features
+- Input validation and bounds checking
+- Memory safety with proper FFI
+- Error handling and reporting
+- Resource cleanup (Drop implementations)
+- Safe state management (Clone support)
+
+## Branch Structure
+- `cursor-main`: Stable, protected branch with working features
+- `cursor-development`: Active development branch
+=======
+>>>>>>> cursor-main

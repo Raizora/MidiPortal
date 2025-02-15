@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.30.5)
 
 # Set the project name and version
-project(MidiPortalStandalone VERSION 0.1.0)
+project(MidiPortalStandalone VERSION 0.0.6)
 
 # Use C++ 23 standard
 set(CMAKE_CXX_STANDARD 23)
@@ -80,6 +80,7 @@ target_compile_definitions(MidiPortalStandalone
 # Link the shared library, JUCE modules, GTK3, and WebKit2 to the standalone app
 target_link_libraries(MidiPortalStandalone
         PRIVATE
+        ${MIDI_VISUALS_LIB}  # Make sure this is first
         MidiPortalShared
         juce::juce_analytics
         juce::juce_audio_basics
