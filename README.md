@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # **MidiPortal - Version 0.0.6**
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -333,3 +334,5 @@ Prerequisites:
 ## Branch Structure
 - `cursor-main`: Stable, protected branch with working features
 - `cursor-development`: Active development branch
+=======
+>>>>>>> cursor-main
