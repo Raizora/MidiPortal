@@ -1,13 +1,18 @@
 [package]
-name = "midi_visuals"
-version = "0.1.0"
+name = "midi_engine"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
-name = "midi_visuals"
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
-rand = "0.8"
+# For FFI
+cxx = "1.0"
+# For MIDI message handling
+midly = "0.5"
+# For logging
 log = "0.4"
+env_logger = "0.10"
+# For error handling
 thiserror = "1.0"

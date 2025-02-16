@@ -63,106 +63,94 @@ MidiLogger::~MidiLogger() {
 }
 
 void MidiLogger::logMessage(const juce::MidiMessage& message) {
-    static double lastClockTime = 0.0;
-    static int clockCount = 0;
-    static double currentBPM = 0.0;
-    
-    juce::String description;
-    description << "MIDI [";
-    
-    // Get high-precision timestamp
-    auto now = juce::Time::getHighResolutionTicks();
-    auto nowSeconds = juce::Time::highResolutionTicksToSeconds(now);
-    
-    if (message.isMidiClock()) {
-        // MIDI Clock is 24 pulses per quarter note
-        clockCount++;
-        double currentTime = nowSeconds;
+    try {
+        DBG("MidiLogger: About to log message");
         
-        if (lastClockTime > 0.0) {
-            // Calculate BPM from clock intervals
-            double interval = currentTime - lastClockTime;
-            double instantBPM = 60.0 / (interval * 24.0);
-            
-            // Smooth BPM calculation
-            currentBPM = (currentBPM * 0.9) + (instantBPM * 0.1);
-            
-            description << "MIDI Clock - BPM: " << juce::String(currentBPM, 2) 
-                       << " (Pulse " << clockCount << ")";
-        }
-        lastClockTime = currentTime;
-    }
-    else if (message.isMidiStart())
-        description << "Transport Start";
-    else if (message.isMidiStop())
-        description << "Transport Stop";
-    else if (message.isMidiContinue())
-        description << "Transport Continue";
-    else if (message.isTempoMetaEvent())
-        description << "Tempo Change: " << message.getTempoSecondsPerQuarterNote() * 60.0 << " BPM";
-    else if (message.isTimeSignatureMetaEvent()) {
-        int numerator, denominator;
-        message.getTimeSignatureInfo(numerator, denominator);
-        description << "Time Signature: " << numerator << "/" << denominator;
-    }
-    else if (message.getRawData()[0] == 0xFE)
-        description << "Active Sensing";
-    else if (message.getRawData()[0] == 0xF0)
-        description << "SysEx";
-    else if (message.isNoteOn())
-        description << "Note On: Note=" << message.getNoteNumber() 
-                   << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
-                   << " Vel=" << message.getVelocity() 
-                   << " Ch=" << message.getChannel();
-    else if (message.isNoteOff())
-        description << "Note Off: Note=" << message.getNoteNumber()
-                   << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
-                   << " Ch=" << message.getChannel();
-    else if (message.isController()) {
-        description << "CC: Number=" << message.getControllerNumber();
-        // Add common CC names
-        switch (message.getControllerNumber()) {
-            case 1:  description << " (Modulation Wheel)"; break;
-            case 7:  description << " (Volume)"; break;
-            case 10: description << " (Pan)"; break;
-            case 11: description << " (Expression)"; break;
-            case 64: description << " (Sustain Pedal)"; break;
-            case 74: description << " (Filter Cutoff)"; break;
-            // Add more CC names as needed
-        }
-        description << " Value=" << message.getControllerValue() 
-                   << " Ch=" << message.getChannel();
-    }
-    else if (message.isPitchWheel())
-        description << "Pitch Wheel: Value=" << message.getPitchWheelValue() 
-                   << " Ch=" << message.getChannel();
-    else if (message.isProgramChange())
-        description << "Program Change: Program=" << message.getProgramChangeNumber() 
-                   << " Ch=" << message.getChannel();
-    else if (message.isAftertouch())
-        description << "Aftertouch: Note=" << message.getNoteNumber() 
-                   << " Value=" << message.getAfterTouchValue() 
-                   << " Ch=" << message.getChannel();
-    else if (message.isChannelPressure())
-        description << "Channel Pressure: Value=" << message.getChannelPressureValue() 
-                   << " Ch=" << message.getChannel();
-    
-    description << "] from device: " << deviceName << " - Raw: ";
-    
-    // Add raw data
-    for (int i = 0; i < message.getRawDataSize(); ++i)
-        description << juce::String::formatted("%02x ", message.getRawData()[i]);
+        juce::String description;
+        description << "MIDI [";
         
-    // Add system timing info to all messages
-    description << " [System Time: " << juce::Time::getCurrentTime().formatted("%H:%M:%S.%ms")
-                << ", Delta: " << juce::String(nowSeconds - lastClockTime, 4) << "s]";
-    
-    DBG(description);
-    
-    if (logFile.is_open()) {
-        logFile << juce::Time::getCurrentTime().formatted("%Y-%m-%d %H:%M:%S.%ms")
-                << " " << description << std::endl;
-        logFile.flush();
+        // Get high-precision timestamp for logging only
+        auto now = juce::Time::getCurrentTime();
+        
+        // X- Simplified message type descriptions without analysis
+        if (message.isMidiClock())
+            description << "MIDI Clock";
+        else if (message.isMidiStart())
+            description << "Transport Start";
+        else if (message.isMidiStop())
+            description << "Transport Stop";
+        else if (message.isMidiContinue())
+            description << "Transport Continue";
+        else if (message.isTempoMetaEvent())
+            description << "Tempo Change: " << message.getTempoSecondsPerQuarterNote() * 60.0 << " BPM";
+        else if (message.isTimeSignatureMetaEvent()) {
+            int numerator, denominator;
+            message.getTimeSignatureInfo(numerator, denominator);
+            description << "Time Signature: " << numerator << "/" << denominator;
+        }
+        else if (message.getRawData()[0] == 0xFE)
+            description << "Active Sensing";
+        else if (message.getRawData()[0] == 0xF0)
+            description << "SysEx";
+        else if (message.isNoteOn())
+            description << "Note On: Note=" << message.getNoteNumber() 
+                       << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
+                       << " Vel=" << message.getVelocity() 
+                       << " Ch=" << message.getChannel();
+        else if (message.isNoteOff())
+            description << "Note Off: Note=" << message.getNoteNumber()
+                       << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
+                       << " Ch=" << message.getChannel();
+        else if (message.isController()) {
+            description << "CC: Number=" << message.getControllerNumber();
+            // Add common CC names
+            switch (message.getControllerNumber()) {
+                case 1:  description << " (Modulation Wheel)"; break;
+                case 7:  description << " (Volume)"; break;
+                case 10: description << " (Pan)"; break;
+                case 11: description << " (Expression)"; break;
+                case 64: description << " (Sustain Pedal)"; break;
+                case 74: description << " (Filter Cutoff)"; break;
+            }
+            description << " Value=" << message.getControllerValue() 
+                       << " Ch=" << message.getChannel();
+        }
+        else if (message.isPitchWheel())
+            description << "Pitch Wheel: Value=" << message.getPitchWheelValue() 
+                       << " Ch=" << message.getChannel();
+        else if (message.isProgramChange())
+            description << "Program Change: Program=" << message.getProgramChangeNumber() 
+                       << " Ch=" << message.getChannel();
+        else if (message.isAftertouch())
+            description << "Aftertouch: Note=" << message.getNoteNumber() 
+                       << " Value=" << message.getAfterTouchValue() 
+                       << " Ch=" << message.getChannel();
+        else if (message.isChannelPressure())
+            description << "Channel Pressure: Value=" << message.getChannelPressureValue() 
+                       << " Ch=" << message.getChannel();
+        
+        description << "] from device: " << deviceName << " - Raw: ";
+        
+        // Add raw data
+        for (int i = 0; i < message.getRawDataSize(); ++i)
+            description << juce::String::formatted("%02x ", message.getRawData()[i]);
+        
+        // X- Simplified timestamp to just show system time
+        description << " [Time: " << now.formatted("%H:%M:%S.%ms") << "]";
+        
+        DBG(description);  // Output to console for debugging
+        
+        if (logFile.is_open()) {
+            logFile << now.formatted("%Y-%m-%d %H:%M:%S.%ms")
+                    << " " << description << std::endl;
+            logFile.flush();
+            DBG("MidiLogger: Successfully wrote to log file");
+        } else {
+            DBG("MidiLogger: Log file not open!");
+        }
+    }
+    catch (const std::exception& e) {
+        DBG("Exception in MidiLogger::logMessage: " + juce::String(e.what()));
     }
 }
 
