@@ -50,6 +50,9 @@ private:
   class MidiInputCallback;
   std::unique_ptr<MidiInputCallback> midiInputCallback;
 
+  // Add menu as member variable
+  juce::PopupMenu applicationMenu;
+
   // MIDI input management
   juce::OwnedArray<juce::MidiInput> midiInputs;
 
@@ -78,6 +81,9 @@ private:
 
   std::unique_ptr<SettingsComponent> settingsComponent;
   std::unique_ptr<juce::DialogWindow> settingsWindow;
+
+  // Add Rust engine handle
+  void* rustEngine = nullptr;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

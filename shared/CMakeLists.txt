@@ -8,6 +8,9 @@ if(NOT TARGET MidiPortalShared)
             source/MainComponent.h
             source/MidiLogger.cpp
             source/MidiLogger.h
+            source/SettingsComponent.h
+            source/SettingsWindow.h
+            source/RustMidiEngine.h
     )
 
     target_include_directories(MidiPortalShared
@@ -35,20 +38,20 @@ if(NOT TARGET MidiPortalShared)
     # Debug: Print the extracted target directory
     message("Rust library target directory: ${RUST_LIBRARY_PATH}")
 
-    # Add these debug messages
+    # Look for the Rust library
     message(STATUS "Looking for Rust library in: ${CMAKE_SOURCE_DIR}/rust/target/release")
-    find_library(MIDI_VISUALS_LIB 
-        NAMES midi_visuals
+    find_library(MIDI_ENGINE_LIB 
+        NAMES midi_engine
         PATHS "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
         REQUIRED
         NO_DEFAULT_PATH
     )
-    message(STATUS "MIDI_VISUALS_LIB = ${MIDI_VISUALS_LIB}")
+    message(STATUS "MIDI_ENGINE_LIB = ${MIDI_ENGINE_LIB}")
 
     # Link libraries in correct order
     target_link_libraries(MidiPortalShared
         PRIVATE
-        ${MIDI_VISUALS_LIB}  # Must be first
+        ${MIDI_ENGINE_LIB}  # Must be first
         PUBLIC
         juce::juce_core
         juce::juce_gui_basics

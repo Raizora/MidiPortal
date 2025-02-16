@@ -12,10 +12,21 @@ cmake --build build
 # Quick Rebuild (when only C++ changed)
 cmake --build build
 
-# Debug Build
+# Debug Build option A:
 rm -rf build
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
+
+# Debug Build option B:
+
+rm -rf cmake-build-ninja
+cmake -G Ninja -S . -B cmake-build-ninja -DCMAKE_BUILD_TYPE=Debug
+
+cmake --build cmake-build-ninja
+
+lldb ./cmake-build-ninja/standalone/MidiPortalStandalone
+
+(lldb) run
 
 # Release Build
 rm -rf build

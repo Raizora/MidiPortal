@@ -113,7 +113,7 @@ public:
         {
             message = "Connected MIDI devices:\n\n";
             for (auto& device : devices)
-                message += "• " + device.name + "\n";
+                message += "- " + device.name + "\n";
         }
         
         juce::AlertWindow::showMessageBoxAsync(
@@ -165,13 +165,15 @@ private:
             for (const auto& device : devices)
             {
                 // Device listening checkbox
-                auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton(device.name));
+                auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton("* " + device.name));
                 listenBox->setToggleState(true, juce::dontSendNotification);
+                listenBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
                 addAndMakeVisible(listenBox);
                 
                 // Device logging checkbox
-                auto* logBox = deviceLogBoxes.add(new juce::ToggleButton(device.name));
+                auto* logBox = deviceLogBoxes.add(new juce::ToggleButton("* " + device.name));
                 logBox->setToggleState(true, juce::dontSendNotification);
+                logBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
                 addAndMakeVisible(logBox);
             }
             
@@ -264,55 +266,28 @@ private:
                 return;
             }
             
-            if (!isVisible())  // Don't check if component isn't visible
-                return;
-            
             auto currentDevices = juce::MidiInput::getAvailableDevices();
             
-            // Check if device list has changed
-            bool devicesChanged = static_cast<int>(currentDevices.size()) != deviceListenBoxes.size();
-            if (!devicesChanged && !deviceListenBoxes.isEmpty())
+            // Clear and rebuild device boxes
+            deviceListenBoxes.clear(true);
+            deviceLogBoxes.clear(true);
+            
+            for (const auto& device : currentDevices)
             {
-                int minSize = static_cast<int>(currentDevices.size());
-                if (deviceListenBoxes.size() < minSize)
-                    minSize = deviceListenBoxes.size();
+                // Create device listening checkbox
+                auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton("* " + device.name));
+                listenBox->setToggleState(true, juce::dontSendNotification);
+                listenBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+                addAndMakeVisible(listenBox);
                 
-                for (int i = 0; i < minSize; ++i)
-                {
-                    if (deviceListenBoxes[i] != nullptr && 
-                        deviceListenBoxes[i]->getButtonText().isNotEmpty() &&
-                        i < currentDevices.size() &&  // Bounds check
-                        currentDevices[i].name.isNotEmpty() &&
-                        deviceListenBoxes[i]->getButtonText() != currentDevices[i].name)
-                    {
-                        devicesChanged = true;
-                        break;
-                    }
-                }
+                // Create device logging checkbox
+                auto* logBox = deviceLogBoxes.add(new juce::ToggleButton("* " + device.name));
+                logBox->setToggleState(true, juce::dontSendNotification);
+                logBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
+                addAndMakeVisible(logBox);
             }
             
-            // Update UI if needed
-            if (devicesChanged)
-            {
-                juce::MessageManagerLock mml;  // Ensure UI updates happen on message thread
-                deviceListenBoxes.clear(true);
-                deviceLogBoxes.clear(true);
-                
-                for (const auto& device : currentDevices)
-                {
-                    auto* listenBox = deviceListenBoxes.add(new juce::ToggleButton(device.name));
-                    listenBox->setToggleState(true, juce::dontSendNotification);
-                    listenBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
-                    addAndMakeVisible(listenBox);
-                    
-                    auto* logBox = deviceLogBoxes.add(new juce::ToggleButton(device.name));
-                    logBox->setToggleState(true, juce::dontSendNotification);
-                    logBox->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
-                    addAndMakeVisible(logBox);
-                }
-                
-                resized();  // Relayout with new devices
-            }
+            resized();  // Relayout with new devices
         }
 
     private:

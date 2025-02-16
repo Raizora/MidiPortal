@@ -1,45 +1,83 @@
-mod midi_engine;  // Add this at the top
+// lib.rs
+//! A minimal "MIDI observer" Rust library for MidiPortal.
+//! This just collects raw MIDI messages, with no note tracking or analysis.
+//! 
+//! FFI boundary: 
+//!  - create_engine -> returns pointer to new MidiEngine
+//!  - destroy_engine -> free the MidiEngine
+//!  - process_midi_message -> feed raw data to the engine
+//! 
+//! Expand or modify as needed for ring buffers, real-time safe data structures, etc.
 
-use rand::Rng; // Import the random number generator
+mod midi_engine;
 
-// Re-export what we need
-pub use midi_engine::{process_midi_message, RustMidiStats, ProcessResult};
+use crate::midi_engine::MidiEngine;
+use std::slice;
 
-#[repr(C)] // Ensures C-compatible memory layout
-pub struct ColorWithOpacity {
-    pub hue: f32,
-    pub saturation: f32,
-    pub value: f32,
-    pub opacity: f32,
+/// If you want an error enum, define one. But for a minimal skeleton, we skip it.
+
+// Opaque pointer to our MidiEngine.
+#[repr(C)]
+pub struct RustMidiEngineHandle {
+    // Boxing so we can pass it as a raw pointer over FFI
+    pub engine: Box<MidiEngine>,
 }
 
-#[repr(C)] // Ensures C-compatible memory layout
-pub struct Position {
-    pub x: f32,
-    pub y: f32,
-}
-
-/// Translates a MIDI note and velocity into a color with opacity.
+/// Creates a new MidiEngine and returns an opaque pointer. 
+/// The C++ side can store this pointer in a `void*` or similar.
 #[no_mangle]
-pub extern "C" fn midi_note_to_color_with_opacity(note: u8, velocity: u8) -> ColorWithOpacity {
-    let hue = (note as f32) / 127.0; // Normalize note to hue
-    let saturation = 1.0;
-    let value = 1.0;
-    let opacity = (velocity as f32) / 127.0; // Normalize velocity to opacity
-    ColorWithOpacity {
-        hue,
-        saturation,
-        value,
-        opacity,
+pub extern "C" fn create_midi_engine() -> *mut RustMidiEngineHandle {
+    let engine = MidiEngine::new();
+    let handle = RustMidiEngineHandle {
+        engine: Box::new(engine),
+    };
+    // Box that handle on the heap so we can safely return a raw pointer
+    Box::into_raw(Box::new(handle))
+}
+
+/// Destroys the MidiEngine pointer previously created by `create_midi_engine`.
+#[no_mangle]
+pub extern "C" fn destroy_midi_engine(handle: *mut RustMidiEngineHandle) {
+    if handle.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(handle));
     }
 }
 
-/// Generates a random position.
+/// Processes a MIDI message by copying it into the engine's storage.
+/// Returns `false` if arguments are invalid (e.g., null pointer, out of range).
 #[no_mangle]
-pub extern "C" fn generate_position() -> Position {
-    let mut rng = rand::thread_rng();
-    Position {
-        x: rng.gen_range(0.0..1.0),
-        y: rng.gen_range(0.0..1.0),
+pub extern "C" fn process_midi_message(
+    handle: *mut RustMidiEngineHandle,
+    data: *const u8,
+    len: usize,
+    timestamp: f64,
+) -> bool {
+    // Basic validation
+    if handle.is_null() || data.is_null() || len == 0 || len > midi_engine::MAX_MIDI_MESSAGE_SIZE {
+        return false;
+    }
+
+    // Convert the raw pointer to a slice for safe read
+    let slice = unsafe { slice::from_raw_parts(data, len) };
+
+    // Access the engine
+    let engine_handle = unsafe { &mut *handle };
+    engine_handle.engine.process_message(slice, timestamp);
+
+    true
+}
+
+/// Clears all stored messages (optional utility).
+#[no_mangle]
+pub extern "C" fn clear_midi_messages(handle: *mut RustMidiEngineHandle) {
+    if handle.is_null() {
+        return;
+    }
+    unsafe {
+        let engine_handle = &mut *handle;
+        engine_handle.engine.clear();
     }
 }

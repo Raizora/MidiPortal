@@ -56,18 +56,17 @@ if(NOT APPLE)
     target_include_directories(MidiPortalStandalone PRIVATE ${WEBKIT2_INCLUDE_DIRS})
 endif()
 
-# Find and link the Rust library (midi_visuals)
-find_library(MIDI_VISUALS_LIB NAMES midi_visuals)
-if(NOT MIDI_VISUALS_LIB)
-    # Use CMAKE_PREFIX_PATH so find_library can locate the Rust target dir
+# Find and link the Rust library (midi_engine)
+find_library(MIDI_ENGINE_LIB NAMES midi_engine)
+if(NOT MIDI_ENGINE_LIB)
     execute_process(COMMAND cargo metadata --format-version 1 --no-deps
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             OUTPUT_VARIABLE CARGO_METADATA)
     string(JSON target_directory CARGO_TARGET_DIRECTORY ${CARGO_METADATA})
-    set(CMAKE_PREFIX_PATH ${CARGO_TARGET_DIRECTORY}/release ${CMAKE_PREFIX_PATH}) # or /debug
-    find_library(MIDI_VISUALS_LIB NAMES midi_visuals)  # Try again after adding the path
-    if(NOT MIDI_VISUALS_LIB)
-        message(FATAL_ERROR "Rust library midi_visuals still not found even with CMAKE_PREFIX_PATH")
+    set(CMAKE_PREFIX_PATH ${CARGO_TARGET_DIRECTORY}/release ${CMAKE_PREFIX_PATH})
+    find_library(MIDI_ENGINE_LIB NAMES midi_engine)
+    if(NOT MIDI_ENGINE_LIB)
+        message(FATAL_ERROR "Rust library midi_engine still not found even with CMAKE_PREFIX_PATH")
     endif()
 endif()
 
@@ -80,7 +79,7 @@ target_compile_definitions(MidiPortalStandalone
 # Link the shared library, JUCE modules, GTK3, and WebKit2 to the standalone app
 target_link_libraries(MidiPortalStandalone
         PRIVATE
-        ${MIDI_VISUALS_LIB}  # Make sure this is first
+        ${MIDI_ENGINE_LIB}  # Make sure this is first
         MidiPortalShared
         juce::juce_analytics
         juce::juce_audio_basics
