@@ -1,22 +1,17 @@
-//
-// Created by Jamie Benchia on 1/21/25.
-//
-
 #include "MidiLogger.h"
 
 namespace MidiPortal {
 
-
-MidiLogger::MidiLogger(const juce::String& logFilePath) {
-    // Create log directory in build folder
+MidiLogger::MidiLogger(const juce::String& logFilePath) 
+    : juce::Timer()  // Initialize base class
+{
     juce::File buildDir = juce::File::getCurrentWorkingDirectory();
     juce::File logDir = buildDir.getChildFile("logs");
-    
+
     DBG("==== MidiLogger Initialization ====");
     DBG("Build Directory: " + buildDir.getFullPathName());
     DBG("Attempting to create log directory at: " + logDir.getFullPathName());
-    
-    // Create directory and check result
+
     if (!logDir.exists()) {
         juce::Result result = logDir.createDirectory();
         if (result.failed()) {
@@ -24,129 +19,174 @@ MidiLogger::MidiLogger(const juce::String& logFilePath) {
             return;
         }
     }
-    
-    // Verify directory exists and is writable
+
     if (!logDir.exists() || !logDir.hasWriteAccess()) {
-        DBG("Log directory doesn't exist or isn't writable!");
-        DBG("Directory exists: " + juce::String(logDir.exists() ? "YES" : "NO"));
-        DBG("Write access: " + juce::String(logDir.hasWriteAccess() ? "YES" : "NO"));
+        DBG("Log directory is not writable!");
         return;
     }
-    
+
     juce::File logFile = logDir.getChildFile("MidiTraffic.log");
-    DBG("Log File Path: " + logFile.getFullPathName());
-    
-    // Open the log file for writing
-    this->logFile.open(logFile.getFullPathName().toStdString(), 
-                      std::ios::out | std::ios::trunc | std::ios::binary);
+    this->logFile.open(logFile.getFullPathName().toStdString(), std::ios::out | std::ios::trunc | std::ios::binary);
 
     if (!this->logFile.is_open()) {
         DBG("FAILED to open log file!");
-        DBG("Error: " + juce::String(strerror(errno)));
     } else {
         DBG("Successfully opened log file");
-        this->logFile << "=== MidiPortal Log Started at: " 
+        this->logFile << "=== MidiPortal Log Started: " 
                      << juce::Time::getCurrentTime().formatted("%Y-%m-%d %H:%M:%S") 
                      << " ===" << std::endl;
         this->logFile.flush();
-        
-        DBG("File exists: " + juce::String(logFile.exists() ? "YES" : "NO"));
-        DBG("File size: " + juce::String(logFile.getSize()));
     }
-    DBG("================================");
+
+    // Start flush timer (every 1000ms)
+    startTimer(1000);
 }
 
 MidiLogger::~MidiLogger() {
-  if (logFile.is_open()) {
-    logFile.close(); // Ensure the file is closed on destruction
-  }
+    stopTimer();  // Stop the timer first
+    flushBuffer();  // Flush any remaining messages
+    if (logFile.is_open()) {
+        logFile.close();
+    }
+}
+
+void MidiLogger::resetTiming() {
+    timing.lastClockTime = 0.0;
+    timing.currentBPM = 0.0;
+    timing.isPlaying = false;
+    bpmBufferIndex = 0;
+    std::fill(bpmBuffer.begin(), bpmBuffer.end(), 0.0);
+}
+
+void MidiLogger::updateBPM(double currentTime) {
+    if (!timing.isPlaying) return;
+
+    if (timing.lastClockTime > 0.0) {
+        double deltaTime = currentTime - timing.lastClockTime;
+        
+        // X- Detect clock anomalies
+        if (deltaTime > 2.0 || deltaTime < timing.MIN_CLOCK_DELTA) {
+            DBG("MIDI Clock Anomaly Detected! Resetting...");
+            resetTiming();
+            return;
+        }
+
+        double instantBPM = 60.0 / (deltaTime * 24.0);
+        
+        // X- Apply EMA smoothing
+        constexpr double smoothingFactor = 0.05;  // More stable BPM smoothing
+        timing.currentBPM = (instantBPM * smoothingFactor) + 
+                           (timing.currentBPM * (1.0 - smoothingFactor));
+    }
+    timing.lastClockTime = currentTime;
+}
+
+void MidiLogger::timerCallback() {
+    if (shouldFlushLogs) {
+        flushBuffer();
+        shouldFlushLogs = false;
+    }
+}
+
+void MidiLogger::flushBuffer() {
+    if (isWriting.exchange(true)) return;  // Prevent concurrent writes
+    
+    std::vector<BufferedMessage> tempBuffer;
+    {
+        std::lock_guard<std::mutex> lock(bufferMutex);
+        tempBuffer.swap(messageBuffer);
+    }
+
+    if (!tempBuffer.empty() && logFile.is_open()) {
+        std::thread([this, tempBuffer = std::move(tempBuffer)]() {
+            for (const auto& msg : tempBuffer) {
+                logFile << msg.timestamp.formatted("%Y-%m-%d %H:%M:%S.%ms")
+                       << " " << msg.description << std::endl;
+            }
+            logFile.flush();
+            isWriting.store(false);
+        }).detach();
+    } else {
+        isWriting.store(false);  // X- Ensure flag is always reset
+    }
 }
 
 void MidiLogger::logMessage(const juce::MidiMessage& message) {
     try {
-        DBG("MidiLogger: About to log message");
-        
         juce::String description;
-        description << "MIDI [";
-        
-        // Get high-precision timestamp for logging only
         auto now = juce::Time::getCurrentTime();
-        
-        // X- Simplified message type descriptions without analysis
-        if (message.isMidiClock())
-            description << "MIDI Clock";
-        else if (message.isMidiStart())
-            description << "Transport Start";
-        else if (message.isMidiStop())
-            description << "Transport Stop";
-        else if (message.isMidiContinue())
-            description << "Transport Continue";
-        else if (message.isTempoMetaEvent())
-            description << "Tempo Change: " << message.getTempoSecondsPerQuarterNote() * 60.0 << " BPM";
-        else if (message.isTimeSignatureMetaEvent()) {
-            int numerator, denominator;
-            message.getTimeSignatureInfo(numerator, denominator);
-            description << "Time Signature: " << numerator << "/" << denominator;
+
+        const uint8_t* rawData = message.getRawData();
+        uint8_t statusByte = rawData[0] & 0xF0; // Extract status type
+        uint8_t channel = (rawData[0] & 0x0F) + 1; // Extract channel (1-16)
+
+        if (message.isNoteOn()) {
+            description << "Note On: " << message.getNoteNumber()
+                       << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
+                       << " Vel=" << message.getVelocity()
+                       << " Ch=" << channel;
         }
-        else if (message.getRawData()[0] == 0xFE)
-            description << "Active Sensing";
-        else if (message.getRawData()[0] == 0xF0)
-            description << "SysEx";
-        else if (message.isNoteOn())
-            description << "Note On: Note=" << message.getNoteNumber() 
-                       << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
-                       << " Vel=" << message.getVelocity() 
-                       << " Ch=" << message.getChannel();
-        else if (message.isNoteOff())
-            description << "Note Off: Note=" << message.getNoteNumber()
-                       << " (" << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) << ")"
-                       << " Ch=" << message.getChannel();
+        else if (message.isNoteOff()) {
+            description << "Note Off: " << message.getNoteNumber()
+                       << " Velocity: " << message.getVelocity();
+        }
+        else if (message.isPitchWheel()) {
+            int pitchBendValue = message.getPitchWheelValue() - 8192;
+            description << "Pitch Bend: " << pitchBendValue << " Ch=" << channel;
+        }
         else if (message.isController()) {
-            description << "CC: Number=" << message.getControllerNumber();
-            // Add common CC names
+            description << "CC " << message.getControllerNumber()
+                       << " Value: " << message.getControllerValue()
+                       << " Ch=" << channel;
+            
             switch (message.getControllerNumber()) {
-                case 1:  description << " (Modulation Wheel)"; break;
+                case 1:  description << " (Mod Wheel)"; break;
                 case 7:  description << " (Volume)"; break;
                 case 10: description << " (Pan)"; break;
                 case 11: description << " (Expression)"; break;
                 case 64: description << " (Sustain Pedal)"; break;
                 case 74: description << " (Filter Cutoff)"; break;
             }
-            description << " Value=" << message.getControllerValue() 
-                       << " Ch=" << message.getChannel();
         }
-        else if (message.isPitchWheel())
-            description << "Pitch Wheel: Value=" << message.getPitchWheelValue() 
-                       << " Ch=" << message.getChannel();
-        else if (message.isProgramChange())
-            description << "Program Change: Program=" << message.getProgramChangeNumber() 
-                       << " Ch=" << message.getChannel();
-        else if (message.isAftertouch())
-            description << "Aftertouch: Note=" << message.getNoteNumber() 
+        else if (statusByte == 0xA0) { // Polyphonic Aftertouch
+            description << "Poly Aftertouch: Note=" << message.getNoteNumber()
                        << " Value=" << message.getAfterTouchValue() 
-                       << " Ch=" << message.getChannel();
-        else if (message.isChannelPressure())
-            description << "Channel Pressure: Value=" << message.getChannelPressureValue() 
-                       << " Ch=" << message.getChannel();
-        
-        description << "] from device: " << deviceName << " - Raw: ";
-        
-        // Add raw data
-        for (int i = 0; i < message.getRawDataSize(); ++i)
-            description << juce::String::formatted("%02x ", message.getRawData()[i]);
-        
-        // X- Simplified timestamp to just show system time
-        description << " [Time: " << now.formatted("%H:%M:%S.%ms") << "]";
-        
-        DBG(description);  // Output to console for debugging
-        
-        if (logFile.is_open()) {
-            logFile << now.formatted("%Y-%m-%d %H:%M:%S.%ms")
-                    << " " << description << std::endl;
-            logFile.flush();
-            DBG("MidiLogger: Successfully wrote to log file");
-        } else {
-            DBG("MidiLogger: Log file not open!");
+                       << " Ch=" << channel;
+        }
+        else if (message.isChannelPressure()) {
+            description << "Channel Pressure: " << message.getChannelPressureValue();
+        }
+        else if (message.isProgramChange()) {
+            description << "Program Change: " << message.getProgramChangeNumber();
+        }
+        else if (message.isMidiClock()) {
+            updateBPM(now.toMilliseconds() / 1000.0);
+            if (timing.currentBPM > 0.0) {
+                description << "MIDI Clock - BPM: " << juce::String(timing.currentBPM, 1);
+            }
+        }
+        else if (message.isSysEx()) {
+            description << "SysEx Message: Size=" << message.getRawDataSize() << " bytes";
+        }
+        else if (rawData[0] == 0xFE) {  // Active Sensing
+            description << "Active Sensing Message";
+        }
+        else if (rawData[0] == 0xFF) {  // System Reset
+            description << "System Reset Message";
+        }
+        else {
+            description << "Unknown MIDI Message: Status Byte: " 
+                       << juce::String::formatted("0x%X", rawData[0]);
+        }
+
+        if (description.isNotEmpty()) {
+            description << " (Channel: " << channel << ")";
+            BufferedMessage msg{description, now};
+            {
+                std::lock_guard<std::mutex> lock(bufferMutex);
+                messageBuffer.push_back(std::move(msg));
+                shouldFlushLogs = true;
+            }
         }
     }
     catch (const std::exception& e) {

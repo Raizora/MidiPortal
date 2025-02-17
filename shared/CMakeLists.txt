@@ -39,12 +39,14 @@ if(NOT TARGET MidiPortalShared)
     message("Rust library target directory: ${RUST_LIBRARY_PATH}")
 
     # Look for the Rust library
-    message(STATUS "Looking for Rust library in: ${CMAKE_SOURCE_DIR}/rust/target/release")
+    message(STATUS "Looking for Rust library in: ${CMAKE_SOURCE_DIR}/rust/target/debug and ${CMAKE_SOURCE_DIR}/rust/target/release")
     find_library(MIDI_ENGINE_LIB 
         NAMES midi_engine
-        PATHS "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
-        REQUIRED
+        PATHS 
+            "${CMAKE_SOURCE_DIR}/rust/target/debug/deps"
+            "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
         NO_DEFAULT_PATH
+        REQUIRED
     )
     message(STATUS "MIDI_ENGINE_LIB = ${MIDI_ENGINE_LIB}")
 
