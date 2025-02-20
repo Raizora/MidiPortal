@@ -10,8 +10,6 @@ pub struct MidiEvent {
     pub data: Vec<u8>,
     /// Timestamp in seconds (e.g., from Time::getMillisecondCounterHiRes() / 1000.0).
     pub timestamp: f64,
-<<<<<<< HEAD
-=======
 }
 
 /// Statistics for MIDI timing analysis
@@ -34,7 +32,6 @@ pub struct MidiStats {
     // SPP stats
     pub current_beat: i16,
     pub sysex_in_progress: bool,
->>>>>>> cursor-main
 }
 
 /// The main engine that stores or observes incoming MIDI traffic.
@@ -58,14 +55,6 @@ impl MidiEngine {
     /// For now, we just store it in `messages`. 
     /// In a real-time scenario, you might want a lock-free ring buffer
     /// or immediately forward it to C++ instead.
-<<<<<<< HEAD
-    pub fn process_message(&mut self, data: &[u8], timestamp: f64) {
-        let evt = MidiEvent {
-            data: data.to_vec(),
-            timestamp,
-        };
-        self.messages.push(evt);
-=======
     pub fn process_message(&mut self, data: &[u8], timestamp: f64) -> MidiStats {
         let mut stats = MidiStats::default();
         
@@ -131,7 +120,6 @@ impl MidiEngine {
 
     fn update_spp(&mut self, lsb: u8, msb: u8, stats: &mut MidiStats) {
         stats.current_beat = ((msb as i16) << 7) | (lsb as i16);
->>>>>>> cursor-main
     }
 
     /// Clear all stored messages (if you want a "reset" feature).
