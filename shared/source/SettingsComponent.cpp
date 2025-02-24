@@ -1,3 +1,6 @@
+#include "SettingsComponent.h" // ✅ Include statement must be correct
+#include <juce_audio_devices/juce_audio_devices.h> // ✅ Required for MIDI device functionality
+
 void SettingsComponent::showDeviceStatus()
 {
     juce::String message;
