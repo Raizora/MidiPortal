@@ -31,12 +31,50 @@ public:
   // Add these required MenuBarModel methods
   juce::StringArray getMenuBarNames() override
   {
-    return { "File" };
+    #if JUCE_MAC
+    // On macOS, the application menu is automatically created with the app name
+    // We just need to return the other menu names
+    return { "File", "View" };
+    #else
+    // On other platforms, we need to include the application menu
+    return { "MidiPortal", "File", "View" };
+    #endif
   }
   
-  juce::PopupMenu getMenuForIndex(int /*index*/, const juce::String& /*name*/) override
+  juce::PopupMenu getMenuForIndex(int index, const juce::String& name) override
   {
-    return {};  // Empty menu for now until we have file operations
+    #if JUCE_MAC
+    // On macOS, we don't need to handle the application menu here
+    // as it's automatically created by the OS
+    if (name == "File")
+    {
+        juce::PopupMenu menu;
+        // File menu can be empty or have other items
+        return menu;
+    }
+    else if (name == "View")
+    {
+        return viewMenu;
+    }
+    #else
+    // On other platforms, we need to handle all menus
+    if (name == "MidiPortal")
+    {
+        juce::PopupMenu menu;
+        menu.addItem(1, "Settings...", true, false);
+        return menu;
+    }
+    else if (name == "File")
+    {
+        juce::PopupMenu menu;
+        return menu;
+    }
+    else if (name == "View")
+    {
+        return viewMenu;
+    }
+    #endif
+    return {};
   }
   
   void menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/) override
@@ -49,11 +87,15 @@ public:
           settingsWindow.reset();
         };
             
-            // X- Set background color to match system theme
-            settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
-                .findColour(juce::ResizableWindow::backgroundColourId));
-        }
+        // X- Set background color to match system theme
+        settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+            .findColour(juce::ResizableWindow::backgroundColourId));
+      }
       settingsWindow->toFront(true);
+    }
+    else if (menuItemID >= 100 && menuItemID <= 102)  // View modes
+    {
+        setViewMode(static_cast<ViewMode>(menuItemID - 100));
     }
   }
 
@@ -62,8 +104,51 @@ private:
   class MidiInputCallback;
   std::unique_ptr<MidiInputCallback> midiInputCallback;
 
+  // Add view mode enum and management
+  enum class ViewMode {
+    List = 0,
+    Grid,
+    Timeline
+  };
+  
+  ViewMode currentViewMode = ViewMode::List;
+  
+  void setViewMode(ViewMode newMode)
+  {
+    if (currentViewMode != newMode)
+    {
+        currentViewMode = newMode;
+        updateViewMenu();  // Add this line
+        repaint();
+    }
+  }
+
+  void updateViewMenu()
+  {
+    #if JUCE_MAC
+        // Update just the view menu
+        viewMenu.clear();
+        viewMenu.addItem(100, "List View", true, currentViewMode == ViewMode::List);
+        viewMenu.addItem(101, "Grid View", true, currentViewMode == ViewMode::Grid);
+        viewMenu.addItem(102, "Timeline View", true, currentViewMode == ViewMode::Timeline);
+        
+        // Update the menu bar
+        juce::MenuBarModel::setMacMainMenu(this, &applicationMenu);
+    #else
+        // Update view menu for non-Mac platforms
+        viewMenu.clear();
+        viewMenu.addItem(100, "List View", true, currentViewMode == ViewMode::List);
+        viewMenu.addItem(101, "Grid View", true, currentViewMode == ViewMode::Grid);
+        viewMenu.addItem(102, "Timeline View", true, currentViewMode == ViewMode::Timeline);
+        
+        // For non-Mac platforms, we need to update the menu bar differently
+        menuItemsChanged();
+    #endif
+  }
+
   // Add menu as member variable
   juce::PopupMenu applicationMenu;
+  juce::PopupMenu viewMenu;  // Add view menu as member
 
   // MIDI input management
   juce::OwnedArray<juce::MidiInput> midiInputs;

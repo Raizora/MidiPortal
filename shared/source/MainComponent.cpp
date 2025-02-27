@@ -47,11 +47,26 @@ MainComponent::MainComponent() {
 
     // Set up menu bar
     #if JUCE_MAC
+        // Set up application menu (first menu)
+        // This is automatically created by macOS with the app name
+        // We just need to add our custom items to it
         applicationMenu.addItem(1, "Settings...", true, false);
+        
+        // Set up View menu
+        viewMenu.addItem(100, "List View", true, currentViewMode == ViewMode::List);
+        viewMenu.addItem(101, "Grid View", true, false);
+        viewMenu.addItem(102, "Timeline View", true, false);
+        
+        // Set the Mac main menu
         juce::MenuBarModel::setMacMainMenu(this, &applicationMenu);
         
         juce::Process::setDockIconVisible(true);
         juce::Process::makeForegroundProcess();
+    #else
+        // For non-Mac platforms, the menus will be created through the MenuBarModel methods
+        viewMenu.addItem(100, "List View", true, currentViewMode == ViewMode::List);
+        viewMenu.addItem(101, "Grid View", true, false);
+        viewMenu.addItem(102, "Timeline View", true, false);
     #endif
 
     // Create settings component with device manager
