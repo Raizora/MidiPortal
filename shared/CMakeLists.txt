@@ -3,7 +3,7 @@ set(JUCE_PATH "/Users/jbenchia/JUCE" CACHE PATH "Path to JUCE")
 
 # Create a library for shared functionality
 if(NOT TARGET MidiPortalShared)
-    add_library(MidiPortalShared STATIC
+    add_library(MidiPortalShared
             source/MainComponent.cpp
             source/MainComponent.h
             source/MidiLogger.cpp
@@ -16,24 +16,6 @@ if(NOT TARGET MidiPortalShared)
             source/MidiActivityIndicator.h
             source/MidiChannelSelector.cpp
             source/MidiChannelSelector.h
-            source/MidiLogDisplay.cpp
-            source/MidiLogDisplay.h
-            source/LogDisplaySettingsComponent.cpp
-            source/LogDisplaySettingsComponent.h
-            source/LogDisplaySettingsWindow.h
-            source/WindowManager.cpp
-            source/WindowManager.h
-            source/DisplaySettingsManager.cpp
-            source/DisplaySettingsManager.h
-            source/WindowRoutingComponent.cpp
-            source/WindowRoutingComponent.h
-            source/SharedMidiBuffer.cpp
-            source/SharedMidiBuffer.h
-            source/SettingsManager.h
-            source/MidiAIManager.cpp
-            source/MidiAIManager.h
-            source/AIInsightComponent.cpp
-            source/AIInsightComponent.h
     )
 
     target_include_directories(MidiPortalShared
@@ -61,20 +43,13 @@ if(NOT TARGET MidiPortalShared)
     # Debug: Print the extracted target directory
     message("Rust library target directory: ${RUST_LIBRARY_PATH}")
 
-    # Use the path provided by the build script if available
-    if(DEFINED RUST_LIBRARY_PATH)
-        set(RUST_LIB_SEARCH_PATH "${RUST_LIBRARY_PATH}")
-    else()
-        set(RUST_LIB_SEARCH_PATH "${CMAKE_SOURCE_DIR}/rust/target")
-    endif()
-
     # Look for the Rust library
-    message(STATUS "Looking for Rust library in: ${RUST_LIB_SEARCH_PATH}/release/deps and ${RUST_LIB_SEARCH_PATH}/debug/deps")
+    message(STATUS "Looking for Rust library in: ${CMAKE_SOURCE_DIR}/rust/target/debug and ${CMAKE_SOURCE_DIR}/rust/target/release")
     find_library(MIDI_ENGINE_LIB 
         NAMES midi_engine
         PATHS 
-            "${RUST_LIB_SEARCH_PATH}/release/deps"
-            "${RUST_LIB_SEARCH_PATH}/debug/deps"
+            "${CMAKE_SOURCE_DIR}/rust/target/debug/deps"
+            "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
         NO_DEFAULT_PATH
         REQUIRED
     )
@@ -117,6 +92,6 @@ if(NOT TARGET MidiPortalShared)
     # Add the Rust library directory to runtime path
     set_target_properties(MidiPortalShared PROPERTIES
         BUILD_WITH_INSTALL_RPATH TRUE
-        INSTALL_RPATH "${RUST_LIB_SEARCH_PATH}/release/deps"
+        INSTALL_RPATH "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
     )
 endif()
