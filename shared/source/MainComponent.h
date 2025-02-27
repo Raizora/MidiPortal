@@ -24,6 +24,9 @@ public:
   void paint(juce::Graphics& g) override;
   void resized() override;
   void addMidiMessage(const juce::MidiMessage& message);
+  
+  // X- Add method to trigger activity indicators for a device
+  void triggerMidiActivity(const juce::String& deviceName);
 
   // Add these required MenuBarModel methods
   juce::StringArray getMenuBarNames() override
@@ -38,10 +41,19 @@ public:
   
   void menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/) override
   {
-    if (menuItemID == 1)  // Preferences
+    if (menuItemID == 1)  // Settings
     {
-      if (settingsWindow == nullptr)
-        settingsWindow.reset(new SettingsWindow("MidiPortal Preferences"));
+      if (settingsWindow == nullptr) {
+        settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
+        settingsWindow->onCloseCallback = [this]() {
+          settingsWindow.reset();
+        };
+            
+            // X- Set background color to match system theme
+            settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+                .findColour(juce::ResizableWindow::backgroundColourId));
+        }
+      settingsWindow->toFront(true);
     }
   }
 
@@ -80,10 +92,45 @@ private:
   static constexpr size_t maxMessages = 1000; // Maximum number of messages to store
 
   std::unique_ptr<SettingsComponent> settingsComponent;
-  std::unique_ptr<juce::DialogWindow> settingsWindow;
+  std::unique_ptr<SettingsWindow> settingsWindow;
 
   // Add Rust engine handle
   void* rustEngine = nullptr;
+
+  // X- Add AudioDeviceManager as member
+  juce::AudioDeviceManager deviceManager;
+
+  struct MidiDeviceChannelState {
+    juce::String deviceName;
+    std::array<bool, 16> enabledChannels;
+    
+    MidiDeviceChannelState(const juce::String& name) : deviceName(name) 
+    {
+        // Default to all channels enabled
+        enabledChannels.fill(true);
+    }
+  };
+
+  std::vector<MidiDeviceChannelState> deviceChannelStates;
+
+  // Add method to check if a message should be processed
+  bool shouldProcessMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
+  {
+    // Find the device state
+    for (const auto& state : deviceChannelStates)
+    {
+        if (state.deviceName == deviceName)
+        {
+            // Check if the channel is enabled (MIDI channels are 1-16, array is 0-15)
+            int channel = message.getChannel() - 1;
+            return channel >= 0 && channel < 16 && 
+                   (channel >= 0 ? state.enabledChannels[static_cast<size_t>(channel)] : false);
+        }
+    }
+    
+    // If device not found, default to enabled
+    return true;
+  }
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

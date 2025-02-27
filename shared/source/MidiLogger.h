@@ -40,6 +40,7 @@ public:
 
     void logMessage(const juce::MidiMessage& message);
     void setDeviceName(const juce::String& name) { deviceName = name; }
+    const juce::String& getDeviceName() const { return deviceName; }
     void timerCallback() override;
 
     // Fix getters to use struct members

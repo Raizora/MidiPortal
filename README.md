@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.0.6**
+# **MidiPortal - Version 0.0.7**
 
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -45,6 +45,14 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - Added preferences window with device selection
 - Implemented proper memory management
 - Added foundation for MIDI filtering system
+
+### **0.0.7**:
+- Implemented new JUCE-first architecture for MIDI device management
+- Added MidiChannelSelector UI for per-device MIDI channel control
+- Added MidiActivityIndicator for real-time MIDI activity visualization
+- Enhanced Settings window with responsive layout and dynamic sizing
+- Improved MIDI data flow: JUCE → Rust midi_engine (v0.1.2) → JUCE logging
+- Reduced cross-language communication overhead
 
 ## **Requirements**
 ### **System Requirements**
@@ -292,11 +300,10 @@ Prerequisites:
   - MPE (MIDI Polyphonic Expression) support
 
 ## Architecture
-- `rust/midi_engine/`: Core MIDI processing in Rust
-  - `lib.rs`: FFI interface and safety features
-  - `midi_processor.rs`: MIDI message handling
-  - `note_tracker.rs`: Note and expression tracking
-  - `mpe.rs`: MPE configuration and zones
+MidiPortal uses a JUCE-first architecture where:
+1. JUCE handles all device and channel management through the UI
+2. Filtered MIDI data is passed to the Rust midi_engine (v0.1.2) for processing
+3. Processing results are returned to JUCE for logging and visualization
 
 ## Safety Features
 - Input validation and bounds checking
@@ -308,3 +315,7 @@ Prerequisites:
 ## Branch Structure
 - `cursor-main`: Stable, protected branch with working features
 - `cursor-development`: Active development branch
+
+[package]
+name = "midi_engine"
+version = "0.1.2"

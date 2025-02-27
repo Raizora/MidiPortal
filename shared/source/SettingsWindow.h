@@ -1,28 +1,45 @@
 #pragma once
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "SettingsComponent.h"
+#include <functional>
+
+namespace MidiPortal {
 
 class SettingsWindow : public juce::DialogWindow
 {
 public:
-    SettingsWindow(const juce::String& name)
+    std::function<void()> onCloseCallback;
+
+    SettingsWindow(const juce::String& name, juce::AudioDeviceManager& deviceManager)
         : DialogWindow(name, juce::Colours::lightgrey, true, true)
     {
-        auto* content = new SettingsComponent();
-        setContentOwned(content, true);
+        auto* content = new SettingsComponent(deviceManager);
         
-        // Set minimum size
-        setResizeLimits(400, 300, 1200, 1000);  // min width, min height, max width, max height
+        // X- Create viewport for scrolling
+        auto* viewport = new juce::Viewport();
+        viewport->setViewedComponent(content, true);
+        viewport->setScrollBarsShown(true, true);
         
-        // Center on screen with content's preferred size
-        centreWithSize(content->getWidth(), content->getHeight());
+        // X- Make viewport fill the window and resize with it
+        viewport->setSize(550, 400);
         
+        setContentOwned(viewport, true);
+        setResizeLimits(500, 300, 1200, 1200);
+        centreWithSize(550, 400);
+        
+        // X- Make sure content gets viewport's width
+        content->setSize(viewport->getWidth(), content->getHeight());
+        
+        setResizable(true, true);  // Allow both horizontal and vertical resizing
         setVisible(true);
-        setResizable(true, false);  // Resizable but no resize border
+        setAlwaysOnTop(true);
     }
 
     void closeButtonPressed() override
     {
         setVisible(false);
+        if (onCloseCallback) onCloseCallback();
     }
-}; 
+};
+
+} // namespace MidiPortal
