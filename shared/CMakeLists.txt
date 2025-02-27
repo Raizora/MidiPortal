@@ -8,9 +8,14 @@ if(NOT TARGET MidiPortalShared)
             source/MainComponent.h
             source/MidiLogger.cpp
             source/MidiLogger.h
+            source/SettingsComponent.cpp
             source/SettingsComponent.h
             source/SettingsWindow.h
             source/RustMidiEngine.h
+            source/MidiActivityIndicator.cpp
+            source/MidiActivityIndicator.h
+            source/MidiChannelSelector.cpp
+            source/MidiChannelSelector.h
     )
 
     target_include_directories(MidiPortalShared

@@ -18,8 +18,11 @@ public:
   void handleIncomingMidiMessage(juce::MidiInput* source,
                                  const juce::MidiMessage& message) override {
       juce::MessageManager::callAsync([this, message, sourceName = source->getName()]() {
-          owner.midiLogger->setDeviceName(sourceName);
-          owner.addMidiMessage(message);
+          // Only process if the channel is enabled
+          if (owner.shouldProcessMidiMessage(message, sourceName)) {
+              owner.midiLogger->setDeviceName(sourceName);
+              owner.addMidiMessage(message);
+          }
       });
   }
 
@@ -28,45 +31,41 @@ private:
 };
 
 MainComponent::MainComponent() {
-    // Add Rust engine handle as member
-    rustEngine = create_midi_engine();  // Create the Rust engine
+    // Initialize device manager with no default devices
+    deviceManager.initialiseWithDefaultDevices(0, 0);  // No audio inputs/outputs
     
-    // Initialize UI components here
+    // Initialize other components
+    rustEngine = create_midi_engine();
     setSize(800, 800);
     
-    // Initialize MIDI components first
+    // Initialize MIDI components
     midiInputCallback = std::make_unique<MidiInputCallback>(*this);
     midiLogger = std::make_unique<MidiPortal::MidiLogger>("MidiTraffic.log");
 
-    // Set up MIDI Input
-    auto availableMidiDevices = juce::MidiInput::getAvailableDevices();
-    for (auto& device : availableMidiDevices) {
-        DBG("Found MIDI device: " + device.name);
-        
-        if (auto input = juce::MidiInput::openDevice(device.identifier, midiInputCallback.get())) {
-            midiInputs.add(std::move(input));
-            midiInputs.getLast()->start();
-        }
-    }
+    // Set up MIDI callback for the AudioDeviceManager
+    deviceManager.addMidiInputDeviceCallback({}, midiInputCallback.get());
 
     // Set up menu bar
     #if JUCE_MAC
-        applicationMenu.addItem(1, "Preferences...", true, false);
+        applicationMenu.addItem(1, "Settings...", true, false);
         juce::MenuBarModel::setMacMainMenu(this, &applicationMenu);
         
         juce::Process::setDockIconVisible(true);
         juce::Process::makeForegroundProcess();
     #endif
 
-    // Initialize settings component
-    settingsComponent = std::make_unique<SettingsComponent>();
+    // Create settings component with device manager
+    settingsComponent = std::make_unique<SettingsComponent>(deviceManager);
 
-    // Automatically open settings window
+    // Update settings window creation
     juce::MessageManager::callAsync([this]() {
         if (settingsWindow == nullptr) {
-            settingsWindow.reset(new SettingsWindow("MidiPortal Preferences"));
-            settingsWindow->toFront(true);
-            settingsWindow->grabKeyboardFocus();
+            settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
+            settingsWindow->onCloseCallback = [this]() {
+                settingsWindow.reset();
+            };
+            settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+                .findColour(juce::ResizableWindow::backgroundColourId));
         }
     });
 
@@ -129,6 +128,11 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
                 midiLogger->logMessage(message);
             }
 
+            // X- Use the device name from the logger instead of trying to get it from the message
+            if (midiLogger) {
+                triggerMidiActivity(midiLogger->getDeviceName());
+            }
+
             repaint();
         }
         catch (const std::exception& e) {
@@ -147,6 +151,15 @@ void MainComponent::paint(juce::Graphics& g) {
 
 void MainComponent::resized() {
     // Resize child components if needed
+}
+
+// Add a method to trigger activity indicators
+void MainComponent::triggerMidiActivity(const juce::String& deviceName)
+{
+    if (settingsComponent != nullptr)
+    {
+        settingsComponent->triggerActivityForDevice(deviceName);
+    }
 }
 
 }  // namespace MidiPortal
