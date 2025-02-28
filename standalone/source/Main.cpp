@@ -33,7 +33,7 @@ public:
     MidiPortalApplication() {}
 
     const juce::String getApplicationName() override       { return "MidiPortal"; }
-    const juce::String getApplicationVersion() override    { return "0.0.7"; }
+    const juce::String getApplicationVersion() override    { return "0.0.8"; }
     bool moreThanOneInstanceAllowed() override             { return true; }
 
     //==============================================================================

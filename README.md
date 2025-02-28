@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.0.7**
+# **MidiPortal - Version 0.0.8**
 
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -23,28 +23,11 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
   - Automatic log management for MIDI traffic.
 
 ## **Version History**
-### **0.0.2**:
-- Implemented `MidiLogger` for real-time MIDI logging to file.
-- Validated core functionality: MIDI monitoring and traffic logging.
-- Established a functional prototype of MidiPortal.
-- Integrated GitHub Actions for automated CI/CD.
-- Added dependency caching to speed up builds.
-
-### **0.0.1**:
-- Initial setup with JUCE framework and basic MIDI message handling.
-
-### **0.0.5**:
-- Added Rust-powered MIDI processing engine
-- Implemented comprehensive safety features
-- Added FFI interface for C++/Rust integration
-- Added note tracking and MPE support
-- Established protected branch structure
-
-### **0.0.6**:
-- Added macOS menu bar integration
-- Added preferences window with device selection
-- Implemented proper memory management
-- Added foundation for MIDI filtering system
+### **0.0.8**:
+- Added scrolling, fading MIDI log display for real-time visualization
+- Implemented color-coding for different MIDI message types
+- Added support for switching between different visualization modes
+- Enhanced UI with proper layout and component management
 
 ### **0.0.7**:
 - Implemented new JUCE-first architecture for MIDI device management
@@ -53,6 +36,28 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - Enhanced Settings window with responsive layout and dynamic sizing
 - Improved MIDI data flow: JUCE → Rust midi_engine (v0.1.2) → JUCE logging
 - Reduced cross-language communication overhead
+
+### **0.0.6**:
+- Added macOS menu bar integration
+- Added preferences window with device selection
+- Implemented proper memory management
+- Added foundation for MIDI filtering system
+
+### **0.0.5**:
+- Added Rust-powered MIDI processing engine
+- Implemented comprehensive safety features
+- Added FFI interface for C++/Rust integration
+- Added note tracking and MPE support
+- Established protected branch structure
+
+### **0.0.2**:
+- Implemented `MidiLogger` for real-time MIDI logging to file.
+- Validated core functionality: MIDI monitoring and traffic logging.
+- Established a functional prototype of MidiPortal.
+- Integrated GitHub Actions for automated CI/CD.
+
+### **0.0.1**:
+- Initial setup with JUCE framework and basic MIDI message handling.
 
 ## **Requirements**
 ### **System Requirements**

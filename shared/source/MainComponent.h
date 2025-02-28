@@ -10,6 +10,7 @@
 #include "../include/RustBindings.h"
 #include "SettingsComponent.h"
 #include "SettingsWindow.h"
+#include "MidiLogDisplay.h"
 #include <juce_gui_extra/juce_gui_extra.h>  // For DialogWindow
 
 namespace MidiPortal {
@@ -118,9 +119,47 @@ private:
     if (currentViewMode != newMode)
     {
         currentViewMode = newMode;
-        updateViewMenu();  // Add this line
+        updateViewMenu();
+        updateCurrentView();  // X- Add this to update the visible component
         repaint();
     }
+  }
+
+  // X- Method to update the current view based on the selected mode
+  void updateCurrentView()
+  {
+    // X- Remove all child components first
+    for (int i = getNumChildComponents() - 1; i >= 0; --i)
+    {
+        if (getChildComponent(i) != nullptr && 
+            getChildComponent(i) != midiLogDisplay.get())
+        {
+            removeChildComponent(getChildComponent(i));
+        }
+    }
+    
+    // X- Show the appropriate view based on the current mode
+    switch (currentViewMode)
+    {
+        case ViewMode::List:
+            // X- Show the log display
+            if (midiLogDisplay != nullptr)
+            {
+                addAndMakeVisible(midiLogDisplay.get());
+                midiLogDisplay->setBounds(getLocalBounds().reduced(10));
+            }
+            break;
+            
+        case ViewMode::Grid:
+            // X- Future: Show grid view
+            break;
+            
+        case ViewMode::Timeline:
+            // X- Future: Show timeline view
+            break;
+    }
+    
+    resized();
   }
 
   void updateViewMenu()
@@ -155,6 +194,9 @@ private:
 
   // MIDI logger
   std::unique_ptr<MidiPortal::MidiLogger> midiLogger; // To manage logging functionality
+
+  // X- Add MidiLogDisplay
+  std::unique_ptr<MidiLogDisplay> midiLogDisplay;
 
   // MIDI message storage
   struct TimestampedMidiMessage {

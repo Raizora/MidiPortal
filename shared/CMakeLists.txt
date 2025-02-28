@@ -16,6 +16,8 @@ if(NOT TARGET MidiPortalShared)
             source/MidiActivityIndicator.h
             source/MidiChannelSelector.cpp
             source/MidiChannelSelector.h
+            source/MidiLogDisplay.cpp
+            source/MidiLogDisplay.h
     )
 
     target_include_directories(MidiPortalShared
