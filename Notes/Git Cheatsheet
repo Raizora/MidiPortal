@@ -94,3 +94,19 @@ git log --oneline --graph --all --decorate
 
 5. Delete the Temporary Branch: Once you're done and no longer need the temporary save, you can delete the branch.
    git branch -d temp-save
+
+Basic Git Workflow Protocol
+
+git checkout cursor-development-backup
+
+git merge cursor-development
+
+git push origin cursor-development-backup
+
+git branch -d cursor-development
+
+git push origin --delete cursor-development
+
+git checkout -b cursor-development
+
+git push -u origin cursor-development

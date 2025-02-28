@@ -25,7 +25,7 @@ const juce::String StandaloneApp::getApplicationName() {
 }
 
 const juce::String StandaloneApp::getApplicationVersion() {
-  return "0.0.7";
+  return "0.0.8";
 }
 
 void StandaloneApp::initialise(const juce::String&) {

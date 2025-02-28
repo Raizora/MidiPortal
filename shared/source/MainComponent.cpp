@@ -41,6 +41,10 @@ MainComponent::MainComponent() {
     // Initialize MIDI components
     midiInputCallback = std::make_unique<MidiInputCallback>(*this);
     midiLogger = std::make_unique<MidiPortal::MidiLogger>("MidiTraffic.log");
+    
+    // X- Initialize MidiLogDisplay
+    midiLogDisplay = std::make_unique<MidiLogDisplay>();
+    addAndMakeVisible(midiLogDisplay.get());
 
     // Set up MIDI callback for the AudioDeviceManager
     deviceManager.addMidiInputDeviceCallback({}, midiInputCallback.get());
@@ -91,6 +95,9 @@ MainComponent::MainComponent() {
             grabKeyboardFocus();
         }
     });
+    
+    // X- Initialize the view
+    updateCurrentView();
 }
 
 MainComponent::~MainComponent() {
@@ -110,6 +117,7 @@ MainComponent::~MainComponent() {
   // - midiLogger
   // - settingsComponent
   // - settingsWindow
+  // - midiLogDisplay
 }
 
 void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
@@ -145,6 +153,12 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
 
             // X- Use the device name from the logger instead of trying to get it from the message
             if (midiLogger) {
+                // X- Add message to the log display
+                if (midiLogDisplay) {
+                    midiLogDisplay->addMessage(message, midiLogger->getDeviceName());
+                }
+                
+                // X- Trigger activity indicator
                 triggerMidiActivity(midiLogger->getDeviceName());
             }
 
@@ -157,15 +171,20 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
 }
 
 void MainComponent::paint(juce::Graphics& g) {
-  g.fillAll(juce::Colours::black);
-
-  g.setColour(juce::Colours::white);
-  g.setFont(20.0f);
-  g.drawText("MidiPortal", getLocalBounds(), juce::Justification::centred, true);
+  // X- Only fill background if we're not showing a view
+  if (getNumChildComponents() == 0) {
+      g.fillAll(juce::Colours::black);
+      g.setColour(juce::Colours::white);
+      g.setFont(20.0f);
+      g.drawText("MidiPortal", getLocalBounds(), juce::Justification::centred, true);
+  }
 }
 
 void MainComponent::resized() {
-    // Resize child components if needed
+    // X- Resize the current view to fill the component
+    if (midiLogDisplay != nullptr && midiLogDisplay->isVisible()) {
+        midiLogDisplay->setBounds(getLocalBounds().reduced(10));
+    }
 }
 
 // Add a method to trigger activity indicators
