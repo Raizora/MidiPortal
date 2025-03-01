@@ -34,8 +34,8 @@ private:
         float opacity;
         juce::Time timestamp;
         
-        LogEntry(const juce::String& text, const juce::Colour& color, const juce::Time& timestamp)
-            : text(text), color(color), opacity(1.0f), timestamp(timestamp) {}
+        LogEntry(const juce::String& textIn, const juce::Colour& colorIn, const juce::Time& timestampIn)
+            : text(textIn), color(colorIn), opacity(1.0f), timestamp(timestampIn) {}
     };
     
     // X- Format a MIDI message as text

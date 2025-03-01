@@ -42,7 +42,7 @@ public:
     #endif
   }
   
-  juce::PopupMenu getMenuForIndex(int index, const juce::String& name) override
+  juce::PopupMenu getMenuForIndex(int /*index*/, const juce::String& name) override
   {
     #if JUCE_MAC
     // On macOS, we don't need to handle the application menu here
