@@ -19,16 +19,16 @@ MidiLogDisplay::~MidiLogDisplay()
 
 void MidiLogDisplay::paint(juce::Graphics& g)
 {
-    // X- Fill background
-    g.fillAll(juce::Colours::black);
+    // X- Fill background with user-defined color
+    g.fillAll(settings.backgroundColor);
     
     // X- Get the visible area
     auto bounds = getLocalBounds();
 
-    // Create a FontOptions object with the desired typeface name and height
+    // X- Create a FontOptions object with the desired typeface name and user-defined height
     auto fontOptions = juce::FontOptions()
                            .withName(juce::Font::getDefaultMonospacedFontName())
-                           .withHeight(14.0f);
+                           .withHeight(settings.fontSize);
 
     // Create a Font object using the FontOptions
     juce::Font customFont(fontOptions);
@@ -248,25 +248,32 @@ juce::String MidiLogDisplay::formatMidiMessage(const juce::MidiMessage& message,
 
 juce::Colour MidiLogDisplay::getColorForMessage(const juce::MidiMessage& message)
 {
-    // X- Color-code by message type
+    // X- Color-code by message type using user settings
     if (message.isNoteOn())
-        return juce::Colours::lightgreen;
+        return settings.noteOnColor;
     else if (message.isNoteOff())
-        return juce::Colours::indianred;
+        return settings.noteOffColor;
     else if (message.isPitchWheel())
-        return juce::Colours::deepskyblue;
+        return settings.pitchBendColor;
     else if (message.isController())
-        return juce::Colours::orange;
+        return settings.controllerColor;
     else if (message.isChannelPressure() || message.isAftertouch())
-        return juce::Colours::mediumpurple;
+        return settings.pressureColor;
     else if (message.isProgramChange())
-        return juce::Colours::yellow;
+        return settings.programChangeColor;
     else if (message.isMidiClock() || message.isMidiStart() || message.isMidiStop() || message.isMidiContinue())
-        return juce::Colours::lightgrey;
+        return settings.clockColor;
     else if (message.isSysEx())
-        return juce::Colours::hotpink;
+        return settings.sysExColor;
     else
-        return juce::Colours::white;
+        return settings.defaultColor;
+}
+
+// X- Implement the setSettings method
+void MidiLogDisplay::setSettings(const DisplaySettings& newSettings)
+{
+    settings = newSettings;
+    repaint(); // Repaint with new colors
 }
 
 } // namespace MidiPortal 

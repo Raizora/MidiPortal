@@ -11,6 +11,7 @@
 #include "SettingsComponent.h"
 #include "SettingsWindow.h"
 #include "MidiLogDisplay.h"
+#include "LogDisplaySettingsWindow.h"
 #include <juce_gui_extra/juce_gui_extra.h>  // For DialogWindow
 
 namespace MidiPortal {
@@ -19,6 +20,13 @@ class MainComponent : public juce::Component,
                      public juce::MenuBarModel  // Add this
 {
 public:
+  // X- Menu item IDs
+  static constexpr int kSettingsMenuItemId = 1;
+  static constexpr int kLogDisplaySettingsMenuItemId = 2;
+  static constexpr int kViewModeListId = 100;
+  static constexpr int kViewModeGridId = 101;
+  static constexpr int kViewModeTimelineId = 102;
+
   MainComponent();
   ~MainComponent() override;
 
@@ -50,7 +58,7 @@ public:
     if (name == "File")
     {
         juce::PopupMenu menu;
-        // File menu can be empty or have other items
+        menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
         return menu;
     }
     else if (name == "View")
@@ -62,12 +70,13 @@ public:
     if (name == "MidiPortal")
     {
         juce::PopupMenu menu;
-        menu.addItem(1, "Settings...", true, false);
+        menu.addItem(kSettingsMenuItemId, "Settings...", true, false);
         return menu;
     }
     else if (name == "File")
     {
         juce::PopupMenu menu;
+        menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
         return menu;
     }
     else if (name == "View")
@@ -80,7 +89,7 @@ public:
   
   void menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/) override
   {
-    if (menuItemID == 1)  // Settings
+    if (menuItemID == kSettingsMenuItemId)  // Settings
     {
       if (settingsWindow == nullptr) {
         settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
@@ -94,9 +103,25 @@ public:
       }
       settingsWindow->toFront(true);
     }
-    else if (menuItemID >= 100 && menuItemID <= 102)  // View modes
+    else if (menuItemID == kLogDisplaySettingsMenuItemId) // Log Display Settings
     {
-        setViewMode(static_cast<ViewMode>(menuItemID - 100));
+      if (logDisplaySettingsWindow == nullptr && midiLogDisplay != nullptr) {
+        logDisplaySettingsWindow.reset(new LogDisplaySettingsWindow("Log Display Settings", *midiLogDisplay));
+        logDisplaySettingsWindow->onCloseCallback = [this]() {
+          logDisplaySettingsWindow.reset();
+        };
+            
+        // X- Set background color to match system theme
+        logDisplaySettingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+            .findColour(juce::ResizableWindow::backgroundColourId));
+      }
+      if (logDisplaySettingsWindow != nullptr) {
+        logDisplaySettingsWindow->toFront(true);
+      }
+    }
+    else if (menuItemID >= kViewModeListId && menuItemID <= kViewModeTimelineId)  // View modes
+    {
+        setViewMode(static_cast<ViewMode>(menuItemID - kViewModeListId));
     }
   }
 
@@ -220,6 +245,7 @@ private:
 
   std::unique_ptr<SettingsComponent> settingsComponent;
   std::unique_ptr<SettingsWindow> settingsWindow;
+  std::unique_ptr<LogDisplaySettingsWindow> logDisplaySettingsWindow;
 
   // Add Rust engine handle
   void* rustEngine = nullptr;

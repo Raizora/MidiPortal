@@ -1,681 +1,237 @@
-/**
- * @file LogDisplaySettingsComponent.cpp
- * @brief Implementation of the LogDisplaySettingsComponent class.
- * 
- * This file contains the implementation of the LogDisplaySettingsComponent class methods,
- * which provide a user interface for configuring the visual appearance of MIDI message logs
- * in the MidiPortal application, including colors for different message types, font size,
- * and other display properties.
- */
-
-// LogDisplaySettingsComponent is like a form that lets users view and edit DisplaySettingsManager settings
-
 #include "LogDisplaySettingsComponent.h"
 
 namespace MidiPortal {
 
-/*
- * IMPORTANT MEMORY MANAGEMENT NOTE:
- * 
- * This component previously had a segmentation fault when being destroyed. The issue was related
- * to the ownership of the colorContainer component when used with the viewport.
- * 
- * The Problem:
- * - colorContainer is managed by a unique_ptr in this class
- * - When setting it as the viewed component with setViewedComponent(component, true),
- *   JUCE would take ownership and try to delete it when the viewport was cleared
- * - This caused a double-delete: once by JUCE and once by the unique_ptr destructor
- * 
- * The Solution:
- * - Use setViewedComponent(component, false) to tell JUCE NOT to delete the component
- * - Let the unique_ptr handle the deletion when this component is destroyed
- * - Clear the viewport before any other cleanup in the destructor
- * 
- * If you encounter segmentation faults with JUCE components, always check for ownership
- * conflicts between smart pointers and JUCE's internal deletion mechanisms.
- */
-
-/**
- * @brief Constructor that initializes the settings component with all UI elements.
- * @param logDisplayToControl Reference to the MidiLogDisplay that this component will control.
- * 
- * Creates and configures all UI elements including device selector, font size controls,
- * color selectors for different MIDI message types, and Apply/Reset buttons. Sets up
- * the component layout and initializes all settings from the provided log display.
- */
 LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisplayToControl)
     : logDisplay(logDisplayToControl),
-      isBeingDestroyed(false),
-      deviceSection(std::make_unique<SettingsSection>("Device")),
-      appearanceSection(std::make_unique<SettingsSection>("Appearance")),
-      colorSection(std::make_unique<SettingsSection>("Colors")),
-      currentSettings(logDisplay.getSettingsManager().getSettings()),
-      previousSettings(currentSettings),
-      defaultSettings(currentSettings),
-      currentDevice("Default"),
-      hasAppliedOnce(false),
-      colorContainer(std::make_unique<juce::Component>())
+      currentSettings(logDisplayToControl.getSettings())
 {
-    // Create sections
-    deviceSection = std::make_unique<SettingsSection>("Device Settings");
-    appearanceSection = std::make_unique<SettingsSection>("Appearance Settings");
+    // X- Set up title
+    titleLabel.setText("MIDI Log Display Settings", juce::dontSendNotification);
     
-    addAndMakeVisible(deviceSection.get());
-    addAndMakeVisible(appearanceSection.get());
-
-    // Set up device selector
-    deviceLabel.setText("Device:", juce::dontSendNotification);
-    deviceSelector.addItem("Default", 1);  // X- "Default" represents global settings used when no device-specific settings exist
+    // X- Create a font using the modern approach (JUCE 8)
+    // First create FontOptions, then use withName() and withStyle() to configure it
+    // Finally create a Font with the options
+    juce::Font titleFont(juce::FontOptions().withName(juce::Font::getDefaultSansSerifFontName())
+                                           .withStyle("Bold")
+                                           .withHeight(18.0f));
+    titleLabel.setFont(titleFont);
     
-    // X- Only add enabled MIDI devices to the selector
-    auto devices = juce::MidiInput::getAvailableDevices();
-    int itemId = 2;
-    for (const auto& device : devices) {
-        // Add all available devices - we don't have direct access to check if they're enabled
-        // The user will see all devices but can only configure those that are enabled
-        deviceSelector.addItem(device.name, itemId++);
-    }
+    titleLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(titleLabel);
     
-    deviceSelector.setSelectedId(1, juce::dontSendNotification);
-    deviceSelector.onChange = [this] { deviceSelectorChanged(); };
-    
-    // Add components to the device section
-    deviceSection->addAndMakeVisible(deviceLabel);
-    deviceSection->addAndMakeVisible(deviceSelector);
-    
-    // Set up font size controls
-    fontSizeLabel.setText("Font Size:", juce::dontSendNotification);
-    juce::FontOptions options;
-    options = options.withHeight(16.0f);
-    fontSizeLabel.setFont(juce::Font(options));
-    fontSizeLabel.setJustificationType(juce::Justification::right);
-    
+    // X- Set up font size slider
     fontSizeSlider.setRange(8.0, 24.0, 1.0);
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
-    fontSizeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     fontSizeSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
-    fontSizeSlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
-    fontSizeSlider.setColour(juce::Slider::trackColourId, juce::Colours::darkgrey);
-    fontSizeSlider.onValueChange = [this] { fontSizeChanged(); };
+    fontSizeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    fontSizeSlider.onValueChange = [this] {
+        currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
+    };
+    addAndMakeVisible(fontSizeSlider);
     
-    // Add components to the appearance section
-    appearanceSection->addAndMakeVisible(fontSizeLabel);
-    appearanceSection->addAndMakeVisible(fontSizeSlider);
+    fontSizeLabel.setText("Font Size:", juce::dontSendNotification);
+    fontSizeLabel.attachToComponent(&fontSizeSlider, true);
+    addAndMakeVisible(fontSizeLabel);
     
-    // Set up all color sections with their initial mute states
-    setupColorSection(noteOnColorSection, "Note On Color", currentSettings.noteOnColor, currentSettings.muteNoteOn);
-    setupColorSection(noteOffColorSection, "Note Off Color", currentSettings.noteOffColor, currentSettings.muteNoteOff);
-    setupColorSection(controllerColorSection, "Controller Color", currentSettings.controllerColor, currentSettings.muteController);
-    setupColorSection(pitchBendColorSection, "Pitch Bend Color", currentSettings.pitchBendColor, currentSettings.mutePitchBend);
-    setupColorSection(pressureColorSection, "Pressure Color", currentSettings.pressureColor, currentSettings.mutePressure);
-    setupColorSection(programChangeColorSection, "Program Change Color", currentSettings.programChangeColor, currentSettings.muteProgramChange);
-    setupColorSection(clockColorSection, "Clock Color", currentSettings.clockColor, currentSettings.muteClock);
-    setupColorSection(sysExColorSection, "SysEx Color", currentSettings.sysExColor, currentSettings.muteSysEx);
-    setupColorSection(defaultColorSection, "Default Color", currentSettings.defaultColor, currentSettings.muteDefault);
+    // X- Set up background color selector
+    backgroundLabel.setText("Background:", juce::dontSendNotification);
+    addAndMakeVisible(backgroundLabel);
     
-    // Add color sections to the container
-    colorContainer->addAndMakeVisible(noteOnColorSection.label);
-    colorContainer->addAndMakeVisible(*noteOnColorSection.selector);
-    colorContainer->addAndMakeVisible(noteOnColorSection.muteButton);
+    backgroundSelector.setCurrentColour(currentSettings.backgroundColor);
+    backgroundSelector.setColour(juce::ColourSelector::backgroundColourId, juce::Colours::darkgrey);
+    backgroundSelector.setSize(200, 200);
     
-    colorContainer->addAndMakeVisible(noteOffColorSection.label);
-    colorContainer->addAndMakeVisible(*noteOffColorSection.selector);
-    colorContainer->addAndMakeVisible(noteOffColorSection.muteButton);
+    // X- Add the change listener
+    backgroundChangeListener = std::make_unique<BackgroundColorChangeListener>(currentSettings, backgroundSelector);
+    backgroundSelector.addChangeListener(backgroundChangeListener.get());
+    addAndMakeVisible(backgroundSelector);
     
-    colorContainer->addAndMakeVisible(controllerColorSection.label);
-    colorContainer->addAndMakeVisible(*controllerColorSection.selector);
-    colorContainer->addAndMakeVisible(controllerColorSection.muteButton);
+    resetBackgroundButton.setButtonText("Reset");
+    resetBackgroundButton.onClick = [this] {
+        backgroundSelector.setCurrentColour(juce::Colours::black);
+        currentSettings.backgroundColor = juce::Colours::black;
+    };
+    addAndMakeVisible(resetBackgroundButton);
     
-    colorContainer->addAndMakeVisible(pitchBendColorSection.label);
-    colorContainer->addAndMakeVisible(*pitchBendColorSection.selector);
-    colorContainer->addAndMakeVisible(pitchBendColorSection.muteButton);
+    // X- Create color selectors for each message type
+    // These will allow users to customize colors for different MIDI message types
+    noteOnSelector = createColorSelector("Note On", currentSettings.noteOnColor);
+    noteOffSelector = createColorSelector("Note Off", currentSettings.noteOffColor);
+    pitchBendSelector = createColorSelector("Pitch Bend", currentSettings.pitchBendColor);
+    controllerSelector = createColorSelector("Controller", currentSettings.controllerColor);
+    pressureSelector = createColorSelector("Pressure", currentSettings.pressureColor);
+    programChangeSelector = createColorSelector("Program Change", currentSettings.programChangeColor);
+    clockSelector = createColorSelector("Clock", currentSettings.clockColor);
+    sysExSelector = createColorSelector("SysEx", currentSettings.sysExColor);
+    defaultSelector = createColorSelector("Default", currentSettings.defaultColor);
     
-    colorContainer->addAndMakeVisible(pressureColorSection.label);
-    colorContainer->addAndMakeVisible(*pressureColorSection.selector);
-    colorContainer->addAndMakeVisible(pressureColorSection.muteButton);
-    
-    colorContainer->addAndMakeVisible(programChangeColorSection.label);
-    colorContainer->addAndMakeVisible(*programChangeColorSection.selector);
-    colorContainer->addAndMakeVisible(programChangeColorSection.muteButton);
-    
-    colorContainer->addAndMakeVisible(clockColorSection.label);
-    colorContainer->addAndMakeVisible(*clockColorSection.selector);
-    colorContainer->addAndMakeVisible(clockColorSection.muteButton);
-    
-    colorContainer->addAndMakeVisible(sysExColorSection.label);
-    colorContainer->addAndMakeVisible(*sysExColorSection.selector);
-    colorContainer->addAndMakeVisible(sysExColorSection.muteButton);
-    
-    colorContainer->addAndMakeVisible(defaultColorSection.label);
-    colorContainer->addAndMakeVisible(*defaultColorSection.selector);
-    colorContainer->addAndMakeVisible(defaultColorSection.muteButton);
-
-    // Set up the viewport with the color container
-    colorViewport.setViewedComponent(colorContainer.get(), false); // X- JUCE won't delete colorContainer
-    colorViewport.setScrollBarsShown(true, false);  // Disable horizontal scrollbar, keep vertical
-    addAndMakeVisible(colorViewport);
-    
-    // Set up Apply and Reset buttons
-    applyButton.setButtonText("Apply Settings");
-    applyButton.onClick = [this] { handleApplyButton(); };
+    // X- Set up Apply and Reset buttons
+    applyButton.setButtonText("Apply Changes");
+    applyButton.onClick = [this] {
+        logDisplay.setSettings(currentSettings);
+    };
     addAndMakeVisible(applyButton);
     
-    resetButton.setButtonText("Reset");
-    resetButton.onClick = [this] { handleResetButton(); };
-    addAndMakeVisible(resetButton);
+    resetAllButton.setButtonText("Reset All");
+    resetAllButton.onClick = [this] {
+        // Reset to default settings
+        currentSettings = MidiLogDisplay::DisplaySettings();
+        fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
+        backgroundSelector.setCurrentColour(currentSettings.backgroundColor);
+        
+        // Reset all color selectors
+        noteOnSelector->selector.setCurrentColour(currentSettings.noteOnColor);
+        noteOffSelector->selector.setCurrentColour(currentSettings.noteOffColor);
+        pitchBendSelector->selector.setCurrentColour(currentSettings.pitchBendColor);
+        controllerSelector->selector.setCurrentColour(currentSettings.controllerColor);
+        pressureSelector->selector.setCurrentColour(currentSettings.pressureColor);
+        programChangeSelector->selector.setCurrentColour(currentSettings.programChangeColor);
+        clockSelector->selector.setCurrentColour(currentSettings.clockColor);
+        sysExSelector->selector.setCurrentColour(currentSettings.sysExColor);
+        defaultSelector->selector.setCurrentColour(currentSettings.defaultColor);
+    };
+    addAndMakeVisible(resetAllButton);
     
-    // Initial update
-    updateControls();
+    // X- Set size to accommodate all controls
+    setSize(600, 800);  // Increased height to fit all color selectors
 }
 
-/**
- * @brief Destructor that carefully cleans up resources to prevent memory leaks and crashes.
- * 
- * Implements a specific destruction sequence to prevent double-deletion issues with the
- * colorContainer component. Sets a flag to prevent callbacks during destruction, clears
- * the viewport, removes all listeners, and then resets all smart pointers in a specific order.
- */
-LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
-{
-    // Set the flag to indicate we're being destroyed
-    isBeingDestroyed = true;
-    
-    // CRITICAL: Clear the viewport's viewed component FIRST to prevent double-delete issues
-    // This must be done before any other cleanup to avoid accessing components after deletion
-    // The 'false' parameter ensures JUCE doesn't try to delete the component itself
-    colorViewport.setViewedComponent(nullptr, false);
-    
-    // Remove all listeners from selectors and mute buttons
-    for (auto* selector : {
-        noteOnColorSection.selector.get(),
-        noteOffColorSection.selector.get(),
-        controllerColorSection.selector.get(),
-        pitchBendColorSection.selector.get(),
-        pressureColorSection.selector.get(),
-        programChangeColorSection.selector.get(),
-        clockColorSection.selector.get(),
-        sysExColorSection.selector.get(),
-        defaultColorSection.selector.get()
-    }) {
-        if (selector != nullptr) {
-            selector->removeAllChangeListeners();
-        }
-    }
-    
-    // Remove all button listeners
-    noteOnColorSection.muteButton.removeListener(noteOnColorSection.muteListener.get());
-    noteOffColorSection.muteButton.removeListener(noteOffColorSection.muteListener.get());
-    controllerColorSection.muteButton.removeListener(controllerColorSection.muteListener.get());
-    pitchBendColorSection.muteButton.removeListener(pitchBendColorSection.muteListener.get());
-    pressureColorSection.muteButton.removeListener(pressureColorSection.muteListener.get());
-    programChangeColorSection.muteButton.removeListener(programChangeColorSection.muteListener.get());
-    clockColorSection.muteButton.removeListener(clockColorSection.muteListener.get());
-    sysExColorSection.muteButton.removeListener(sysExColorSection.muteListener.get());
-    defaultColorSection.muteButton.removeListener(defaultColorSection.muteListener.get());
-    
-    // Reset all listeners first
-    noteOnColorSection.listener.reset();
-    noteOffColorSection.listener.reset();
-    controllerColorSection.listener.reset();
-    pitchBendColorSection.listener.reset();
-    pressureColorSection.listener.reset();
-    programChangeColorSection.listener.reset();
-    clockColorSection.listener.reset();
-    sysExColorSection.listener.reset();
-    defaultColorSection.listener.reset();
-    
-    // Reset all mute listeners
-    noteOnColorSection.muteListener.reset();
-    noteOffColorSection.muteListener.reset();
-    controllerColorSection.muteListener.reset();
-    pitchBendColorSection.muteListener.reset();
-    pressureColorSection.muteListener.reset();
-    programChangeColorSection.muteListener.reset();
-    clockColorSection.muteListener.reset();
-    sysExColorSection.muteListener.reset();
-    defaultColorSection.muteListener.reset();
-    
-    // Reset all selectors next
-    noteOnColorSection.selector.reset();
-    noteOffColorSection.selector.reset();
-    controllerColorSection.selector.reset();
-    pitchBendColorSection.selector.reset();
-    pressureColorSection.selector.reset();
-    programChangeColorSection.selector.reset();
-    clockColorSection.selector.reset();
-    sysExColorSection.selector.reset();
-    defaultColorSection.selector.reset();
-
-    // Finally, reset the container
-    colorContainer.reset();
-}
-
-/**
- * @brief Paints the component background and adds a border around the color viewport.
- * @param g The Graphics context to paint into.
- * 
- * Fills the component background with the default window background color and
- * draws a border around the color viewport for visual separation.
- */
 void LogDisplaySettingsComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    // X- Draw an outline around the color viewport
-    g.setColour(juce::Colours::darkgrey); // or whatever color you'd like
-    g.drawRect(colorViewport.getBounds().reduced(-1), 2); // 2px thick border
+    
+    g.setColour(juce::Colours::white);
+    g.drawRect(getLocalBounds(), 1);
 }
 
-/**
- * @brief Handles component resizing and positions all child components.
- * 
- * Positions all sections, controls, and the viewport based on the new size of the component.
- * Uses a sophisticated layout system to ensure all elements are properly positioned and sized.
- */
 void LogDisplaySettingsComponent::resized()
 {
-    // Start with the entire component bounds, reduced by 10px on all sides
-    auto bounds = getLocalBounds().reduced(10);
-
-    // Spacing between major sections
-    const int sectionSpacing = 20;
-    const int buttonHeight = 40;
+    auto area = getLocalBounds().reduced(10);
     
-    // Device section
-    auto deviceBounds = bounds.removeFromTop(80);
-    deviceSection->setBounds(deviceBounds);
-    auto innerDeviceBounds = deviceBounds.reduced(10);
-    deviceLabel.setBounds(innerDeviceBounds.removeFromLeft(100));  // Increased from 80 to 100
-    deviceSelector.setBounds(innerDeviceBounds.reduced(5, 0));  // Add 5px padding from label
-    bounds.removeFromTop(sectionSpacing);
+    // X- Position title at top
+    titleLabel.setBounds(area.removeFromTop(30));
     
-    // Appearance section
-    auto appearanceBounds = bounds.removeFromTop(80);
-    appearanceSection->setBounds(appearanceBounds);
+    // X- Add spacing
+    area.removeFromTop(10);
     
-    // X- Completely revised font size control layout to ensure visibility
-    // Get the inner bounds of the appearance section for our controls
-    auto innerAppearanceBounds = appearanceSection->getLocalBounds().reduced(10);
+    // X- Position font size slider
+    auto sliderArea = area.removeFromTop(30);
+    fontSizeSlider.setBounds(sliderArea.withTrimmedLeft(100));
     
-    // Position the label on the left side
-    fontSizeLabel.setBounds(innerAppearanceBounds.removeFromLeft(100).withHeight(30).withY(innerAppearanceBounds.getY() + 25));
+    // X- Add spacing
+    area.removeFromTop(10);
     
-    // Position the slider to fill the remaining width
-    fontSizeSlider.setBounds(innerAppearanceBounds.withHeight(30).withY(innerAppearanceBounds.getY() + 25));
+    // X- Position background color selector
+    backgroundLabel.setBounds(area.removeFromTop(20).withWidth(100));
+    backgroundSelector.setBounds(area.removeFromTop(200));
     
-    bounds.removeFromTop(sectionSpacing);
+    // X- Position Reset and Apply buttons side by side for background color
+    auto buttonRow = area.removeFromTop(30);
+    resetBackgroundButton.setBounds(buttonRow.removeFromLeft(100));
+    applyButton.setBounds(buttonRow.removeFromLeft(150).withTrimmedLeft(10));
     
-    // BUTTON ROW - At bottom, Height: 40px
-    // Example: If window width is 600px, button area is 580px wide (after 10px padding each side)
-    auto buttonRow = bounds.removeFromBottom(buttonHeight);
-    // Each button width = (580 - 20) / 2 = 280px
-    auto buttonWidth = (buttonRow.getWidth() - 20) / 2; // 20px gap between buttons
-    applyButton.setBounds(buttonRow.removeFromLeft(buttonWidth));  // Left button: 280x40
-    buttonRow.removeFromLeft(20);  // 20px gap between buttons
-    resetButton.setBounds(buttonRow);  // Right button: 280x40
-    bounds.removeFromBottom(sectionSpacing); // 20px gap above buttons
+    // X- Add spacing
+    area.removeFromTop(20);
     
-    // COLOR VIEWPORT - Takes remaining vertical space
-    // If window is 800px tall:
-    // 800 - (10+10) padding - 80 device - 20 gap - 80 appearance - 20 gap - 40 buttons - 20 gap
-    // = ~520px height for viewport
-    colorViewport.setBounds(bounds);
+    // X- Create a scrollable area for color selectors
+    const int selectorHeight = 150;
+    const int labelHeight = 20;
+    const int resetButtonHeight = 25;
+    const int selectorSpacing = 10;
+    const int totalSelectorHeight = labelHeight + selectorHeight + resetButtonHeight + selectorSpacing;
     
-    // COLOR SECTIONS CONTAINER
-    const int colorSectionHeight = 200;
-    // X- Adjust the total height to match the actual number of color sections (9 instead of 10)
-    const int totalColorSectionsHeight = 9 * colorSectionHeight;
-    // X- Expand colorContainer to fill the full width of the viewport to eliminate the dead zone
-    colorContainer->setBounds(0, 0, colorViewport.getWidth(), totalColorSectionsHeight);
+    // X- Calculate positions for each color selector
+    // We'll arrange them in a grid with 3 columns
+    int numSelectors = 9; // 9 different message types
+    int columns = 3;
+    int rows = (numSelectors + columns - 1) / columns; // Ceiling division
     
-    // COLOR SECTIONS LAYOUT
-    auto containerBounds = colorContainer->getLocalBounds().reduced(15);
+    int selectorWidth = (area.getWidth() - (columns - 1) * selectorSpacing) / columns;
     
-    // Each color section layout:
-    auto positionColorSection = [](ColorSection& section, juce::Rectangle<int>& area) {
-        // Total section height: 180px
-        auto sectionArea = area.removeFromTop(180);
-        
-        // Label row: 24px height at top with mute button on the right
-        auto labelRow = sectionArea.removeFromTop(24);
-        section.label.setBounds(labelRow.removeFromLeft(labelRow.getWidth() - 80)); // Leave space for mute button
-        section.muteButton.setBounds(labelRow.reduced(0, 2)); // Reduce height slightly for better appearance
-        
-        // 8px gap between label and color selector
-        sectionArea.removeFromTop(8);
-        
-        // Color selector gets remaining height (148px)
-        // This gives more room for RGB value boxes and labels
-        section.selector->setBounds(sectionArea);
-        
-        // 20px gap between sections
-        area.removeFromTop(20);
+    // X- Create an array of all selectors for easier iteration
+    std::array<std::unique_ptr<ColorSelector>*, 9> selectors = {
+        &noteOnSelector, &noteOffSelector, &pitchBendSelector,
+        &controllerSelector, &pressureSelector, &programChangeSelector,
+        &clockSelector, &sysExSelector, &defaultSelector
     };
     
-    // Position all 9 color sections sequentially
-    // Each takes up 180px height + 20px gap = 200px total
-    positionColorSection(noteOnColorSection, containerBounds);
-    positionColorSection(noteOffColorSection, containerBounds);
-    positionColorSection(controllerColorSection, containerBounds);
-    positionColorSection(pitchBendColorSection, containerBounds);
-    positionColorSection(pressureColorSection, containerBounds);
-    positionColorSection(programChangeColorSection, containerBounds);
-    positionColorSection(clockColorSection, containerBounds);
-    positionColorSection(sysExColorSection, containerBounds);
-    positionColorSection(defaultColorSection, containerBounds);
-}
-
-/**
- * @brief Handles changes to the device selector dropdown.
- * 
- * Updates the current settings to reflect the selected device and refreshes
- * all UI controls to show the device-specific settings.
- */
-void LogDisplaySettingsComponent::deviceSelectorChanged()
-{
-    // Don't access logDisplay if we're being destroyed
-    if (!isBeingDestroyed) {
-        currentSettings = logDisplay.getSettingsManager().getSettings(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-        updateControls();
+    // X- Position each selector in the grid
+    for (int i = 0; i < numSelectors; ++i) {
+        int row = i / columns;
+        int col = i % columns;
+        
+        int x = area.getX() + col * (selectorWidth + selectorSpacing);
+        int y = area.getY() + row * totalSelectorHeight;
+        
+        auto* selector = selectors[i]->get();
+        
+        // Position the label
+        selector->nameLabel.setBounds(x, y, selectorWidth, labelHeight);
+        
+        // Position the color selector
+        selector->selector.setBounds(x, y + labelHeight, selectorWidth, selectorHeight);
+        
+        // Position the reset button
+        selector->resetButton.setBounds(x, y + labelHeight + selectorHeight, selectorWidth, resetButtonHeight);
     }
+    
+    // X- Update area to position after all selectors
+    area.removeFromTop(rows * totalSelectorHeight + 20);
+    
+    // X- Position Reset All button at bottom
+    resetAllButton.setBounds(area.removeFromBottom(40).reduced(5));
 }
 
-/**
- * @brief Handles changes to the font size slider.
- * 
- * Updates the current settings with the new font size and applies the change
- * to the settings manager for the selected device.
- */
-void LogDisplaySettingsComponent::fontSizeChanged()
+// X- Helper method to create a color selector
+std::unique_ptr<LogDisplaySettingsComponent::ColorSelector> LogDisplaySettingsComponent::createColorSelector(const juce::String& name, juce::Colour& targetColor)
 {
-    // Don't access logDisplay if we're being destroyed
-    if (!isBeingDestroyed) {
-        currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-    }
-}
-
-/**
- * @brief Updates all UI controls to reflect the current settings.
- * 
- * Sets the values of all sliders, color selectors, and other controls
- * based on the current settings for the selected device.
- */
-void LogDisplaySettingsComponent::updateControls()
-{
-    fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
+    // X- Create a new ColorSelector struct
+    auto selector = std::make_unique<ColorSelector>();
     
-    noteOnColorSection.selector->setCurrentColour(currentSettings.noteOnColor, juce::dontSendNotification);
-    noteOnColorSection.muteButton.setToggleState(currentSettings.muteNoteOn, juce::dontSendNotification);
+    // X- Set up the name label
+    selector->nameLabel.setText(name + ":", juce::dontSendNotification);
+    selector->nameLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(selector->nameLabel);
     
-    noteOffColorSection.selector->setCurrentColour(currentSettings.noteOffColor, juce::dontSendNotification);
-    noteOffColorSection.muteButton.setToggleState(currentSettings.muteNoteOff, juce::dontSendNotification);
+    // X- Set up the color selector
+    selector->selector.setCurrentColour(targetColor);
+    selector->selector.setColour(juce::ColourSelector::backgroundColourId, juce::Colours::darkgrey);
+    selector->selector.setSize(150, 150);
+    addAndMakeVisible(selector->selector);
     
-    controllerColorSection.selector->setCurrentColour(currentSettings.controllerColor, juce::dontSendNotification);
-    controllerColorSection.muteButton.setToggleState(currentSettings.muteController, juce::dontSendNotification);
-    
-    pitchBendColorSection.selector->setCurrentColour(currentSettings.pitchBendColor, juce::dontSendNotification);
-    pitchBendColorSection.muteButton.setToggleState(currentSettings.mutePitchBend, juce::dontSendNotification);
-    
-    pressureColorSection.selector->setCurrentColour(currentSettings.pressureColor, juce::dontSendNotification);
-    pressureColorSection.muteButton.setToggleState(currentSettings.mutePressure, juce::dontSendNotification);
-    
-    programChangeColorSection.selector->setCurrentColour(currentSettings.programChangeColor, juce::dontSendNotification);
-    programChangeColorSection.muteButton.setToggleState(currentSettings.muteProgramChange, juce::dontSendNotification);
-    
-    clockColorSection.selector->setCurrentColour(currentSettings.clockColor, juce::dontSendNotification);
-    clockColorSection.muteButton.setToggleState(currentSettings.muteClock, juce::dontSendNotification);
-    
-    sysExColorSection.selector->setCurrentColour(currentSettings.sysExColor, juce::dontSendNotification);
-    sysExColorSection.muteButton.setToggleState(currentSettings.muteSysEx, juce::dontSendNotification);
-    
-    defaultColorSection.selector->setCurrentColour(currentSettings.defaultColor, juce::dontSendNotification);
-    defaultColorSection.muteButton.setToggleState(currentSettings.muteDefault, juce::dontSendNotification);
-}
-
-/**
- * @brief Handles changes to combo boxes.
- * @param comboBoxThatHasChanged The combo box that changed.
- * 
- * Called when a combo box value changes, such as the device selector.
- * Delegates to the appropriate handler method based on which combo box changed.
- */
-void LogDisplaySettingsComponent::comboBoxChanged(juce::ComboBox* comboBoxThatHasChanged)
-{
-    if (comboBoxThatHasChanged == &deviceSelector)
+    // X- Create a custom change listener that updates the target color
+    class ColorChangeListener : public juce::ChangeListener
     {
-        deviceSelectorChanged();
-    }
-}
-
-/**
- * @brief Sets up a color section with a label, color selector, and change listener.
- * @param section The ColorSection to set up.
- * @param name The name to display in the label.
- * @param initialColor The initial color for the selector.
- * @param initialMute The initial mute state for the mute button.
- * 
- * Creates and configures a ColorSection with a label, color selector, and change listener
- * for a specific MIDI message type. The change listener updates the appropriate color
- * in the current settings when the user selects a new color.
- */
-void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor, bool initialMute)
-{
-    section.label.setText(name, juce::dontSendNotification);
-    addAndMakeVisible(section.label);
-    
-    section.selector = std::make_unique<juce::ColourSelector>();
-    section.selector->setCurrentColour(initialColor);
-
-    // Setup mute button
-    section.muteButton.setButtonText("Mute");
-    section.muteButton.setToggleState(initialMute, juce::dontSendNotification);
-    addAndMakeVisible(section.muteButton);
-
-    // Determine the color type based on the section name
-    ColorChangeListener::ColorType colorType;
-    MuteButtonListener::MuteType muteType;
-    
-    if (name == "Note On Color") {
-        colorType = ColorChangeListener::ColorType::NoteOn;
-        muteType = MuteButtonListener::MuteType::NoteOn;
-    }
-    else if (name == "Note Off Color") {
-        colorType = ColorChangeListener::ColorType::NoteOff;
-        muteType = MuteButtonListener::MuteType::NoteOff;
-    }
-    else if (name == "Controller Color") {
-        colorType = ColorChangeListener::ColorType::Controller;
-        muteType = MuteButtonListener::MuteType::Controller;
-    }
-    else if (name == "Pitch Bend Color") {
-        colorType = ColorChangeListener::ColorType::PitchBend;
-        muteType = MuteButtonListener::MuteType::PitchBend;
-    }
-    else if (name == "Pressure Color") {
-        colorType = ColorChangeListener::ColorType::Pressure;
-        muteType = MuteButtonListener::MuteType::Pressure;
-    }
-    else if (name == "Program Change Color") {
-        colorType = ColorChangeListener::ColorType::ProgramChange;
-        muteType = MuteButtonListener::MuteType::ProgramChange;
-    }
-    else if (name == "Clock Color") {
-        colorType = ColorChangeListener::ColorType::Clock;
-        muteType = MuteButtonListener::MuteType::Clock;
-    }
-    else if (name == "SysEx Color") {
-        colorType = ColorChangeListener::ColorType::SysEx;
-        muteType = MuteButtonListener::MuteType::SysEx;
-    }
-    else {
-        colorType = ColorChangeListener::ColorType::Default;
-        muteType = MuteButtonListener::MuteType::Default;
-    }
-
-    section.listener = std::make_unique<ColorChangeListener>(&currentSettings, section.selector.get(), colorType);
-    section.selector->addChangeListener(section.listener.get());
-    
-    // Setup mute button listener
-    section.muteListener = std::make_unique<MuteButtonListener>(&currentSettings, &section.muteButton, muteType);
-    section.muteButton.addListener(section.muteListener.get());
-    
-    addAndMakeVisible(section.selector.get());
-}
-
-/**
- * @brief Handles clicks on the Apply button.
- * 
- * Applies the current settings to the log display by updating the settings manager
- * with the values from all UI controls. Caches the settings for potential reset.
- */
-void LogDisplaySettingsComponent::handleApplyButton()
-{
-    // Don't access logDisplay if we're being destroyed
-    if (!isBeingDestroyed) {
-        // Cache the previous settings before applying new ones
-        if (hasAppliedOnce) {
-            previousSettings = currentSettings;
+    public:
+        ColorChangeListener(juce::Colour& colorToUpdate, juce::ColourSelector& selector)
+            : targetColor(colorToUpdate), colourSelector(selector) {}
+            
+        void changeListenerCallback(juce::ChangeBroadcaster* source) override
+        {
+            if (source == &colourSelector)
+                targetColor = colourSelector.getCurrentColour();
         }
         
-        // X- Get the current background color to preserve it
-        juce::Colour currentBgColor = currentSettings.backgroundColor;
-        
-        // Update current settings from all controls
-        currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-        
-        // Update colors
-        currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
-        currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
-        currentSettings.controllerColor = controllerColorSection.selector->getCurrentColour();
-        currentSettings.pitchBendColor = pitchBendColorSection.selector->getCurrentColour();
-        currentSettings.pressureColor = pressureColorSection.selector->getCurrentColour();
-        currentSettings.programChangeColor = programChangeColorSection.selector->getCurrentColour();
-        currentSettings.clockColor = clockColorSection.selector->getCurrentColour();
-        currentSettings.sysExColor = sysExColorSection.selector->getCurrentColour();
-        currentSettings.defaultColor = defaultColorSection.selector->getCurrentColour();
-        
-        // Update mute states
-        currentSettings.muteNoteOn = noteOnColorSection.muteButton.getToggleState();
-        currentSettings.muteNoteOff = noteOffColorSection.muteButton.getToggleState();
-        currentSettings.muteController = controllerColorSection.muteButton.getToggleState();
-        currentSettings.mutePitchBend = pitchBendColorSection.muteButton.getToggleState();
-        currentSettings.mutePressure = pressureColorSection.muteButton.getToggleState();
-        currentSettings.muteProgramChange = programChangeColorSection.muteButton.getToggleState();
-        currentSettings.muteClock = clockColorSection.muteButton.getToggleState();
-        currentSettings.muteSysEx = sysExColorSection.muteButton.getToggleState();
-        currentSettings.muteDefault = defaultColorSection.muteButton.getToggleState();
-        
-        // X- Preserve the background color
-        currentSettings.backgroundColor = currentBgColor;
-        
-        // Apply the settings
-        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-        hasAppliedOnce = true;
-    }
-}
-
-/**
- * @brief Handles clicks on the Reset button.
- * 
- * Resets the settings to either the previous settings (if Apply has been clicked)
- * or the default settings (if Apply has not been clicked). Updates the UI controls
- * and applies the reset settings to the log display.
- */
-void LogDisplaySettingsComponent::handleResetButton()
-{
-    // Don't access logDisplay if we're being destroyed
-    if (!isBeingDestroyed) {
-        // X- Get the current background color to preserve it
-        juce::Colour currentBgColor = currentSettings.backgroundColor;
-        
-        // Get the current device name
-        juce::String deviceName = deviceSelector.getItemText(deviceSelector.getSelectedItemIndex());
-        
-        // X- If "Default" is selected, reset to the default settings
-        // X- Otherwise, reset to the device-specific settings from the DisplaySettingsManager
-        if (hasAppliedOnce) {
-            // Reset to previous settings if we've applied at least once
-            currentSettings = previousSettings;
-        } else {
-            // Otherwise reset to default settings
-            if (deviceName == "Default") {
-                // For "Default", use the default settings
-                currentSettings = defaultSettings;
-            } else {
-                // For specific devices, get fresh settings from the manager
-                currentSettings = logDisplay.getSettingsManager().getSettings(deviceName);
-            }
-        }
-        
-        // X- Preserve the background color
-        currentSettings.backgroundColor = currentBgColor;
-        
-        // Update UI to reflect the reset settings
-        updateControls();
-        
-        // Apply the reset settings
-        logDisplay.getSettingsManager().setSettings(currentSettings, deviceName);
-    }
-}
-
-/**
- * @brief Applies settings to the log display.
- * @param settings The settings to apply.
- * 
- * Updates the current settings with the specified settings, updates the UI controls,
- * and applies the settings to the log display for the selected device.
- */
-void LogDisplaySettingsComponent::applySettings(const DisplaySettingsManager::DisplaySettings& settings)
-{
-    currentSettings = settings;
-    updateControls();
-    logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-}
-
-/**
- * @brief Updates the device selector with currently enabled MIDI devices.
- * 
- * Refreshes the device selector dropdown to show only currently enabled MIDI devices.
- * This should be called when MIDI device configuration changes.
- */
-void LogDisplaySettingsComponent::updateDeviceSelector()
-{
-    // Remember the currently selected device
-    juce::String currentlySelectedDevice = deviceSelector.getItemText(deviceSelector.getSelectedItemIndex());
+    private:
+        juce::Colour& targetColor;
+        juce::ColourSelector& colourSelector;
+    };
     
-    // Clear the selector
-    deviceSelector.clear(juce::dontSendNotification);
+    // X- Add the change listener to the selector
+    auto* listener = new ColorChangeListener(targetColor, selector->selector);
+    selector->selector.addChangeListener(listener);
+    selector->changeListener.reset(listener); // Store the listener to manage its lifetime
     
-    // Add the Default option
-    deviceSelector.addItem("Default", 1);
+    // X- Set up reset button
+    selector->resetButton.setButtonText("Reset");
+    selector->resetButton.onClick = [&targetColor, &selector = selector->selector, originalColor = targetColor]() {
+        selector.setCurrentColour(originalColor);
+        targetColor = originalColor;
+    };
+    addAndMakeVisible(selector->resetButton);
     
-    // Add all available MIDI devices
-    auto devices = juce::MidiInput::getAvailableDevices();
-    int itemId = 2;
-    for (const auto& device : devices) {
-        // Add all available devices - we don't have direct access to check if they're enabled
-        deviceSelector.addItem(device.name, itemId++);
-    }
-    
-    // Try to reselect the previously selected device
-    int indexToSelect = deviceSelector.getNumItems() > 0 ? 0 : -1;
-    for (int i = 0; i < deviceSelector.getNumItems(); ++i) {
-        if (deviceSelector.getItemText(i) == currentlySelectedDevice) {
-            indexToSelect = i;
-            break;
-        }
-    }
-    
-    // Select the appropriate item
-    if (indexToSelect >= 0) {
-        deviceSelector.setSelectedItemIndex(indexToSelect, juce::dontSendNotification);
-    } else {
-        // If the previously selected device is no longer available, select Default
-        deviceSelector.setSelectedItemIndex(0, juce::dontSendNotification);
-    }
-    
-    // Update the current settings based on the selected device
-    deviceSelectorChanged();
+    return selector;
 }
 
 } // namespace MidiPortal 
