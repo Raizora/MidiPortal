@@ -11,6 +11,25 @@ class MidiLogDisplay : public juce::Component,
                       public juce::Timer
 {
 public:
+    // X- Settings struct to store user preferences for colors
+    struct DisplaySettings {
+        juce::Colour noteOnColor = juce::Colours::lightgreen;
+        juce::Colour noteOffColor = juce::Colours::indianred;
+        juce::Colour pitchBendColor = juce::Colours::deepskyblue;
+        juce::Colour controllerColor = juce::Colours::orange;
+        juce::Colour pressureColor = juce::Colours::mediumpurple;
+        juce::Colour programChangeColor = juce::Colours::yellow;
+        juce::Colour clockColor = juce::Colours::lightgrey;
+        juce::Colour sysExColor = juce::Colours::hotpink;
+        juce::Colour defaultColor = juce::Colours::white;
+        
+        // X- Font size for the log display
+        float fontSize = 14.0f;
+        
+        // X- Background color
+        juce::Colour backgroundColor = juce::Colours::black;
+    };
+    
     MidiLogDisplay();
     ~MidiLogDisplay() override;
 
@@ -26,6 +45,12 @@ public:
     
     // X- Set maximum number of messages to display
     void setMaxMessages(size_t maxMessages);
+    
+    // X- Get current settings
+    const DisplaySettings& getSettings() const { return settings; }
+    
+    // X- Update settings
+    void setSettings(const DisplaySettings& newSettings);
     
 private:
     struct LogEntry {
@@ -49,6 +74,9 @@ private:
     float fadeRate = 0.02f;  // How quickly messages fade out
     float scrollSpeed = 0.5f; // Pixels per frame to scroll
     float yOffset = 0.0f;     // Current scroll position
+    
+    // X- User settings
+    DisplaySettings settings;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiLogDisplay)
 };
