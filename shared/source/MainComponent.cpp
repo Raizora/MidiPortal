@@ -104,6 +104,15 @@ MainComponent::MainComponent()
 }
 
 MainComponent::~MainComponent() {
+  // Close any open windows first to prevent accessing destroyed components
+  if (logDisplaySettingsWindow != nullptr) {
+    logDisplaySettingsWindow->setVisible(false);
+    logDisplaySettingsWindow.reset();
+  }
+  
+  // Close any device windows
+  deviceWindows.clear();
+  
   // Clean up menu bar
   juce::MenuBarModel::setMacMainMenu(nullptr);
   

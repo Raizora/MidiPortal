@@ -70,6 +70,9 @@ private:
     // Reference to the log display we're controlling
     MidiLogDisplay& logDisplay;
     
+    // Flag to track if we're being destroyed
+    bool isBeingDestroyed = false;
+    
     // Settings sections
     std::unique_ptr<SettingsSection> deviceSection;
     std::unique_ptr<SettingsSection> appearanceSection;

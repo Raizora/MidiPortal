@@ -3,11 +3,25 @@ include(cmake/cpm.cmake)
 # $ cmake --version
 cmake_minimum_required(VERSION 3.30.5)
 
+# Enforce Ninja generator if not already specified
+if(NOT DEFINED CMAKE_GENERATOR)
+  set(CMAKE_GENERATOR "Ninja" CACHE INTERNAL "Generator" FORCE)
+  message(STATUS "Enforcing Ninja generator")
+endif()
+
+# Enforce Apple Clang on macOS
+if(APPLE AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/macos-clang.cmake" 
+      CACHE FILEPATH "Toolchain file" FORCE)
+  message(STATUS "Using macOS toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+endif()
+
 # Sets a few variables, like PROJECT_NAME
 project(MidiPortal)
 
 # Always use the newest C++ standard on green-field projects if possible.
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Specify the path to JUCE
 if(DEFINED ENV{GITHUB_ACTIONS})
