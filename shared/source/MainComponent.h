@@ -3,29 +3,46 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_gui_extra/juce_gui_extra.h>  // For DialogWindow
 #include <memory>
 #include <utility>
 #include <vector>
+#include <deque>
+#include <map>
+#include <array>
 #include "MidiLogger.h"
 #include "../include/RustBindings.h"
 #include "SettingsComponent.h"
 #include "SettingsWindow.h"
 #include "MidiLogDisplay.h"
 #include "LogDisplaySettingsWindow.h"
-#include <juce_gui_extra/juce_gui_extra.h>  // For DialogWindow
+#include "LogDisplayWindow.h"
+#include "DisplaySettingsManager.h"
+#include "WindowManager.h"
+#include "WindowRoutingWindow.h"
 
 namespace MidiPortal {
 
 class MainComponent : public juce::Component,
-                     public juce::MenuBarModel  // Add this
+                     public juce::MenuBarModel
 {
 public:
-  // X- Menu item IDs
+  // Menu item IDs
   static constexpr int kSettingsMenuItemId = 1;
   static constexpr int kLogDisplaySettingsMenuItemId = 2;
+  static constexpr int kWindowRoutingMenuItemId = 3;
   static constexpr int kViewModeListId = 100;
   static constexpr int kViewModeGridId = 101;
   static constexpr int kViewModeTimelineId = 102;
+  static constexpr int kDeviceWindowBaseId = 1000; // Base ID for device window menu items
+
+  // Add view mode enum
+  enum class ViewMode {
+    List = 0,
+    Grid,
+    Timeline
+  };
 
   MainComponent();
   ~MainComponent() override;
@@ -38,182 +55,26 @@ public:
   void triggerMidiActivity(const juce::String& deviceName);
 
   // Add these required MenuBarModel methods
-  juce::StringArray getMenuBarNames() override
-  {
-    #if JUCE_MAC
-    // On macOS, the application menu is automatically created with the app name
-    // We just need to return the other menu names
-    return { "File", "View" };
-    #else
-    // On other platforms, we need to include the application menu
-    return { "MidiPortal", "File", "View" };
-    #endif
-  }
+  juce::StringArray getMenuBarNames() override;
+  juce::PopupMenu getMenuForIndex(int index, const juce::String& name) override;
+  void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+  int getNumMenuBarItems();  // Remove override since it's not virtual
+
+  void setViewMode(ViewMode newMode);
   
-  juce::PopupMenu getMenuForIndex(int /*index*/, const juce::String& name) override
-  {
-    #if JUCE_MAC
-    // On macOS, we don't need to handle the application menu here
-    // as it's automatically created by the OS
-    if (name == "File")
-    {
-        juce::PopupMenu menu;
-        menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
-        return menu;
-    }
-    else if (name == "View")
-    {
-        return viewMenu;
-    }
-    #else
-    // On other platforms, we need to handle all menus
-    if (name == "MidiPortal")
-    {
-        juce::PopupMenu menu;
-        menu.addItem(kSettingsMenuItemId, "Settings...", true, false);
-        return menu;
-    }
-    else if (name == "File")
-    {
-        juce::PopupMenu menu;
-        menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
-        return menu;
-    }
-    else if (name == "View")
-    {
-        return viewMenu;
-    }
-    #endif
-    return {};
-  }
+  void updateCurrentView();
   
-  void menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/) override
-  {
-    if (menuItemID == kSettingsMenuItemId)  // Settings
-    {
-      if (settingsWindow == nullptr) {
-        settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
-        settingsWindow->onCloseCallback = [this]() {
-          settingsWindow.reset();
-        };
-            
-        // X- Set background color to match system theme
-        settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
-            .findColour(juce::ResizableWindow::backgroundColourId));
-      }
-      settingsWindow->toFront(true);
-    }
-    else if (menuItemID == kLogDisplaySettingsMenuItemId) // Log Display Settings
-    {
-      if (logDisplaySettingsWindow == nullptr && midiLogDisplay != nullptr) {
-        logDisplaySettingsWindow.reset(new LogDisplaySettingsWindow("Log Display Settings", *midiLogDisplay));
-        logDisplaySettingsWindow->onCloseCallback = [this]() {
-          logDisplaySettingsWindow.reset();
-        };
-            
-        // X- Set background color to match system theme
-        logDisplaySettingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
-            .findColour(juce::ResizableWindow::backgroundColourId));
-      }
-      if (logDisplaySettingsWindow != nullptr) {
-        logDisplaySettingsWindow->toFront(true);
-      }
-    }
-    else if (menuItemID >= kViewModeListId && menuItemID <= kViewModeTimelineId)  // View modes
-    {
-        setViewMode(static_cast<ViewMode>(menuItemID - kViewModeListId));
-    }
-  }
+  void updateViewMenu();
+  
+  bool shouldProcessMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName);
 
 private:
   // Forward declare the MidiInputCallback class
   class MidiInputCallback;
   std::unique_ptr<MidiInputCallback> midiInputCallback;
 
-  // Add view mode enum and management
-  enum class ViewMode {
-    List = 0,
-    Grid,
-    Timeline
-  };
-  
   ViewMode currentViewMode = ViewMode::List;
   
-  void setViewMode(ViewMode newMode)
-  {
-    if (currentViewMode != newMode)
-    {
-        currentViewMode = newMode;
-        updateViewMenu();
-        updateCurrentView();  // X- Add this to update the visible component
-        repaint();
-    }
-  }
-
-  // X- Method to update the current view based on the selected mode
-  void updateCurrentView()
-  {
-    // X- Remove all child components first
-    for (int i = getNumChildComponents() - 1; i >= 0; --i)
-    {
-        if (getChildComponent(i) != nullptr && 
-            getChildComponent(i) != midiLogDisplay.get())
-        {
-            removeChildComponent(getChildComponent(i));
-        }
-    }
-    
-    // X- Show the appropriate view based on the current mode
-    switch (currentViewMode)
-    {
-        case ViewMode::List:
-            // X- Show the log display
-            if (midiLogDisplay != nullptr)
-            {
-                addAndMakeVisible(midiLogDisplay.get());
-                midiLogDisplay->setBounds(getLocalBounds().reduced(10));
-            }
-            break;
-            
-        case ViewMode::Grid:
-            // X- Future: Show grid view
-            break;
-            
-        case ViewMode::Timeline:
-            // X- Future: Show timeline view
-            break;
-    }
-    
-    resized();
-  }
-
-  void updateViewMenu()
-  {
-    #if JUCE_MAC
-        // Update just the view menu
-        viewMenu.clear();
-        viewMenu.addItem(100, "List View", true, currentViewMode == ViewMode::List);
-        viewMenu.addItem(101, "Grid View", true, currentViewMode == ViewMode::Grid);
-        viewMenu.addItem(102, "Timeline View", true, currentViewMode == ViewMode::Timeline);
-        
-        // Update the menu bar
-        juce::MenuBarModel::setMacMainMenu(this, &applicationMenu);
-    #else
-        // Update view menu for non-Mac platforms
-        viewMenu.clear();
-        viewMenu.addItem(100, "List View", true, currentViewMode == ViewMode::List);
-        viewMenu.addItem(101, "Grid View", true, currentViewMode == ViewMode::Grid);
-        viewMenu.addItem(102, "Timeline View", true, currentViewMode == ViewMode::Timeline);
-        
-        // For non-Mac platforms, we need to update the menu bar differently
-        menuItemsChanged();
-    #endif
-  }
-
-  // Add menu as member variable
-  juce::PopupMenu applicationMenu;
-  juce::PopupMenu viewMenu;  // Add view menu as member
-
   // MIDI input management
   juce::OwnedArray<juce::MidiInput> midiInputs;
 
@@ -222,6 +83,13 @@ private:
 
   // X- Add MidiLogDisplay
   std::unique_ptr<MidiLogDisplay> midiLogDisplay;
+
+  // X- Add managers
+  DisplaySettingsManager settingsManager;
+  WindowManager windowManager;
+
+  // X- Add window pointers
+  std::unique_ptr<WindowRoutingWindow> windowRoutingWindow;
 
   // MIDI message storage
   struct TimestampedMidiMessage {
@@ -266,24 +134,18 @@ private:
 
   std::vector<MidiDeviceChannelState> deviceChannelStates;
 
-  // Add method to check if a message should be processed
-  bool shouldProcessMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
-  {
-    // Find the device state
-    for (const auto& state : deviceChannelStates)
-    {
-        if (state.deviceName == deviceName)
-        {
-            // Check if the channel is enabled (MIDI channels are 1-16, array is 0-15)
-            int channel = message.getChannel() - 1;
-            return channel >= 0 && channel < 16 && 
-                   (channel >= 0 ? state.enabledChannels[static_cast<size_t>(channel)] : false);
-        }
-    }
-    
-    // If device not found, default to enabled
-    return true;
-  }
+  // Add these to the private section before JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR
+  std::map<juce::String, std::unique_ptr<LogDisplayWindow>> deviceWindows;
+  
+  // Helper methods for device windows
+  void openDeviceWindow(const juce::String& deviceName);
+  void closeDeviceWindow(const juce::String& deviceName);
+  void updateDeviceWindowMenu(juce::PopupMenu& menu);
+  void routeMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName);
+
+  // Add menu-related member variables
+  juce::PopupMenu applicationMenu;
+  juce::PopupMenu viewMenu;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

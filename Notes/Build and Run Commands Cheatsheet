@@ -46,3 +46,9 @@ cmake --build build
 
 # Run Plugin (Release)
 ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Quick Copy/ Paste Combo
+rm -rf build
+cmake -B build -G Ninja
+cmake --build build
+./build/standalone/MidiPortalStandalone

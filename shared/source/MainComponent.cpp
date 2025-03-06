@@ -30,7 +30,10 @@ private:
     MainComponent& owner;
 };
 
-MainComponent::MainComponent() {
+MainComponent::MainComponent()
+    : settingsManager(), // Initialize settings manager
+      windowManager(settingsManager) // Initialize window manager with settings manager
+{
     // Initialize device manager with no default devices
     deviceManager.initialiseWithDefaultDevices(0, 0);  // No audio inputs/outputs
     
@@ -42,8 +45,8 @@ MainComponent::MainComponent() {
     midiInputCallback = std::make_unique<MidiInputCallback>(*this);
     midiLogger = std::make_unique<MidiPortal::MidiLogger>("MidiTraffic.log");
     
-    // X- Initialize MidiLogDisplay
-    midiLogDisplay = std::make_unique<MidiLogDisplay>();
+    // X- Initialize MidiLogDisplay with settings manager
+    midiLogDisplay = std::make_unique<MidiLogDisplay>(settingsManager);
     addAndMakeVisible(midiLogDisplay.get());
 
     // Set up MIDI callback for the AudioDeviceManager
@@ -146,20 +149,17 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
                 midiMessages.erase(midiMessages.begin());
             }
             
-            // Log the raw message
+            // Route the message to appropriate displays
             if (midiLogger) {
+                const auto& deviceName = midiLogger->getDeviceName();
                 midiLogger->logMessage(message);
-            }
-
-            // X- Use the device name from the logger instead of trying to get it from the message
-            if (midiLogger) {
-                // X- Add message to the log display
-                if (midiLogDisplay) {
-                    midiLogDisplay->addMessage(message, midiLogger->getDeviceName());
-                }
                 
-                // X- Trigger activity indicator
-                triggerMidiActivity(midiLogger->getDeviceName());
+                // Route to main display
+                if (midiLogDisplay)
+                    midiLogDisplay->addMessage(message, deviceName);
+                    
+                // Route to device windows
+                windowManager.routeMidiMessage(message, deviceName);
             }
 
             repaint();
@@ -180,10 +180,12 @@ void MainComponent::paint(juce::Graphics& g) {
   }
 }
 
-void MainComponent::resized() {
-    // X- Resize the current view to fill the component
-    if (midiLogDisplay != nullptr && midiLogDisplay->isVisible()) {
-        midiLogDisplay->setBounds(getLocalBounds().reduced(10));
+void MainComponent::resized()
+{
+    // Make the midiLogDisplay fill the entire component
+    if (midiLogDisplay != nullptr)
+    {
+        midiLogDisplay->setBounds(getLocalBounds());
     }
 }
 
@@ -194,6 +196,166 @@ void MainComponent::triggerMidiActivity(const juce::String& deviceName)
     {
         settingsComponent->triggerActivityForDevice(deviceName);
     }
+}
+
+// Update the getMenuForIndex method to include device windows
+juce::PopupMenu MainComponent::getMenuForIndex(int /*index*/, const juce::String& name)
+{
+    juce::PopupMenu menu;
+    
+    #if JUCE_MAC
+    if (name == "View")
+    {
+        menu.addItem(kViewModeListId, "List View", true, currentViewMode == ViewMode::List);
+        menu.addItem(kViewModeGridId, "Grid View", true, currentViewMode == ViewMode::Grid);
+        menu.addItem(kViewModeTimelineId, "Timeline View", true, currentViewMode == ViewMode::Timeline);
+        menu.addSeparator();
+        menu.addItem(kWindowRoutingMenuItemId, "Window Routing...", true, false);
+    }
+    else if (name == "File")
+    {
+        menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
+    }
+    #else
+    if (name == "MidiPortal")
+    {
+        menu.addItem(kSettingsMenuItemId, "Settings...", true, false);
+        menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
+    }
+    else if (name == "View")
+    {
+        menu.addItem(kViewModeListId, "List View", true, currentViewMode == ViewMode::List);
+        menu.addItem(kViewModeGridId, "Grid View", true, currentViewMode == ViewMode::Grid);
+        menu.addItem(kViewModeTimelineId, "Timeline View", true, currentViewMode == ViewMode::Timeline);
+        menu.addSeparator();
+        menu.addItem(kWindowRoutingMenuItemId, "Window Routing...", true, false);
+    }
+    #endif
+    
+    return menu;
+}
+
+// Update menuItemSelected to handle device window toggles
+void MainComponent::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
+{
+    if (menuItemID == kSettingsMenuItemId)  // Settings
+    {
+        if (settingsWindow == nullptr) {
+            settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
+            settingsWindow->onCloseCallback = [this]() {
+                settingsWindow.reset();
+            };
+            
+            // X- Set background color to match system theme
+            settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+                .findColour(juce::ResizableWindow::backgroundColourId));
+        }
+        settingsWindow->toFront(true);
+    }
+    else if (menuItemID == kLogDisplaySettingsMenuItemId) // Log Display Settings
+    {
+        if (logDisplaySettingsWindow == nullptr && midiLogDisplay != nullptr) {
+            logDisplaySettingsWindow.reset(new LogDisplaySettingsWindow("Log Display Settings", *midiLogDisplay));
+            logDisplaySettingsWindow->onCloseCallback = [this]() {
+                logDisplaySettingsWindow.reset();
+            };
+            
+            // X- Set background color to match system theme
+            logDisplaySettingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+                .findColour(juce::ResizableWindow::backgroundColourId));
+        }
+        if (logDisplaySettingsWindow != nullptr) {
+            logDisplaySettingsWindow->toFront(true);
+        }
+    }
+    else if (menuItemID == kWindowRoutingMenuItemId) // Window Routing
+    {
+        if (windowRoutingWindow == nullptr) {
+            windowRoutingWindow.reset(new WindowRoutingWindow("Window Routing", windowManager));
+            windowRoutingWindow->onCloseCallback = [this]() {
+                windowRoutingWindow.reset();
+            };
+            
+            // X- Set background color to match system theme
+            windowRoutingWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
+                .findColour(juce::ResizableWindow::backgroundColourId));
+        }
+        windowRoutingWindow->toFront(true);
+    }
+    else if (menuItemID >= kViewModeListId && menuItemID <= kViewModeTimelineId)  // View modes
+    {
+        setViewMode(static_cast<ViewMode>(menuItemID - kViewModeListId));
+    }
+}
+
+juce::StringArray MainComponent::getMenuBarNames()
+{
+    #if JUCE_MAC
+    return { "File", "View" };
+    #else
+    return { "MidiPortal", "View" };
+    #endif
+}
+
+int MainComponent::getNumMenuBarItems()
+{
+    return getMenuBarNames().size();
+}
+
+void MainComponent::setViewMode(ViewMode newMode)
+{
+    if (currentViewMode != newMode)
+    {
+        currentViewMode = newMode;
+        updateCurrentView();
+        updateViewMenu();
+    }
+}
+
+void MainComponent::updateCurrentView()
+{
+    // For now, we only have the list view
+    // Future implementations will handle grid and timeline views
+    if (midiLogDisplay != nullptr)
+    {
+        midiLogDisplay->setVisible(currentViewMode == ViewMode::List);
+    }
+}
+
+void MainComponent::updateViewMenu()
+{
+    #if JUCE_MAC
+        viewMenu.clear();
+        viewMenu.addItem(kViewModeListId, "List View", true, currentViewMode == ViewMode::List);
+        viewMenu.addItem(kViewModeGridId, "Grid View", true, currentViewMode == ViewMode::Grid);
+        viewMenu.addItem(kViewModeTimelineId, "Timeline View", true, currentViewMode == ViewMode::Timeline);
+    #endif
+    
+    menuItemsChanged();
+}
+
+bool MainComponent::shouldProcessMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
+{
+    // Find the device state
+    auto it = std::find_if(deviceChannelStates.begin(), deviceChannelStates.end(),
+                          [&](const auto& state) { return state.deviceName == deviceName; });
+    
+    // If device not found, create a new state with all channels enabled
+    if (it == deviceChannelStates.end())
+    {
+        deviceChannelStates.emplace_back(deviceName);
+        return true;  // Process message by default
+    }
+    
+    // Check if the message's channel is enabled
+    if (message.getChannel() > 0)  // MIDI channels are 1-16
+    {
+        int channelIndex = message.getChannel() - 1;
+        if (channelIndex >= 0 && channelIndex < static_cast<int>(it->enabledChannels.size()))
+            return it->enabledChannels[static_cast<size_t>(channelIndex)];
+    }
+        
+    return true;  // Process non-channel messages by default
 }
 
 }  // namespace MidiPortal

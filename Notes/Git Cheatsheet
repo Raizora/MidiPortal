@@ -97,16 +97,29 @@ git log --oneline --graph --all --decorate
 
 Basic Git Workflow Protocol
 
-git checkout cursor-development-backup
+# Ensure you're on the cursor-development branch
+git checkout cursor-development
 
-git merge cursor-development
+# Push the current state of cursor-development to the remote repository
+git push origin cursor-development
 
-git push origin cursor-development-backup
+# Delete the local cursor-development-backup branch
+git branch -d cursor-development-backup
 
-git branch -d cursor-development
+# Delete the remote cursor-development-backup branch
+git push origin --delete cursor-development-backup
 
-git push origin --delete cursor-development
+# Create a new local cursor-development-backup branch based on the current state
+git checkout -b cursor-development-backup
 
-git checkout -b cursor-development
+# Push the new cursor-development-backup branch to the remote repository and set it to track the remote branch
+git push -u origin cursor-development-backup
 
-git push -u origin cursor-development
+quick recovery cheat code:
+git config --global credential.helper osxkeychain
+
+or
+
+rm ~/.git-credentials   # (optional cleanup if it exists)
+git config --global credential.helper osxkeychain
+

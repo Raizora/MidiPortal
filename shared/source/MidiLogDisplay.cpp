@@ -2,253 +2,178 @@
 
 namespace MidiPortal {
 
-MidiLogDisplay::MidiLogDisplay()
+MidiLogDisplay::MidiLogDisplay(DisplaySettingsManager& manager)
+    : settingsManager(manager)
 {
+    // Initialize default settings
+    settingsManager.addSettings("Default", DisplaySettingsManager::DisplaySettings());
+    setSize(800, 600);
+    
     // X- Start the timer to update animations (30fps)
     startTimerHz(30);
     
     // X- Set background color
     setOpaque(true);
+    
+    // X- Register with settings manager
+    settingsManager.registerDisplay(this);
+    settingsManager.addChangeListener(this);
 }
 
 MidiLogDisplay::~MidiLogDisplay()
 {
     // X- Stop the timer
     stopTimer();
+    
+    // X- Unregister from settings manager
+    settingsManager.unregisterDisplay(this);
+    settingsManager.removeChangeListener(this);
 }
 
 void MidiLogDisplay::paint(juce::Graphics& g)
 {
-    // X- Fill background with user-defined color
-    g.fillAll(settings.backgroundColor);
+    // Get default settings for background
+    const auto& defaultSettings = settingsManager.getSettings("Default");
+    g.fillAll(defaultSettings.backgroundColor);
     
-    // X- Get the visible area
-    auto bounds = getLocalBounds();
-
-    // X- Create a FontOptions object with the desired typeface name and user-defined height
-    auto fontOptions = juce::FontOptions()
-                           .withName(juce::Font::getDefaultMonospacedFontName())
-                           .withHeight(settings.fontSize);
-
-    // Create a Font object using the FontOptions
-    juce::Font customFont(fontOptions);
-
-    // Set the font to the Graphics context
-    g.setFont(customFont);
-
-    // Calculate line height
-    float lineHeight = customFont.getHeight() * 1.5f;
-
-    // Start position for drawing (bottom of the component)
-    float y = bounds.getHeight() - yOffset;
-
-    // Draw each message from newest to oldest
-    for (auto it = messages.rbegin(); it != messages.rend(); ++it)
+    float y = getHeight() - 10.0f;  // Start from bottom
+    
+    // Draw messages from bottom to top
+    for (int i = logEntries.size() - 1; i >= 0; --i)
     {
-        // Skip if fully transparent
-        if (it->opacity <= 0.01f)
-            continue;
-
-        // Set color with opacity
-        g.setColour(it->color.withAlpha(it->opacity));
-
-        // Draw text
-        g.drawText(it->text, bounds.getX() + 10, static_cast<int>(y - lineHeight),
-                   bounds.getWidth() - 20, static_cast<int>(lineHeight),
-                   juce::Justification::left, true);
-
-        // Move up for next message
-        y -= lineHeight;
-
-        // Stop if we're off the top of the component
-        if (y < 0)
+        const auto& entry = logEntries[i];
+        
+        // Get settings for this message's device
+        const auto& settings = settingsManager.getSettings(entry.deviceName);
+        
+        g.setFont(settings.fontSize);
+        g.setColour(entry.color);
+        
+        float messageHeight = g.getCurrentFont().getHeight();
+        y -= messageHeight;
+        
+        if (y < 0)  // Stop if we've reached the top
             break;
+            
+        g.drawText(entry.text, 10.0f, y, getWidth() - 20.0f, messageHeight, 
+                  juce::Justification::left, true);
     }
 }
 
 void MidiLogDisplay::resized()
 {
-    // X- Nothing to do here
+    // Nothing needed here as we handle layout in paint()
 }
 
 void MidiLogDisplay::timerCallback()
 {
     bool needsRepaint = false;
     
-    // X- Update opacity for each message
-    for (auto& entry : messages)
+    // Update message opacities and remove fully faded messages
+    for (auto it = messages.begin(); it != messages.end();)
     {
-        // X- Fade out messages over time
-        entry.opacity -= fadeRate;
-        if (entry.opacity < 0.0f)
-            entry.opacity = 0.0f;
-            
+        it->opacity -= fadeRate;
+        if (it->opacity <= 0.0f)
+            it = messages.erase(it);
+        else
+            ++it;
         needsRepaint = true;
     }
     
-    // X- Remove fully faded messages from the front
-    while (!messages.empty() && messages.front().opacity <= 0.0f)
+    // Update scroll position
+    if (yOffset > 0.0f)
     {
-        messages.pop_front();
+        yOffset = std::max(0.0f, yOffset - scrollSpeed);
         needsRepaint = true;
     }
     
-    // X- Update scroll position
-    if (!messages.empty())
-    {
-        yOffset += scrollSpeed;
-        needsRepaint = true;
-    }
-    else
-    {
-        // X- Reset scroll position when no messages
-        yOffset = 0.0f;
-    }
-    
-    // X- Repaint if needed
     if (needsRepaint)
         repaint();
 }
 
+void MidiLogDisplay::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+    if (source == &settingsManager)
+    {
+        // Settings have changed, repaint with new settings
+        repaint();
+    }
+}
+
 void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
-    // X- Format the message
-    juce::String text = formatMidiMessage(message, deviceName);
+    auto text = formatMidiMessage(message, deviceName);
+    auto color = getColorForMessage(message, deviceName);
     
-    // X- Get color for this message type
-    juce::Colour color = getColorForMessage(message);
+    logEntries.add(LogEntryData(text, color, deviceName));
+    if (logEntries.size() > maxEntries)
+        logEntries.remove(0);
     
-    // X- Add to the queue
-    messages.emplace_back(text, color, juce::Time::getCurrentTime());
-    
-    // X- Limit the number of messages
-    while (messages.size() > maxMessages)
+    messages.emplace_back(text, color, juce::Time::getCurrentTime(), deviceName);
+    if (messages.size() > maxMessages)
         messages.pop_front();
     
-    // X- Reset scroll position for new message
-    yOffset = 0.0f;
-    
-    // X- Trigger repaint
     repaint();
 }
 
 void MidiLogDisplay::clear()
 {
-    // X- Clear all messages
     messages.clear();
-    yOffset = 0.0f;
+    logEntries.clear();
     repaint();
 }
 
 void MidiLogDisplay::setMaxMessages(size_t max)
 {
-    // X- Set maximum number of messages
     maxMessages = max;
-    
-    // X- Trim if needed
     while (messages.size() > maxMessages)
         messages.pop_front();
 }
 
-juce::String MidiLogDisplay::formatMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
+void MidiLogDisplay::settingsChanged(const juce::String& /*deviceName*/)
 {
-    juce::String formattedText;
-    
-    // X- Add timestamp
-    formattedText << juce::Time::getCurrentTime().formatted("%H:%M:%S.%03d") << " | ";
-    
-    // X- Add device name (truncated if too long)
-    if (deviceName.length() > 15)
-        formattedText << deviceName.substring(0, 12) << "... | ";
-    else
-        formattedText << deviceName.paddedLeft(' ', 15) << " | ";
-    
-    // X- Format based on message type
-    if (message.isNoteOn())
-    {
-        formattedText << "Note On:  " << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4)
-             << " (" << message.getNoteNumber() << ") Vel:" << message.getVelocity()
-             << " Ch:" << message.getChannel();
-    }
-    else if (message.isNoteOff())
-    {
-        formattedText << "Note Off: " << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4)
-             << " (" << message.getNoteNumber() << ") Vel:" << message.getVelocity()
-             << " Ch:" << message.getChannel();
-    }
-    else if (message.isPitchWheel())
-    {
-        int value = message.getPitchWheelValue() - 8192;
-        formattedText << "Pitch Bend: " << value << " Ch:" << message.getChannel();
-    }
-    else if (message.isController())
-    {
-        formattedText << "CC " << message.getControllerNumber() << ": " << message.getControllerValue()
-             << " Ch:" << message.getChannel();
-             
-        // X- Add common controller names
-        switch (message.getControllerNumber())
-        {
-            case 1:  formattedText << " (Mod Wheel)"; break;
-            case 7:  formattedText << " (Volume)"; break;
-            case 10: formattedText << " (Pan)"; break;
-            case 11: formattedText << " (Expression)"; break;
-            case 64: formattedText << " (Sustain)"; break;
-            case 74: formattedText << " (Cutoff)"; break;
-        }
-    }
-    else if (message.isChannelPressure())
-    {
-        formattedText << "Channel Pressure: " << message.getChannelPressureValue()
-             << " Ch:" << message.getChannel();
-    }
-    else if (message.isAftertouch())
-    {
-        formattedText << "Aftertouch: " << juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4)
-             << " (" << message.getNoteNumber() << ") Value:" << message.getAfterTouchValue()
-             << " Ch:" << message.getChannel();
-    }
-    else if (message.isProgramChange())
-    {
-        formattedText << "Program Change: " << message.getProgramChangeNumber()
-             << " Ch:" << message.getChannel();
-    }
-    else if (message.isMidiClock())
-    {
-        formattedText << "MIDI Clock";
-    }
-    else if (message.isMidiStart())
-    {
-        formattedText << "MIDI Start";
-    }
-    else if (message.isMidiStop())
-    {
-        formattedText << "MIDI Stop";
-    }
-    else if (message.isMidiContinue())
-    {
-        formattedText << "MIDI Continue";
-    }
-    else if (message.isSysEx())
-    {
-        formattedText << "SysEx: " << message.getSysExDataSize() << " bytes";
-    }
-    else
-    {
-        // X- Generic fallback for other message types
-        formattedText << "MIDI Message: ";
-        for (int i = 0; i < message.getRawDataSize(); ++i)
-        {
-            formattedText << juce::String::formatted("%02X ", message.getRawData()[i]);
-        }
-    }
-    
-    return formattedText;
+    // Settings have changed, repaint with new settings
+    repaint();
 }
 
-juce::Colour MidiLogDisplay::getColorForMessage(const juce::MidiMessage& message)
+juce::String MidiLogDisplay::formatMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
-    // X- Color-code by message type using user settings
+    juce::String text = deviceName + ": ";
+    
+    if (message.isNoteOn())
+        text += "Note On: " + juce::String(message.getNoteNumber()) + " Vel: " + juce::String(message.getVelocity());
+    else if (message.isNoteOff())
+        text += "Note Off: " + juce::String(message.getNoteNumber());
+    else if (message.isPitchWheel())
+        text += "Pitch Bend: " + juce::String(message.getPitchWheelValue());
+    else if (message.isController())
+        text += "CC: " + juce::String(message.getControllerNumber()) + " Val: " + juce::String(message.getControllerValue());
+    else if (message.isChannelPressure())
+        text += "Channel Pressure: " + juce::String(message.getChannelPressureValue());
+    else if (message.isAftertouch())
+        text += "Aftertouch: " + juce::String(message.getAfterTouchValue());
+    else if (message.isProgramChange())
+        text += "Program Change: " + juce::String(message.getProgramChangeNumber());
+    else if (message.isMidiClock())
+        text += "MIDI Clock";
+    else if (message.isMidiStart())
+        text += "MIDI Start";
+    else if (message.isMidiStop())
+        text += "MIDI Stop";
+    else if (message.isMidiContinue())
+        text += "MIDI Continue";
+    else if (message.isSysEx())
+        text += "SysEx: " + juce::String(message.getSysExDataSize()) + " bytes";
+    else
+        text += "Other MIDI Event";
+    
+    return text;
+}
+
+juce::Colour MidiLogDisplay::getColorForMessage(const juce::MidiMessage& message, const juce::String& deviceName)
+{
+    const auto& settings = settingsManager.getSettings(deviceName);
+    
     if (message.isNoteOn())
         return settings.noteOnColor;
     else if (message.isNoteOff())
@@ -267,13 +192,6 @@ juce::Colour MidiLogDisplay::getColorForMessage(const juce::MidiMessage& message
         return settings.sysExColor;
     else
         return settings.defaultColor;
-}
-
-// X- Implement the setSettings method
-void MidiLogDisplay::setSettings(const DisplaySettings& newSettings)
-{
-    settings = newSettings;
-    repaint(); // Repaint with new colors
 }
 
 } // namespace MidiPortal 
