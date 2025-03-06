@@ -1,84 +1,129 @@
+// LogDisplaySettingsComponent is like a form that lets users view and edit DisplaySettingsManager settings
+
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 #include "MidiLogDisplay.h"
+#include "DisplaySettingsManager.h"
+#include "SettingsSection.h"
 
 namespace MidiPortal {
 
-// X- Define a ChangeListener class
-class BackgroundColorChangeListener : public juce::ChangeListener {
+// X- Define a proper ColorChangeListener class for each color type
+class ColorChangeListener : public juce::ChangeListener {
 public:
-    BackgroundColorChangeListener(MidiLogDisplay::DisplaySettings& settings, juce::ColourSelector& selector)
-        : settings(settings), selector(selector) {}
+    enum class ColorType {
+        Background,
+        NoteOn,
+        NoteOff,
+        Controller,
+        PitchBend,
+        Pressure,
+        ProgramChange,
+        Clock,
+        SysEx,
+        Default
+    };
 
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override {
-        if (source == &selector) {
-            settings.backgroundColor = selector.getCurrentColour();
+    ColorChangeListener(DisplaySettingsManager::DisplaySettings* settingsPtr, 
+                       juce::ColourSelector* selector,
+                       ColorType type)
+        : settings(settingsPtr), colourSelector(selector), colorType(type) {}
+
+    void changeListenerCallback(juce::ChangeBroadcaster*) override {
+        if (settings != nullptr && colourSelector != nullptr) {
+            auto newColor = colourSelector->getCurrentColour();
+            switch (colorType) {
+                case ColorType::Background:     settings->backgroundColor = newColor; break;
+                case ColorType::NoteOn:         settings->noteOnColor = newColor; break;
+                case ColorType::NoteOff:        settings->noteOffColor = newColor; break;
+                case ColorType::Controller:      settings->controllerColor = newColor; break;
+                case ColorType::PitchBend:      settings->pitchBendColor = newColor; break;
+                case ColorType::Pressure:        settings->pressureColor = newColor; break;
+                case ColorType::ProgramChange:   settings->programChangeColor = newColor; break;
+                case ColorType::Clock:          settings->clockColor = newColor; break;
+                case ColorType::SysEx:          settings->sysExColor = newColor; break;
+                case ColorType::Default:        settings->defaultColor = newColor; break;
+            }
         }
     }
 
 private:
-    MidiLogDisplay::DisplaySettings& settings;
-    juce::ColourSelector& selector;
+    DisplaySettingsManager::DisplaySettings* settings;
+    juce::ColourSelector* colourSelector;
+    ColorType colorType;
 };
 
 // X- Component for customizing MidiLogDisplay settings
-class LogDisplaySettingsComponent : public juce::Component
+class LogDisplaySettingsComponent : public juce::Component,
+                                  private juce::ComboBox::Listener
 {
 public:
     LogDisplaySettingsComponent(MidiLogDisplay& logDisplayToControl);
-    ~LogDisplaySettingsComponent() override = default;
+    ~LogDisplaySettingsComponent() override;
     
     void paint(juce::Graphics& g) override;
     void resized() override;
     
 private:
-    // X- Reference to the log display we're controlling
+    // Reference to the log display we're controlling
     MidiLogDisplay& logDisplay;
     
-    // X- Current settings (working copy)
-    MidiLogDisplay::DisplaySettings currentSettings;
+    // Settings sections
+    std::unique_ptr<SettingsSection> deviceSection;
+    std::unique_ptr<SettingsSection> appearanceSection;
+    std::unique_ptr<SettingsSection> colorSection;
     
-    // X- UI Components
-    juce::Label titleLabel;
+    // Current and cached settings
+    DisplaySettingsManager::DisplaySettings currentSettings;
+    DisplaySettingsManager::DisplaySettings previousSettings;  // For reset functionality
+    DisplaySettingsManager::DisplaySettings defaultSettings;   // Original defaults
+    juce::String currentDevice;
+    bool hasAppliedOnce = false;
     
-    // X- Color selectors
-    struct ColorSelector {
-        juce::Label nameLabel;
-        juce::ColourSelector selector;
-        juce::TextButton resetButton;
-        std::unique_ptr<juce::ChangeListener> changeListener;
-    };
+    // UI Components
+    juce::Label deviceLabel;
+    juce::ComboBox deviceSelector;
     
-    // X- Font size slider
-    juce::Slider fontSizeSlider;
     juce::Label fontSizeLabel;
+    juce::Slider fontSizeSlider;
+
+    // X- Added for scrollable color section area
+    std::unique_ptr<juce::Component> colorContainer;
+    juce::Viewport colorViewport;
     
-    // X- Background color selector
-    juce::Label backgroundLabel;
-    juce::ColourSelector backgroundSelector;
-    juce::TextButton resetBackgroundButton;
+    // Color selectors for different MIDI message types
+    struct ColorSection {
+        juce::Label label;
+        std::unique_ptr<juce::ColourSelector> selector;
+        std::unique_ptr<ColorChangeListener> listener;
+    };
+
+    ColorSection backgroundColorSection;
+    ColorSection noteOnColorSection;
+    ColorSection noteOffColorSection;
+    ColorSection controllerColorSection;
+    ColorSection pitchBendColorSection;
+    ColorSection pressureColorSection;
+    ColorSection programChangeColorSection;
+    ColorSection clockColorSection;
+    ColorSection sysExColorSection;
+    ColorSection defaultColorSection;
     
-    // X- Apply and Reset buttons
     juce::TextButton applyButton;
-    juce::TextButton resetAllButton;
+    juce::TextButton resetButton;
     
-    // X- Helper method to create a color selector
-    std::unique_ptr<ColorSelector> createColorSelector(const juce::String& name, juce::Colour& targetColor);
-    
-    // X- Color selectors for each message type
-    std::unique_ptr<ColorSelector> noteOnSelector;
-    std::unique_ptr<ColorSelector> noteOffSelector;
-    std::unique_ptr<ColorSelector> pitchBendSelector;
-    std::unique_ptr<ColorSelector> controllerSelector;
-    std::unique_ptr<ColorSelector> pressureSelector;
-    std::unique_ptr<ColorSelector> programChangeSelector;
-    std::unique_ptr<ColorSelector> clockSelector;
-    std::unique_ptr<ColorSelector> sysExSelector;
-    std::unique_ptr<ColorSelector> defaultSelector;
-    
-    // X- Change listener for background color
-    std::unique_ptr<BackgroundColorChangeListener> backgroundChangeListener;
+    // Helper methods
+    void setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor);
+    void deviceSelectorChanged();
+    void fontSizeChanged();
+    void updateControls();
+    void comboBoxChanged(juce::ComboBox* comboBoxThatHasChanged) override;
+    void handleApplyButton();
+    void handleResetButton();
+    void cacheCurrentSettings();
+    void applySettings(const DisplaySettingsManager::DisplaySettings& settings);
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LogDisplaySettingsComponent)
 };

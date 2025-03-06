@@ -21,6 +21,12 @@ if(NOT TARGET MidiPortalShared)
             source/LogDisplaySettingsComponent.cpp
             source/LogDisplaySettingsComponent.h
             source/LogDisplaySettingsWindow.h
+            source/WindowManager.cpp
+            source/WindowManager.h
+            source/DisplaySettingsManager.cpp
+            source/DisplaySettingsManager.h
+            source/WindowRoutingComponent.cpp
+            source/WindowRoutingComponent.h
     )
 
     target_include_directories(MidiPortalShared

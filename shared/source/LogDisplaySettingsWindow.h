@@ -16,8 +16,8 @@ public:
         auto* content = new LogDisplaySettingsComponent(logDisplay);
         
         setContentOwned(content, true);
-        setResizeLimits(400, 300, 800, 800);
-        centreWithSize(600, 800);
+        setResizeLimits(400, 300, 600, 1800);
+        centreWithSize(600, 1200);
         
         setResizable(true, true);  // Allow both horizontal and vertical resizing
         setVisible(true);

@@ -1,87 +1,54 @@
-# Build Commands for MidiPortal
+# Build Commands
 
-## RECOMMENDED: Use the build script
-# This is the simplest and most reliable method
-./build.sh                  # Build standalone only (Debug)
-./build.sh --release        # Build standalone only (Release)
-./build.sh --plugin         # Build standalone and AU plugin (Debug)
-./build.sh --plugin --release # Build standalone and AU plugin (Release)
-
-## Run the application
-# Run the standalone version
-./build/standalone/MidiPortalStandalone
-
-# Run the plugin version (after building with --plugin)
-./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-# Run the plugin version (after building with --plugin --release)
-./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-## Quick Copy/Paste Combos
-# Build and run standalone (Debug)
-./build.sh && ./build/standalone/MidiPortalStandalone
-
-# Build and run standalone (Release)
-./build.sh --release && ./build/standalone/MidiPortalStandalone
-
-# Build and run plugin (Debug)
-./build.sh --plugin && ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-# Build and run plugin (Release)
-./build.sh --plugin --release && ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-## Loading the Plugin in a DAW
-# After building with --plugin, the AU plugin is available at:
-# Debug build:
-./build/plugin/AudioPlugin_artefacts/Debug/AU/MidiPortalPlugin.component
-# Release build:
-./build/plugin/AudioPlugin_artefacts/Release/AU/MidiPortalPlugin.component
-
-# You may need to copy the component to the system AU directory:
-# For current user only:
-mkdir -p ~/Library/Audio/Plug-Ins/Components/
-cp -r ./build/plugin/AudioPlugin_artefacts/Debug/AU/MidiPortalPlugin.component ~/Library/Audio/Plug-Ins/Components/
-# Then restart your DAW and scan for new plugins
-
-## Initial Setup (only needed once)
-# Install Homebrew if not already installed
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install LLVM 19+ and Ninja
-brew install llvm ninja
-
-# Build Rust library
+# Initial Setup
+Build Rust library first:
 cd rust && cargo build --release && cd ..
 
-## Fix IDE Code Intelligence Issues
-# If you see "#include errors" in your IDE but the build works fine:
-cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cp build/compile_commands.json .
-
-## ADVANCED: Manual Build Commands
-# Only use these if you have specific needs not covered by build.sh
-
-# Manual build with Ninja
+Configure and build with Ninja:
 rm -rf build
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake -B build -G Ninja
 cmake --build build
-
-# Build standalone only (avoids VST3 helper issues)
-cmake --build build --target MidiPortalStandalone
 
 # Quick Rebuild (when only C++ changed)
 cmake --build build
 
-# Explicitly specify compiler paths (rarely needed)
-cmake -B build -G Ninja \
-      -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
-      -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
-      -DCMAKE_BUILD_TYPE=Debug
+# Debug Build option A:
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
 
-## Debug with LLDB
-lldb ./build/standalone/MidiPortalStandalone
+# Debug Build option B:
+
+rm -rf cmake-build-ninja
+cmake -G Ninja -S . -B cmake-build-ninja -DCMAKE_BUILD_TYPE=Debug
+
+cmake --build cmake-build-ninja
+
+lldb ./cmake-build-ninja/standalone/MidiPortalStandalone
+
 (lldb) run
 
-## Notes
-For detailed information about the build system and common issues, see the "Common Issues & Fixes" 
-section in the README.md file.
+# Release Build
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+
+# Run Commands
+
+# Run Standalone (Debug)
+./build/standalone/MidiPortalStandalone
+
+# Run Standalone (Release)
+./build/standalone/MidiPortalStandalone_artefacts/Release/MidiPortalStandalone
+
+# Run Plugin (Debug)
+./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Run Plugin (Release)
+./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Quick Copy/ Paste Combo
+rm -rf build
+cmake -B build -G Ninja
+cmake --build build
+./build/standalone/MidiPortalStandalone
