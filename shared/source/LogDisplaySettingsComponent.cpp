@@ -4,10 +4,33 @@
 
 namespace MidiPortal {
 
+/*
+ * IMPORTANT MEMORY MANAGEMENT NOTE:
+ * 
+ * This component previously had a segmentation fault when being destroyed. The issue was related
+ * to the ownership of the colorContainer component when used with the viewport.
+ * 
+ * The Problem:
+ * - colorContainer is managed by a unique_ptr in this class
+ * - When setting it as the viewed component with setViewedComponent(component, true),
+ *   JUCE would take ownership and try to delete it when the viewport was cleared
+ * - This caused a double-delete: once by JUCE and once by the unique_ptr destructor
+ * 
+ * The Solution:
+ * - Use setViewedComponent(component, false) to tell JUCE NOT to delete the component
+ * - Let the unique_ptr handle the deletion when this component is destroyed
+ * - Clear the viewport before any other cleanup in the destructor
+ * 
+ * If you encounter segmentation faults with JUCE components, always check for ownership
+ * conflicts between smart pointers and JUCE's internal deletion mechanisms.
+ */
 LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisplayToControl)
     : logDisplay(logDisplayToControl),
       currentSettings(logDisplay.getSettingsManager().getSettings()),
       defaultSettings(currentSettings),
+      deviceSection(std::make_unique<SettingsSection>("Device")),
+      appearanceSection(std::make_unique<SettingsSection>("Appearance")),
+      colorSection(std::make_unique<SettingsSection>("Colors")),
       colorContainer(std::make_unique<juce::Component>())
 {
     // Create sections
@@ -76,7 +99,7 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     colorContainer->addAndMakeVisible(*defaultColorSection.selector);
 
     // Set up the viewport with the color container
-    colorViewport.setViewedComponent(colorContainer.get(), true);
+    colorViewport.setViewedComponent(colorContainer.get(), false); // X- JUCE won't delete colorContainer
     colorViewport.setScrollBarsShown(true, false);  // Disable horizontal scrollbar, keep vertical
     addAndMakeVisible(colorViewport);
     
@@ -95,8 +118,15 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
 
 LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
 {
+    // Set the flag to indicate we're being destroyed
+    isBeingDestroyed = true;
+    
+    // CRITICAL: Clear the viewport's viewed component FIRST to prevent double-delete issues
+    // This must be done before any other cleanup to avoid accessing components after deletion
+    // The 'false' parameter ensures JUCE doesn't try to delete the component itself
     colorViewport.setViewedComponent(nullptr, false);
     
+    // Remove all listeners from selectors
     for (auto* selector : {
         backgroundColorSection.selector.get(),
         noteOnColorSection.selector.get(),
@@ -114,6 +144,7 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
         }
     }
     
+    // Reset all listeners first
     backgroundColorSection.listener.reset();
     noteOnColorSection.listener.reset();
     noteOffColorSection.listener.reset();
@@ -124,7 +155,20 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     clockColorSection.listener.reset();
     sysExColorSection.listener.reset();
     defaultColorSection.listener.reset();
+    
+    // Reset all selectors next
+    backgroundColorSection.selector.reset();
+    noteOnColorSection.selector.reset();
+    noteOffColorSection.selector.reset();
+    controllerColorSection.selector.reset();
+    pitchBendColorSection.selector.reset();
+    pressureColorSection.selector.reset();
+    programChangeColorSection.selector.reset();
+    clockColorSection.selector.reset();
+    sysExColorSection.selector.reset();
+    defaultColorSection.selector.reset();
 
+    // Finally, reset the container
     colorContainer.reset();
 }
 
@@ -223,14 +267,20 @@ void LogDisplaySettingsComponent::resized()
 
 void LogDisplaySettingsComponent::deviceSelectorChanged()
 {
-    currentSettings = logDisplay.getSettingsManager().getSettings(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-    updateControls();
+    // Don't access logDisplay if we're being destroyed
+    if (!isBeingDestroyed) {
+        currentSettings = logDisplay.getSettingsManager().getSettings(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+        updateControls();
+    }
 }
 
 void LogDisplaySettingsComponent::fontSizeChanged()
 {
-    currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-    logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+    // Don't access logDisplay if we're being destroyed
+    if (!isBeingDestroyed) {
+        currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
+        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+    }
 }
 
 void LogDisplaySettingsComponent::updateControls()
@@ -284,37 +334,49 @@ void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const
 
 void LogDisplaySettingsComponent::handleApplyButton()
 {
-    // Cache the previous settings before applying new ones
-    if (hasAppliedOnce) {
-        previousSettings = currentSettings;
+    // Don't access logDisplay if we're being destroyed
+    if (!isBeingDestroyed) {
+        // Cache the previous settings before applying new ones
+        if (hasAppliedOnce) {
+            previousSettings = currentSettings;
+        }
+        
+        // Update current settings from all controls
+        currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
+        currentSettings.backgroundColor = backgroundColorSection.selector->getCurrentColour();
+        currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
+        currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
+        currentSettings.controllerColor = controllerColorSection.selector->getCurrentColour();
+        currentSettings.pitchBendColor = pitchBendColorSection.selector->getCurrentColour();
+        currentSettings.pressureColor = pressureColorSection.selector->getCurrentColour();
+        currentSettings.programChangeColor = programChangeColorSection.selector->getCurrentColour();
+        currentSettings.clockColor = clockColorSection.selector->getCurrentColour();
+        currentSettings.sysExColor = sysExColorSection.selector->getCurrentColour();
+        currentSettings.defaultColor = defaultColorSection.selector->getCurrentColour();
+        
+        // Apply the settings
+        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+        hasAppliedOnce = true;
     }
-    
-    // Update current settings from all controls
-    currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-    currentSettings.backgroundColor = backgroundColorSection.selector->getCurrentColour();
-    currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
-    currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
-    currentSettings.controllerColor = controllerColorSection.selector->getCurrentColour();
-    currentSettings.pitchBendColor = pitchBendColorSection.selector->getCurrentColour();
-    currentSettings.pressureColor = pressureColorSection.selector->getCurrentColour();
-    currentSettings.programChangeColor = programChangeColorSection.selector->getCurrentColour();
-    currentSettings.clockColor = clockColorSection.selector->getCurrentColour();
-    currentSettings.sysExColor = sysExColorSection.selector->getCurrentColour();
-    currentSettings.defaultColor = defaultColorSection.selector->getCurrentColour();
-    
-    // Apply the settings
-    logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-    hasAppliedOnce = true;
 }
 
 void LogDisplaySettingsComponent::handleResetButton()
 {
-    if (hasAppliedOnce) {
-        // If settings have been applied, reset to previous settings
-        applySettings(previousSettings);
-    } else {
-        // If no settings have been applied, reset to defaults
-        applySettings(defaultSettings);
+    // Don't access logDisplay if we're being destroyed
+    if (!isBeingDestroyed) {
+        // If we've applied settings before, reset to the previous settings
+        if (hasAppliedOnce) {
+            currentSettings = previousSettings;
+        } else {
+            // Otherwise reset to default settings
+            currentSettings = defaultSettings;
+        }
+        
+        // Update UI to reflect the reset settings
+        updateControls();
+        
+        // Apply the reset settings
+        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
     }
 }
 

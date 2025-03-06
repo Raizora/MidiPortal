@@ -9,18 +9,11 @@ if(NOT DEFINED CMAKE_GENERATOR)
   message(STATUS "Enforcing Ninja generator")
 endif()
 
-# Always use the toolchain file on macOS
-if(APPLE)
-  # Set the toolchain file before the project() command
+# Enforce Apple Clang on macOS
+if(APPLE AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/macos-clang.cmake" 
       CACHE FILEPATH "Toolchain file" FORCE)
   message(STATUS "Using macOS toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
-endif()
-
-# Explicitly set compiler paths if not set by toolchain
-if(APPLE AND NOT DEFINED CMAKE_C_COMPILER)
-  set(CMAKE_C_COMPILER "/opt/homebrew/Cellar/llvm/19.1.7/bin/clang" CACHE FILEPATH "C Compiler" FORCE)
-  set(CMAKE_CXX_COMPILER "/opt/homebrew/Cellar/llvm/19.1.7/bin/clang++" CACHE FILEPATH "C++ Compiler" FORCE)
 endif()
 
 # Sets a few variables, like PROJECT_NAME

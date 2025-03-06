@@ -1,66 +1,14 @@
-# Toolchain file for macOS with Homebrew Clang
+# Toolchain file for macOS with Apple Clang
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
 
-# Try to find Homebrew Clang in common locations
-set(HOMEBREW_CLANG_PATHS
-    "/opt/homebrew/Cellar/llvm/19.1.7/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.6/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.5/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.4/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.3/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.2/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.1/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.1.0/bin/clang"
-    "/opt/homebrew/Cellar/llvm/19.0.0/bin/clang"
-    "/opt/homebrew/opt/llvm/bin/clang"
-)
-
-set(HOMEBREW_CLANGPP_PATHS
-    "/opt/homebrew/Cellar/llvm/19.1.7/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.6/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.5/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.4/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.3/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.2/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.1/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.1.0/bin/clang++"
-    "/opt/homebrew/Cellar/llvm/19.0.0/bin/clang++"
-    "/opt/homebrew/opt/llvm/bin/clang++"
-)
-
-# Find the first existing Homebrew Clang
-foreach(CLANG_PATH ${HOMEBREW_CLANG_PATHS})
-    if(EXISTS ${CLANG_PATH})
-        set(FOUND_CLANG ${CLANG_PATH})
-        break()
-    endif()
-endforeach()
-
-# Find the first existing Homebrew Clang++
-foreach(CLANGPP_PATH ${HOMEBREW_CLANGPP_PATHS})
-    if(EXISTS ${CLANGPP_PATH})
-        set(FOUND_CLANGPP ${CLANGPP_PATH})
-        break()
-    endif()
-endforeach()
-
-# Set the compiler paths
-if(DEFINED FOUND_CLANG AND DEFINED FOUND_CLANGPP)
-    set(CMAKE_C_COMPILER ${FOUND_CLANG} CACHE PATH "C compiler")
-    set(CMAKE_CXX_COMPILER ${FOUND_CLANGPP} CACHE PATH "C++ compiler")
-    message(STATUS "Using Homebrew Clang: ${FOUND_CLANG}")
-    message(STATUS "Using Homebrew Clang++: ${FOUND_CLANGPP}")
-else()
-    # Fall back to system Clang if Homebrew Clang is not found
-    set(CMAKE_C_COMPILER /usr/bin/clang CACHE PATH "C compiler")
-    set(CMAKE_CXX_COMPILER /usr/bin/clang++ CACHE PATH "C++ compiler")
-    message(WARNING "Homebrew Clang not found, falling back to system Clang")
-endif()
+# Specify the Apple Clang compiler
+set(CMAKE_C_COMPILER /usr/bin/clang CACHE PATH "C compiler")
+set(CMAKE_CXX_COMPILER /usr/bin/clang++ CACHE PATH "C++ compiler")
 
 # Enforce minimum version check
-set(CMAKE_C_COMPILER_ID "Clang")
-set(CMAKE_CXX_COMPILER_ID "Clang")
+set(CMAKE_C_COMPILER_ID "AppleClang")
+set(CMAKE_CXX_COMPILER_ID "AppleClang")
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 23)

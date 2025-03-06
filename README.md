@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.0.8**
+# **MidiPortal - Version 0.0.9.9**
 
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -8,10 +8,13 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - **Real-Time Monitoring**: Observe MIDI messages as they traverse your system.
 - **Cross-Platform Support**: Built with JUCE for compatibility with macOS, Windows, and Linux.
 - **Highly Customizable**: Modular design serves as a foundation for future functionality.
+- **Multi-Window Device Selection**: Spawn additional windows for device-specific monitoring.
+- **Comprehensive Settings**: Fully configurable colors for different MIDI message types.
 - **Lightweight Design**: Optimized for performance with minimal system resource usage.
 - **Robust Tooling**: Effortless management of third-party dependencies using the CPM package manager.
 - **Unit Testing**: Ready-to-go unit testing with GoogleTest.
 - **Enforced Code Quality**: Highest warning levels with "treat warnings as errors" for maximum safety.
+- **Consistent Build System**: Enforced Ninja generator and Apple Clang compiler for reliable builds.
 
 ## **Roadmap**
 - Visualize incoming and outgoing MIDI messages.
@@ -23,11 +26,20 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
   - Automatic log management for MIDI traffic.
 
 ## **Version History**
+### **0.0.9.9** (Pre-release):
+- Implemented comprehensive Log Display Settings component with scrollable viewport
+- Added color selectors for each MIDI message type with clearly labeled UI sections
+- Introduced multi-window functionality for device-specific monitoring
+- Refined and polished UI components and behaviors across the application
+- Enhanced overall usability, responsiveness, and user experience
+- Final major milestone before the 0.1.0 release
+
 ### **0.0.8**:
 - Added scrolling, fading MIDI log display for real-time visualization
 - Implemented color-coding for different MIDI message types
 - Added support for switching between different visualization modes
 - Enhanced UI with proper layout and component management
+- Added build script with enforced Ninja generator and Apple Clang compiler
 
 ### **0.0.7**:
 - Implemented new JUCE-first architecture for MIDI device management
@@ -82,32 +94,70 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 git clone https://github.com/Raizora/MidiPortal.git
 cd MidiPortal
 ```
-### **2. Build Rust Library**
+
+### **2. Build Using the Script (Recommended)**
+The build script handles all necessary steps, including building the Rust library and enforcing the correct build system:
+```bash
+./build.sh                  # Build standalone only (Debug)
+./build.sh --release        # Build standalone only (Release)
+./build.sh --plugin         # Build standalone and plugin (Debug)
+./build.sh --plugin --release # Build standalone and plugin (Release)
+```
+
+### **3. Run the Application**
+```bash
+./build/standalone/MidiPortalStandalone
+```
+
+### **Alternative: Manual Build Process**
+If you prefer to build manually:
+
+#### **Build Rust Library**
 Navigate to the `rust` directory and build the Rust library:
 ```bash
 cd rust
 cargo build --release
 cd ..
 ```
-### **3. Configure CMake**
+
+#### **Configure CMake**
 Use Ninja to configure the build system:
 ```bash
-cmake -G Ninja -S . -B cmake-build-ninja
+cmake -B build -G Ninja \
+      -DCMAKE_C_COMPILER=/usr/bin/clang \
+      -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+      -DCMAKE_BUILD_TYPE=Debug
 ```
-### **4. Build the Project**
+
+#### **Build the Project**
 Compile the project:
 ```bash
-cmake --build cmake-build-ninja
+cmake --build build
 ```
-### **5. Run the Targets**
+
+#### **Run the Targets**
 - Run `MidiPortalStandalone`:
   ```bash
-  ./cmake-build-ninja/standalone/MidiPortalStandalone
+  ./build/standalone/MidiPortalStandalone
   ```
 - Run the `AudioPlugin`:
   ```bash
-  ./cmake-build-ninja/plugin/AudioPlugin_Standalone
+  ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
   ```
+
+## **Enforced Build System**
+MidiPortal now enforces the use of Ninja as the build generator and Apple Clang as the compiler on macOS. This ensures consistent builds across different environments and prevents issues with build system switching.
+
+### **How It Works**
+- **CMake Presets**: The project includes CMake presets that specify Ninja and Apple Clang.
+- **Toolchain File**: A custom toolchain file (`cmake/toolchains/macos-clang.cmake`) enforces compiler settings.
+- **Build Script**: The `build.sh` script handles all build steps with proper configuration.
+
+### **Benefits**
+- **Consistent Builds**: Prevents accidental switching to Unix Makefiles or other generators.
+- **Faster Compilation**: Ninja provides faster builds than traditional Make.
+- **Modern C++ Support**: Ensures the use of a compiler with full C++23 support.
+- **Simplified Workflow**: Single command to handle the entire build process.
 
 ## **Continuous Integration (CI/CD)**
 MidiPortal uses **GitHub Actions** for automated **building and testing**.  
@@ -260,6 +310,36 @@ This section documents some of the most common issues encountered when building 
 2. **If Using CLion, Restart and Reload the Project**
   - **File > Invalidate Caches & Restart**
   - **File > Reload CMake Project**
+
+---
+
+### **5️⃣ Segmentation Fault When Closing Log Display Settings Window**
+**Issue:**
+- Application crashes with a segmentation fault when closing the Log Display Settings window.
+- This is caused by a double-delete of the `colorContainer` component in `LogDisplaySettingsComponent`.
+
+**Fix:**
+1. **Change the Viewport Ownership Parameter**
+   ```cpp
+   // Change this line in LogDisplaySettingsComponent.cpp:
+   colorViewport.setViewedComponent(colorContainer.get(), true);
+   
+   // To this (setting the second parameter to false):
+   colorViewport.setViewedComponent(colorContainer.get(), false); // JUCE won't delete colorContainer
+   ```
+
+2. **Explanation:**
+   - When the second parameter is `true`, JUCE takes ownership of the component and will delete it.
+   - Since `colorContainer` is already managed by a `unique_ptr`, this causes a double-delete.
+   - Setting the parameter to `false` tells JUCE not to delete the component, avoiding the conflict.
+
+3. **Additional Precautions:**
+   - Always clear the viewport in the destructor before other cleanup:
+   ```cpp
+   // In the destructor:
+   colorViewport.setViewedComponent(nullptr, false);
+   ```
+   - Be careful with component ownership when using JUCE with smart pointers.
 
 ---
 
