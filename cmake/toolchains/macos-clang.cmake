@@ -2,13 +2,13 @@
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
 
-# Specify the Apple Clang compiler
-set(CMAKE_C_COMPILER /usr/bin/clang CACHE PATH "C compiler")
-set(CMAKE_CXX_COMPILER /usr/bin/clang++ CACHE PATH "C++ compiler")
+# Specify the Homebrew Clang compiler
+set(CMAKE_C_COMPILER /opt/homebrew/Cellar/llvm/19.1.7/bin/clang CACHE PATH "C compiler")
+set(CMAKE_CXX_COMPILER /opt/homebrew/Cellar/llvm/19.1.7/bin/clang++ CACHE PATH "C++ compiler")
 
 # Enforce minimum version check
-set(CMAKE_C_COMPILER_ID "AppleClang")
-set(CMAKE_CXX_COMPILER_ID "AppleClang")
+set(CMAKE_C_COMPILER_ID "Clang")
+set(CMAKE_CXX_COMPILER_ID "Clang")
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 23)

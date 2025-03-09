@@ -5,10 +5,17 @@ namespace MidiPortal {
 WindowManager::WindowManager(DisplaySettingsManager& settingsManager)
     : displaySettingsManager(settingsManager)
 {
+    // MAIN is the main application window that's always present
+    // We'll include it in our window list for routing purposes
+    // but we don't need to create it as it's already part of the application
 }
 
 void WindowManager::createWindow(const juce::String& windowName)
 {
+    // Don't allow creating a window named "MAIN" as it's the main application window
+    if (windowName == "MAIN")
+        return;
+        
     if (!hasWindow(windowName))
     {
         auto window = std::make_unique<LogDisplayWindow>(windowName, displaySettingsManager);
@@ -21,6 +28,10 @@ void WindowManager::createWindow(const juce::String& windowName)
 
 void WindowManager::closeWindow(const juce::String& windowName)
 {
+    // Don't allow closing the MAIN window as it's the main application window
+    if (windowName == "MAIN")
+        return;
+        
     // Remove all device routings for this window
     auto devicesIt = windowToDevices.find(windowName);
     if (devicesIt != windowToDevices.end())
@@ -41,14 +52,26 @@ void WindowManager::closeWindow(const juce::String& windowName)
 
 bool WindowManager::hasWindow(const juce::String& windowName) const
 {
+    // MAIN is always considered to exist, even though it's not in our windows map
+    if (windowName == "MAIN")
+        return true;
+        
     return windows.find(windowName) != windows.end();
 }
 
 juce::StringArray WindowManager::getWindowNames() const
 {
     juce::StringArray names;
+    
+    // Always add MAIN first - this is the main application window
+    names.add("MAIN");
+    
+    // Add other windows
     for (const auto& [name, window] : windows)
-        names.add(name);
+    {
+        if (name != "MAIN") // Skip MAIN as we already added it
+            names.add(name);
+    }
     return names;
 }
 

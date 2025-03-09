@@ -56,8 +56,17 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     
     // Set up font size controls
     fontSizeLabel.setText("Font Size:", juce::dontSendNotification);
+    juce::FontOptions options;
+    options = options.withHeight(16.0f);
+    fontSizeLabel.setFont(juce::Font(options));
+    fontSizeLabel.setJustificationType(juce::Justification::right);
+    
     fontSizeSlider.setRange(8.0, 24.0, 1.0);
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
+    fontSizeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    fontSizeSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+    fontSizeSlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
+    fontSizeSlider.setColour(juce::Slider::trackColourId, juce::Colours::darkgrey);
     fontSizeSlider.onValueChange = [this] { fontSizeChanged(); };
     
     // Add components to the appearance section
@@ -200,9 +209,17 @@ void LogDisplaySettingsComponent::resized()
     // Appearance section
     auto appearanceBounds = bounds.removeFromTop(80);
     appearanceSection->setBounds(appearanceBounds);
-    auto innerAppearanceBounds = appearanceBounds.reduced(10);
-    fontSizeLabel.setBounds(innerAppearanceBounds.removeFromLeft(100));  // Increased from 80 to 100
-    fontSizeSlider.setBounds(innerAppearanceBounds.reduced(5, 0));  // Add 5px padding from label
+    
+    // X- Completely revised font size control layout to ensure visibility
+    // Get the inner bounds of the appearance section for our controls
+    auto innerAppearanceBounds = appearanceSection->getLocalBounds().reduced(10);
+    
+    // Position the label on the left side
+    fontSizeLabel.setBounds(innerAppearanceBounds.removeFromLeft(100).withHeight(30).withY(innerAppearanceBounds.getY() + 25));
+    
+    // Position the slider to fill the remaining width
+    fontSizeSlider.setBounds(innerAppearanceBounds.withHeight(30).withY(innerAppearanceBounds.getY() + 25));
+    
     bounds.removeFromTop(sectionSpacing);
     
     // BUTTON ROW - At bottom, Height: 40px
