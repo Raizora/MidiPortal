@@ -30,9 +30,6 @@ void WindowRoutingComponent::paint(juce::Graphics& g)
     // Get the component bounds, reduced by 10 pixels on all sides for padding
     auto bounds = getLocalBounds().reduced(10);
     
-    // Reserve space at the top for the header (New Window button)
-    auto headerArea = bounds.removeFromTop(40);
-    
     // The remaining area is for the grid
     auto gridArea = bounds;
     
@@ -133,7 +130,6 @@ void WindowRoutingComponent::resized()
     // Position routing cells (toggle buttons)
     // Each cell represents a connection between a device and a window
     // Note: We don't have toggle buttons for the MAIN window
-    int cellIndex = 0;
     for (auto* cell : routingCells)
     {
         // Find the window and device indices for this cell
@@ -169,8 +165,6 @@ void WindowRoutingComponent::resized()
                           cellWidth,
                           cellHeight);
         }
-        
-        cellIndex++;
     }
     
     // Position RGB sliders below the window labels
@@ -248,6 +242,9 @@ void WindowRoutingComponent::buttonClicked(juce::Button* button)
 
 void WindowRoutingComponent::sliderValueChanged(juce::Slider* slider)
 {
+    // X- Intentionally unused parameter as we only apply color changes when the Apply button is clicked
+    juce::ignoreUnused(slider);
+    
     // Handle slider value changes
     // We don't need to do anything here since we only apply the color when the Apply button is clicked
 }
@@ -470,11 +467,45 @@ void WindowRoutingComponent::createNewWindow()
     if (newName.isEmpty())
         return;
         
+    // X- Store existing window colors before creating a new window
+    std::map<juce::String, juce::Colour> existingColors;
+    auto& settingsManager = windowManager.getSettingsManager();
+    
+    for (const auto& window : windows)
+    {
+        if (window == "MAIN")
+        {
+            existingColors[window] = settingsManager.getSettings("Default").backgroundColor;
+        }
+        else
+        {
+            existingColors[window] = settingsManager.getSettings(window).backgroundColor;
+        }
+    }
+    
     // Create the new window using the window manager
     windowManager.createWindow(newName);
     
-    // Update the grid to include the new window
+    // X- Update the grid to include the new window
     updateGrid();
+    
+    // X- Restore existing window colors
+    for (const auto& [window, color] : existingColors)
+    {
+        // Find the RGB sliders for this window
+        for (auto* slider : rgbSliders)
+        {
+            if (slider->window == window)
+            {
+                // Set the color in the sliders
+                slider->setColor(color);
+                
+                // Apply the color to the window
+                applyRGBSlidersToWindow(window);
+                break;
+            }
+        }
+    }
 }
 
 void WindowRoutingComponent::showColorSelectorForWindow(const juce::String& windowName)

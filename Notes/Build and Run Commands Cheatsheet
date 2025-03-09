@@ -3,8 +3,8 @@
 ## Recommended: Use the build script (automatically finds and uses Homebrew Clang 19+ and Ninja)
 ./build.sh                  # Build standalone only (Debug)
 ./build.sh --release        # Build standalone only (Release)
-./build.sh --plugin         # Build standalone and plugin (Debug)
-./build.sh --plugin --release # Build standalone and plugin (Release)
+./build.sh --plugin         # Build standalone and AU plugin (Debug)
+./build.sh --plugin --release # Build standalone and AU plugin (Release)
 
 ## Initial Setup (only needed once)
 # Install Homebrew if not already installed
@@ -79,6 +79,32 @@ lldb ./build/standalone/MidiPortalStandalone
 # Verify compiler version (should show Clang 19+)
 cmake -B build -G Ninja | grep "compiler identification"
 
+## Handling Plugin Format Issues
+
+# The project now uses Audio Units (AU) format on macOS instead of VST3
+# AU is the native plugin format for macOS and doesn't require the VST3 helper
+
+# Option 1: Use build.sh which now builds AU plugins
+./build.sh --plugin  # Builds AU plugin on macOS
+
+# Option 2: Build only the standalone target
+cmake --build build --target MidiPortalStandalone
+
+# Option 3 (Advanced): If you specifically need VST3 format
+# 1. Edit plugin/CMakeLists.txt to change `FORMATS AU Standalone` to `FORMATS VST3 Standalone`
+# 2. Build the JUCE VST3 helper:
+cd /path/to/JUCE
+cmake -B build -G Ninja
+cmake --build build --target juce_vst3_helper
+# 3. Add to PATH:
+export PATH="/path/to/JUCE/build/extras/Build/juceaide/juce_vst3_helper:$PATH"
+# 4. Build the project:
+cd /path/to/MidiPortal
+cmake --build build
+
 ## Notes
 For detailed information about the build system improvements and how we fixed the Clang version issues, see:
 Notepad/Clang_Build_System_Fix
+
+For information about common build issues including the VST3 helper problem, see the "Common Issues & Fixes" 
+section in the README.md file.

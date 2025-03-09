@@ -114,39 +114,8 @@ if [ "$BUILD_PLUGIN" = true ]; then
     # Build everything including plugin
     echo -e "${YELLOW}Building with plugin support...${NC}"
     
-    # Check for juce_vst3_helper
-    if ! command -v juce_vst3_helper &> /dev/null; then
-        echo -e "${YELLOW}Warning: juce_vst3_helper not found in PATH${NC}"
-        echo -e "${YELLOW}Attempting to find it in JUCE directory...${NC}"
-        
-        # Try to find juce_vst3_helper in common locations
-        JUCE_VST3_HELPER=""
-        for path in \
-            "/Users/jbenchia/JUCE/extras/Build/juceaide/build/Debug/juce_vst3_helper" \
-            "/Users/jbenchia/JUCE/extras/Build/juceaide/build/Release/juce_vst3_helper" \
-            "$(find /Users/jbenchia/JUCE -name "juce_vst3_helper" -type f 2>/dev/null | head -n 1)"
-        do
-            if [ -f "$path" ]; then
-                JUCE_VST3_HELPER="$path"
-                break
-            fi
-        done
-        
-        if [ -n "$JUCE_VST3_HELPER" ]; then
-            echo -e "${GREEN}Found juce_vst3_helper at: $JUCE_VST3_HELPER${NC}"
-            echo -e "${YELLOW}Creating symlink to juce_vst3_helper in /usr/local/bin${NC}"
-            sudo ln -sf "$JUCE_VST3_HELPER" /usr/local/bin/juce_vst3_helper
-        else
-            echo -e "${RED}Could not find juce_vst3_helper. Plugin build may fail.${NC}"
-            echo -e "${YELLOW}Building standalone only...${NC}"
-            cmake --build build --target MidiPortalStandalone
-            BUILD_PLUGIN=false
-        fi
-    fi
-    
-    if [ "$BUILD_PLUGIN" = true ]; then
-        cmake --build build
-    fi
+    # Build the entire project including AU plugin
+    cmake --build build
 else
     # Build standalone only
     echo -e "${YELLOW}Building standalone only...${NC}"
