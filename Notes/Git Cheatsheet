@@ -115,71 +115,44 @@ git checkout -b cursor-development-backup
 # Push the new cursor-development-backup branch to the remote repository and set it to track the remote branch
 git push -u origin cursor-development-backup
 
-# 6. Merge changes from cursor-development
-# 7. Push updated cursor-development-backup to remote
-# 8. Switch back to cursor-development branch
+quick recovery cheat code:
+git config --global credential.helper osxkeychain
+
+or
+
+rm ~/.git-credentials   # (optional cleanup if it exists)
+git config --global credential.helper osxkeychain
 
 # ----------------------------------------
-# MidiPortal Branch Management Protocols
+# Cursor Development Branch Management Protocol
 # ----------------------------------------
 
-## Protocol 1: Update cursor-development-backup from cursor-development
+# Quick Protocol for Updating cursor-development and cursor-development-backup
 
-# Quick copy/paste combo to update cursor-development-backup from cursor-development
-git checkout cursor-development && \
-git pull origin cursor-development && \
-git checkout cursor-development-backup && \
-git merge cursor-development && \
-git push origin cursor-development-backup && \
-git checkout cursor-development
+## 1. Update cursor-development-backup from cursor-development (after making changes to cursor-development)
+# This single command sequence will:
+# - Switch to cursor-development-backup
+# - Merge changes from cursor-development (fast-forward if possible)
+# - Push changes to remote
+# - Switch back to cursor-development
+git checkout cursor-development-backup && git merge cursor-development && git push origin cursor-development-backup && git checkout cursor-development
 
-# Explanation:
-# 1. Switch to cursor-development branch
-# 2. Pull latest changes from remote cursor-development
-# 3. Switch to cursor-development-backup branch
-# 4. Merge changes from cursor-development (fast-forward)
-# 5. Push updated cursor-development-backup to remote
-# 6. Switch back to cursor-development branch
+## 2. Create a fresh cursor-development-backup from cursor-development
+# This will delete the old backup and create a new one (useful for a clean backup)
+git checkout cursor-development && git branch -D cursor-development-backup && git push origin --delete cursor-development-backup && git checkout -b cursor-development-backup && git push -u origin cursor-development-backup && git checkout cursor-development
 
-## Protocol 2: Reset cursor-development-backup (Complete Refresh)
+## 3. Push changes to both branches at once
+# First commit your changes to cursor-development, then:
+git push origin cursor-development && git checkout cursor-development-backup && git merge cursor-development && git push origin cursor-development-backup && git checkout cursor-development
 
-# Quick copy/paste combo to completely reset cursor-development-backup to match cursor-development
-git checkout cursor-development && \
-git pull origin cursor-development && \
-git branch -D cursor-development-backup && \
-git push origin --delete cursor-development-backup && \
-git checkout -b cursor-development-backup && \
-git push -u origin cursor-development-backup && \
-git checkout cursor-development
+## 4. Check if branches are in sync
+# This will show if cursor-development-backup is behind cursor-development
+git checkout cursor-development && git log -1 --pretty=format:"%H" > /tmp/cursor-dev-hash && git checkout cursor-development-backup && git log -1 --pretty=format:"%H" > /tmp/cursor-backup-hash && diff /tmp/cursor-dev-hash /tmp/cursor-backup-hash && echo "Branches are in sync!" || echo "Branches are NOT in sync!"
 
-# Explanation:
-# 1. Switch to cursor-development branch
-# 2. Pull latest changes from remote cursor-development
-# 3. Delete local cursor-development-backup branch
-# 4. Delete remote cursor-development-backup branch
-# 5. Create new cursor-development-backup branch from current cursor-development
-# 6. Push new cursor-development-backup to remote and set tracking
-# 7. Switch back to cursor-development branch
+## 5. Quick recovery if something goes wrong
+# If you accidentally mess up the branches, this will reset cursor-development-backup to match cursor-development exactly
+git checkout cursor-development && git branch -D cursor-development-backup && git checkout -b cursor-development-backup && git push -f origin cursor-development-backup
 
-## Protocol 3: Commit Changes and Update Both Branches
-
-# Quick copy/paste combo to commit changes, push to cursor-development, and update cursor-development-backup
-git checkout cursor-development && \
-git add . && \
-git commit -m "Your commit message" && \
-git push origin cursor-development && \
-git checkout cursor-development-backup && \
-git merge cursor-development && \
-git push origin cursor-development-backup && \
-git checkout cursor-development
-
-# Explanation:
-# 1. Ensure you're on cursor-development branch
-# 2. Stage all changes
-# 3. Commit changes with message (replace with your actual message)
-# 4. Push changes to remote cursor-development
-# 5. Switch to cursor-development-backup branch
-# 6. Merge changes from cursor-development
-# 7. Push updated cursor-development-backup to remote
-# 8. Switch back to cursor-development branch
+# Note: Always make changes to cursor-development first, then update cursor-development-backup.
+# cursor-development-backup should be treated as a read-only backup that mirrors cursor-development.
 
