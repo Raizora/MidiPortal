@@ -62,34 +62,6 @@ void WindowRoutingComponent::paint(juce::Graphics& g)
         int y = gridArea.getY() + i * cellHeight;
         g.drawLine(gridArea.getX(), y, gridArea.getRight(), y);
     }
-    
-    // Draw colored bars below each window name
-    // These bars represent the window's color scheme
-    for (int i = 0; i < numWindows; ++i)
-    {
-        // Calculate the position for the color bars
-        int x = gridArea.getX() + i * cellWidth;
-        int y = gridArea.getY() + cellHeight - 30; // Position below the window name
-        int barWidth = cellWidth - 20; // Make it slightly narrower than the cell
-        int barHeight = 5; // Height of each color bar
-        
-        // Draw red bar
-        g.setColour(juce::Colours::red);
-        g.fillRect(x + 10, y, barWidth, barHeight);
-        
-        // Draw yellow bar below red
-        g.setColour(juce::Colours::yellow);
-        g.fillRect(x + 10, y + barHeight, barWidth, barHeight);
-        
-        // Draw green bar below yellow
-        g.setColour(juce::Colours::green);
-        g.fillRect(x + 10, y + barHeight * 2, barWidth, barHeight);
-        
-        // Draw blue bar below green
-        g.setColour(juce::Colours::blue);
-        g.fillRect(x + 10, y + barHeight * 3, barWidth, barHeight);
-    }
-    
 }
 
 void WindowRoutingComponent::resized()
@@ -115,17 +87,36 @@ void WindowRoutingComponent::resized()
     // Calculate cell dimensions
     // The grid has numWindows columns and numDevices+1 rows (extra row for window names)
     int cellWidth = bounds.getWidth() / numWindows;
-    int cellHeight = bounds.getHeight() / (numDevices + 1);
+    
+    // Reserve space for window labels (30px height) and some padding
+    int windowLabelHeight = 30;
+    int windowLabelPadding = 5;
+    int totalWindowLabelHeight = windowLabelHeight + windowLabelPadding;
+    
+    // Reserve space for RGB sliders (100px height) and some padding
+    int rgbSliderHeight = 100;
+    int rgbSliderPadding = 10;
+    int totalRgbHeight = rgbSliderHeight + rgbSliderPadding;
+    
+    // Calculate the remaining height for the device grid
+    int remainingHeight = bounds.getHeight() - totalRgbHeight - totalWindowLabelHeight;
+    int cellHeight = remainingHeight / numDevices;
+    
+    // Create a separate area for the window labels at the top
+    auto windowLabelArea = bounds.removeFromTop(totalWindowLabelHeight);
+    
+    // Create a separate area for the RGB sliders below the window labels
+    auto rgbArea = bounds.removeFromTop(totalRgbHeight);
     
     // Position window labels (column headers)
     // Each window gets its own column
     for (int i = 0; i < numWindows; ++i)
     {
-        // Position the window label in the center of its cell
-        windowLabels[i]->setBounds(bounds.getX() + i * cellWidth,
-                                 bounds.getY(),
+        // Position the window label in the center of its cell in the window label area
+        windowLabels[i]->setBounds(windowLabelArea.getX() + i * cellWidth,
+                                 windowLabelArea.getY(),
                                  cellWidth,
-                                 cellHeight);
+                                 windowLabelHeight);
     }
     
     // Position device labels (row headers)
@@ -134,7 +125,7 @@ void WindowRoutingComponent::resized()
     {
         // Position the device label in the first column of its row
         deviceLabels[i]->setBounds(bounds.getX(),
-                                 bounds.getY() + (i + 1) * cellHeight,
+                                 bounds.getY() + i * cellHeight,
                                  cellWidth,
                                  cellHeight);
     }
@@ -174,7 +165,7 @@ void WindowRoutingComponent::resized()
         {
             // Position the cell at the intersection of the window column and device row
             cell->setBounds(bounds.getX() + windowIndex * cellWidth,
-                          bounds.getY() + (deviceIndex + 1) * cellHeight,
+                          bounds.getY() + deviceIndex * cellHeight,
                           cellWidth,
                           cellHeight);
         }
@@ -182,31 +173,38 @@ void WindowRoutingComponent::resized()
         cellIndex++;
     }
     
-    // Position color buttons below the grid
-    // Each window gets a color button for changing its background color
-    for (int i = 0; i < colorButtons.size(); ++i)
+    // Position RGB sliders below the window labels
+    // Each window gets RGB sliders for changing its background color
+    for (int i = 0; i < rgbSliders.size(); ++i)
     {
-        // Find the window index for this color button
+        // Find the window index for this RGB slider
         int windowIndex = -1;
         for (int j = 0; j < windowLabels.size(); ++j)
         {
-            if (windowLabels[j]->getText() == colorButtons[i]->window)
+            if (windowLabels[j]->getText() == rgbSliders[i]->window)
             {
                 windowIndex = j;
                 break;
             }
         }
         
-        // If the window was found, position the color button
+        // If the window was found, position the RGB sliders
         if (windowIndex >= 0)
         {
-            // Position the button below the grid, in the same column as its window
-            int x = bounds.getX() + windowIndex * cellWidth + 10; // Add 10px padding
-            int y = bounds.getY() + (numDevices + 1) * cellHeight + 30; // Add 30px space
+            // Position the sliders in the RGB area, in the same column as its window
+            int x = rgbArea.getX() + windowIndex * cellWidth + 10; // Add 10px padding
+            int y = rgbArea.getY();
             
-            // Make the button slightly narrower than the cell
-            colorButtons[i]->setBounds(x, y, cellWidth - 20, 30);
+            // Make the sliders slightly narrower than the cell
+            rgbSliders[i]->setBounds(x, y, cellWidth - 20, rgbSliderHeight);
         }
+    }
+    
+    // We no longer need the color buttons since we have RGB sliders
+    // But if we want to keep them for some reason, position them off-screen
+    for (auto* btn : colorButtons)
+    {
+        btn->setBounds(-1000, -1000, 1, 1);
     }
 }
 
@@ -233,7 +231,25 @@ void WindowRoutingComponent::buttonClicked(juce::Button* button)
             windowManager.unrouteDeviceFromWindow(cell->device, cell->window);
         }
     }
-    // Note: ColorButton clicks are now handled through the onClick lambda
+    else
+    {
+        // Check if it's an Apply button from one of the RGB sliders
+        for (auto* slider : rgbSliders)
+        {
+            if (button == &slider->applyButton)
+            {
+                // Apply the RGB slider values to update the window's background color
+                applyRGBSlidersToWindow(slider->window);
+                break;
+            }
+        }
+    }
+}
+
+void WindowRoutingComponent::sliderValueChanged(juce::Slider* slider)
+{
+    // Handle slider value changes
+    // We don't need to do anything here since we only apply the color when the Apply button is clicked
 }
 
 void WindowRoutingComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
@@ -254,31 +270,26 @@ void WindowRoutingComponent::changeListenerCallback(juce::ChangeBroadcaster* sou
             }
         }
         
+        // Update the RGB sliders for the selected window
+        for (auto* slider : rgbSliders)
+        {
+            if (slider->window == currentWindowForColorSelection)
+            {
+                slider->setColor(newColor);
+                break;
+            }
+        }
+        
         // Update the window background color in the settings manager
         auto& settingsManager = windowManager.getSettingsManager();
         
         if (currentWindowForColorSelection == "MAIN")
         {
-            // For the MAIN window, update the Default settings
-            // This affects the main application window's background color
+            // For the MAIN window, update only the Default settings
+            // This affects only the main application window's background color
             auto defaultSettings = settingsManager.getSettings("Default");
             defaultSettings.backgroundColor = newColor;
             settingsManager.setSettings(defaultSettings, "Default");
-            
-            // Also update any existing windows that might be using the Default settings
-            for (const auto& windowName : windowManager.getWindowNames())
-            {
-                if (windowName != "MAIN")
-                {
-                    auto windowSettings = settingsManager.getSettings(windowName);
-                    // Only update if this window is using the default background color
-                    if (windowSettings.backgroundColor == defaultSettings.backgroundColor)
-                    {
-                        windowSettings.backgroundColor = newColor;
-                        settingsManager.setSettings(windowSettings, windowName);
-                    }
-                }
-            }
         }
         else
         {
@@ -298,6 +309,7 @@ void WindowRoutingComponent::updateGrid()
     windowLabels.clear();
     routingCells.clear();
     colorButtons.clear();
+    rgbSliders.clear();
     
     // Get current windows and devices from the window manager
     auto windows = windowManager.getWindowNames();
@@ -363,8 +375,44 @@ void WindowRoutingComponent::updateGrid()
         }
     }
     
-    // Create color buttons for each window
+    // Create RGB sliders for each window
     auto& settingsManager = windowManager.getSettingsManager();
+    for (const auto& window : windows)
+    {
+        // Get the current background color for this window
+        juce::Colour bgColor;
+        
+        if (window == "MAIN")
+        {
+            // For MAIN window, use the Default settings
+            // This is the main application window's background color
+            bgColor = settingsManager.getSettings("Default").backgroundColor;
+        }
+        else
+        {
+            // For other windows, use their specific settings
+            bgColor = settingsManager.getSettings(window).backgroundColor;
+        }
+        
+        // Create a new RGB sliders component for this window
+        auto* rgbSlider = new RGBSliders(window, bgColor);
+        
+        // Register this class as a listener for the sliders
+        rgbSlider->redSlider.addListener(this);
+        rgbSlider->greenSlider.addListener(this);
+        rgbSlider->blueSlider.addListener(this);
+        
+        // Register this class as a listener for the Apply button
+        rgbSlider->applyButton.addListener(this);
+        
+        // Make the component visible
+        addAndMakeVisible(rgbSlider);
+        
+        // Add the component to the list
+        rgbSliders.add(rgbSlider);
+    }
+    
+    // Create color buttons for each window
     for (const auto& window : windows)
     {
         // Get the current background color for this window
@@ -474,6 +522,56 @@ void WindowRoutingComponent::showColorSelectorForWindow(const juce::String& wind
     // Ensure clicks on the callout are consumed
     // This prevents clicks from passing through to components underneath
     colorSelectorCallout->setDismissalMouseClicksAreAlwaysConsumed(true);
+}
+
+void WindowRoutingComponent::applyRGBSlidersToWindow(const juce::String& windowName)
+{
+    // Find the RGB sliders for this window
+    RGBSliders* targetSliders = nullptr;
+    for (auto* slider : rgbSliders)
+    {
+        if (slider->window == windowName)
+        {
+            targetSliders = slider;
+            break;
+        }
+    }
+    
+    // If the sliders weren't found, don't apply the color
+    if (targetSliders == nullptr)
+        return;
+    
+    // Get the current color from the sliders
+    juce::Colour newColor = targetSliders->getCurrentColor();
+    
+    // Update the color button for this window
+    for (auto* btn : colorButtons)
+    {
+        if (btn->window == windowName)
+        {
+            btn->setColor(newColor);
+            break;
+        }
+    }
+    
+    // Update the window background color in the settings manager
+    auto& settingsManager = windowManager.getSettingsManager();
+    
+    if (windowName == "MAIN")
+    {
+        // For the MAIN window, update only the Default settings
+        // This affects only the main application window's background color
+        auto defaultSettings = settingsManager.getSettings("Default");
+        defaultSettings.backgroundColor = newColor;
+        settingsManager.setSettings(defaultSettings, "Default");
+    }
+    else
+    {
+        // For other windows, just update their specific settings
+        auto settings = settingsManager.getSettings(windowName);
+        settings.backgroundColor = newColor;
+        settingsManager.setSettings(settings, windowName);
+    }
 }
 
 } // namespace MidiPortal 

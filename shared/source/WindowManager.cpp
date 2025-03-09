@@ -18,10 +18,33 @@ void WindowManager::createWindow(const juce::String& windowName)
         
     if (!hasWindow(windowName))
     {
+        // Create a new window
         auto window = std::make_unique<LogDisplayWindow>(windowName, displaySettingsManager);
         window->onCloseCallback = [this, windowName]() {
             closeWindow(windowName);
         };
+        
+        // Create custom settings for this window
+        // Start with default settings but give it a unique background color
+        auto settings = displaySettingsManager.getSettings("Default");
+        
+        // Generate a unique color based on the window name
+        // This ensures each window gets its own color
+        juce::Random random(windowName.hashCode());
+        juce::Colour uniqueColor = juce::Colour::fromHSV(
+            random.nextFloat(), // Hue (0.0 - 1.0)
+            0.7f,               // Saturation (0.7 for vibrant colors)
+            0.3f,               // Brightness (0.3 for darker colors)
+            1.0f                // Alpha (fully opaque)
+        );
+        
+        // Set the unique background color
+        settings.backgroundColor = uniqueColor;
+        
+        // Add the settings to the settings manager
+        displaySettingsManager.addSettings(windowName, settings);
+        
+        // Store the window
         windows[windowName] = std::move(window);
     }
 }
