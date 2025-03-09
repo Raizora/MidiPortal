@@ -6,13 +6,15 @@
 
 namespace MidiPortal {
 
-class LogDisplayWindow : public juce::DocumentWindow
+class LogDisplayWindow : public juce::DocumentWindow,
+                        private juce::ChangeListener
 {
 public:
     std::function<void()> onCloseCallback;
 
     LogDisplayWindow(const juce::String& name, DisplaySettingsManager& settingsManager)
-        : DocumentWindow(name + " - MIDI Log", juce::Colours::darkgrey, true)
+        : DocumentWindow(name + " - MIDI Log", juce::Colours::darkgrey, true),
+          displaySettingsManager(settingsManager)
     {
         // Create a new MidiLogDisplay that uses the settings manager
         auto* display = new MidiLogDisplay(settingsManager);
@@ -26,6 +28,18 @@ public:
         
         // Store the display pointer for message routing
         midiDisplay = display;
+        
+        // Listen for settings changes
+        settingsManager.addChangeListener(this);
+        
+        // Apply initial background color
+        applyBackgroundColor();
+    }
+    
+    ~LogDisplayWindow() override
+    {
+        // Stop listening for settings changes
+        displaySettingsManager.removeChangeListener(this);
     }
 
     void closeButtonPressed() override
@@ -40,9 +54,27 @@ public:
         if (midiDisplay != nullptr)
             midiDisplay->addMessage(message, deviceName);
     }
+    
+    // Apply the background color from settings
+    void applyBackgroundColor()
+    {
+        auto settings = displaySettingsManager.getSettings(getName());
+        setBackgroundColour(settings.backgroundColor);
+    }
+    
+    // Change listener callback for settings changes
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override
+    {
+        if (source == &displaySettingsManager)
+        {
+            // Settings have changed, update the background color
+            applyBackgroundColor();
+        }
+    }
 
 private:
     MidiLogDisplay* midiDisplay = nullptr;
+    DisplaySettingsManager& displaySettingsManager;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LogDisplayWindow)
 };

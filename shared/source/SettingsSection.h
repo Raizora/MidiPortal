@@ -11,8 +11,10 @@ public:
         // Create and set up the header label
         title.setText(titleText, juce::dontSendNotification);
         
-        // Use a simple approach that works with JUCE 8
-        auto font = juce::Font(16.0f);
+        // X- Use the correct approach for JUCE 8
+        juce::FontOptions options;
+        options = options.withHeight(16.0f);
+        juce::Font font(options);
         font = font.boldened();
         title.setFont(font);
         

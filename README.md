@@ -313,36 +313,6 @@ This section documents some of the most common issues encountered when building 
 
 ---
 
-### **5️⃣ Segmentation Fault When Closing Log Display Settings Window**
-**Issue:**
-- Application crashes with a segmentation fault when closing the Log Display Settings window.
-- This is caused by a double-delete of the `colorContainer` component in `LogDisplaySettingsComponent`.
-
-**Fix:**
-1. **Change the Viewport Ownership Parameter**
-   ```cpp
-   // Change this line in LogDisplaySettingsComponent.cpp:
-   colorViewport.setViewedComponent(colorContainer.get(), true);
-   
-   // To this (setting the second parameter to false):
-   colorViewport.setViewedComponent(colorContainer.get(), false); // JUCE won't delete colorContainer
-   ```
-
-2. **Explanation:**
-   - When the second parameter is `true`, JUCE takes ownership of the component and will delete it.
-   - Since `colorContainer` is already managed by a `unique_ptr`, this causes a double-delete.
-   - Setting the parameter to `false` tells JUCE not to delete the component, avoiding the conflict.
-
-3. **Additional Precautions:**
-   - Always clear the viewport in the destructor before other cleanup:
-   ```cpp
-   // In the destructor:
-   colorViewport.setViewedComponent(nullptr, false);
-   ```
-   - Be careful with component ownership when using JUCE with smart pointers.
-
----
-
 ### **Final Notes**
 If you continue to have issues, ensure you:
 ✅ Run `cmake --build out/build --target help` to verify targets.

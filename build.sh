@@ -17,13 +17,30 @@ if ! command -v ninja &> /dev/null; then
     brew install ninja
 fi
 
-# Check for Clang
-if ! command -v clang &> /dev/null; then
-    echo -e "${RED}Clang compiler not found!${NC}"
-    echo -e "${YELLOW}Please install Xcode command line tools with:${NC}"
-    echo "xcode-select --install"
-    exit 1
+# Check for Homebrew Clang
+CLANG_PATH="/opt/homebrew/Cellar/llvm/19.1.7/bin/clang"
+CLANGPP_PATH="/opt/homebrew/Cellar/llvm/19.1.7/bin/clang++"
+
+if [ ! -f "$CLANG_PATH" ]; then
+    echo -e "${RED}Homebrew Clang 19.1.7 not found at $CLANG_PATH!${NC}"
+    echo -e "${YELLOW}Installing LLVM via Homebrew...${NC}"
+    brew install llvm
+    
+    # Update paths to the latest installed version
+    LLVM_VERSION=$(brew list --versions llvm | awk '{print $2}')
+    CLANG_PATH="/opt/homebrew/Cellar/llvm/$LLVM_VERSION/bin/clang"
+    CLANGPP_PATH="/opt/homebrew/Cellar/llvm/$LLVM_VERSION/bin/clang++"
+    
+    if [ ! -f "$CLANG_PATH" ]; then
+        echo -e "${RED}Failed to find Homebrew Clang after installation!${NC}"
+        echo -e "${YELLOW}Falling back to system Clang...${NC}"
+        CLANG_PATH="/usr/bin/clang"
+        CLANGPP_PATH="/usr/bin/clang++"
+    fi
 fi
+
+echo -e "${GREEN}Using Clang at: $CLANG_PATH${NC}"
+echo -e "${GREEN}Using Clang++ at: $CLANGPP_PATH${NC}"
 
 # Parse command line arguments
 BUILD_PLUGIN=false
@@ -53,11 +70,11 @@ echo -e "${BLUE}Building Rust library...${NC}"
 echo -e "${BLUE}Cleaning build directory...${NC}"
 rm -rf build
 
-# Configure with CMake using Ninja and Apple Clang
+# Configure with CMake using Ninja and Homebrew Clang
 echo -e "${BLUE}Configuring with CMake...${NC}"
 cmake -B build -G Ninja \
-      -DCMAKE_C_COMPILER=/usr/bin/clang \
-      -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+      -DCMAKE_C_COMPILER="$CLANG_PATH" \
+      -DCMAKE_CXX_COMPILER="$CLANGPP_PATH" \
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 

@@ -43,6 +43,17 @@ public:
     // X- Register/unregister displays to receive settings updates
     void registerDisplay(MidiLogDisplay* display);
     void unregisterDisplay(MidiLogDisplay* display);
+    
+    // Add/remove change listeners
+    void addChangeListener(juce::ChangeListener* listener)
+    {
+        juce::ChangeBroadcaster::addChangeListener(listener);
+    }
+    
+    void removeChangeListener(juce::ChangeListener* listener)
+    {
+        juce::ChangeBroadcaster::removeChangeListener(listener);
+    }
 
 private:
     // X- Store settings per device
