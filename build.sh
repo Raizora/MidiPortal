@@ -10,6 +10,44 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}=== MidiPortal Build Script ===${NC}"
 
+# Function to find the latest Homebrew LLVM installation
+find_homebrew_clang() {
+    # Try to find the latest LLVM version installed by Homebrew
+    if command -v brew &> /dev/null; then
+        LLVM_VERSION=$(brew list --versions llvm | awk '{print $2}')
+        if [ -n "$LLVM_VERSION" ]; then
+            CLANG_PATH="/opt/homebrew/Cellar/llvm/$LLVM_VERSION/bin/clang"
+            CLANGPP_PATH="/opt/homebrew/Cellar/llvm/$LLVM_VERSION/bin/clang++"
+            
+            if [ -f "$CLANG_PATH" ] && [ -f "$CLANGPP_PATH" ]; then
+                echo -e "${GREEN}Found Homebrew Clang $LLVM_VERSION at: $CLANG_PATH${NC}"
+                return 0
+            fi
+        fi
+    fi
+    
+    # If we couldn't find it through brew, try common paths
+    for version in 19.1.7 19.1.6 19.1.5 19.1.4 19.1.3 19.1.2 19.1.1 19.1.0 19.0.0; do
+        CLANG_PATH="/opt/homebrew/Cellar/llvm/$version/bin/clang"
+        CLANGPP_PATH="/opt/homebrew/Cellar/llvm/$version/bin/clang++"
+        
+        if [ -f "$CLANG_PATH" ] && [ -f "$CLANGPP_PATH" ]; then
+            echo -e "${GREEN}Found Homebrew Clang $version at: $CLANG_PATH${NC}"
+            return 0
+        fi
+    done
+    
+    # If we still couldn't find it, check if it's in the PATH
+    if command -v /opt/homebrew/opt/llvm/bin/clang &> /dev/null; then
+        CLANG_PATH="/opt/homebrew/opt/llvm/bin/clang"
+        CLANGPP_PATH="/opt/homebrew/opt/llvm/bin/clang++"
+        echo -e "${GREEN}Found Homebrew Clang in PATH at: $CLANG_PATH${NC}"
+        return 0
+    fi
+    
+    return 1
+}
+
 # Check for Ninja
 if ! command -v ninja &> /dev/null; then
     echo -e "${RED}Ninja build system not found!${NC}"
@@ -17,21 +55,12 @@ if ! command -v ninja &> /dev/null; then
     brew install ninja
 fi
 
-# Check for Homebrew Clang
-CLANG_PATH="/opt/homebrew/Cellar/llvm/19.1.7/bin/clang"
-CLANGPP_PATH="/opt/homebrew/Cellar/llvm/19.1.7/bin/clang++"
-
-if [ ! -f "$CLANG_PATH" ]; then
-    echo -e "${RED}Homebrew Clang 19.1.7 not found at $CLANG_PATH!${NC}"
-    echo -e "${YELLOW}Installing LLVM via Homebrew...${NC}"
+# Find Homebrew Clang
+if ! find_homebrew_clang; then
+    echo -e "${YELLOW}Homebrew Clang not found. Installing LLVM via Homebrew...${NC}"
     brew install llvm
     
-    # Update paths to the latest installed version
-    LLVM_VERSION=$(brew list --versions llvm | awk '{print $2}')
-    CLANG_PATH="/opt/homebrew/Cellar/llvm/$LLVM_VERSION/bin/clang"
-    CLANGPP_PATH="/opt/homebrew/Cellar/llvm/$LLVM_VERSION/bin/clang++"
-    
-    if [ ! -f "$CLANG_PATH" ]; then
+    if ! find_homebrew_clang; then
         echo -e "${RED}Failed to find Homebrew Clang after installation!${NC}"
         echo -e "${YELLOW}Falling back to system Clang...${NC}"
         CLANG_PATH="/usr/bin/clang"
