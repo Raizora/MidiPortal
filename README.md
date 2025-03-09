@@ -14,7 +14,7 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - **Robust Tooling**: Effortless management of third-party dependencies using the CPM package manager.
 - **Unit Testing**: Ready-to-go unit testing with GoogleTest.
 - **Enforced Code Quality**: Highest warning levels with "treat warnings as errors" for maximum safety.
-- **Consistent Build System**: Enforced Ninja generator and Apple Clang compiler for reliable builds.
+- **Consistent Build System**: Enforced Ninja generator and Homebrew Clang 19+ compiler for reliable builds.
 
 ## **Roadmap**
 - Visualize incoming and outgoing MIDI messages.
@@ -32,6 +32,7 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - Introduced multi-window functionality for device-specific monitoring
 - Refined and polished UI components and behaviors across the application
 - Enhanced overall usability, responsiveness, and user experience
+- Improved build system with robust Homebrew Clang 19+ detection and usage
 - Final major milestone before the 0.1.0 release
 
 ### **0.0.8**:
@@ -78,14 +79,11 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - **CMake**: Version 3.31.5 or higher.
 - **Rust**: Stable version 1.84 or higher.
 - **Cargo**: Rust's package manager and build system.
+- **Homebrew**: For installing dependencies on macOS.
+- **LLVM/Clang**: Version 19+ (installed via Homebrew).
 - **Ninja**: Version 1.12.1 or higher (for fast builds).
 - **CLion (Recommended)**: IDE for development.
 - **Python 3.13.2 (Optional)**: For pre-commit hooks.
-- **SQLite**: Version 3.49.0 (for data storage)
-- **OpenSSL**: Version 3.4.1
-- **Node.js**: Version 23.7.0 (for build scripts)
-- **XZ Utils**: Version 5.6.4
-- **LibX11**: Version 1.8.11
 
 ## **Getting Started**
 
@@ -95,8 +93,18 @@ git clone https://github.com/Raizora/MidiPortal.git
 cd MidiPortal
 ```
 
-### **2. Build Using the Script (Recommended)**
-The build script handles all necessary steps, including building the Rust library and enforcing the correct build system:
+### **2. Install Dependencies**
+On macOS:
+```bash
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install required dependencies
+brew install llvm ninja cmake rust
+```
+
+### **3. Build Using the Script (Recommended)**
+The build script automatically detects and uses Homebrew Clang 19+ and handles all necessary steps:
 ```bash
 ./build.sh                  # Build standalone only (Debug)
 ./build.sh --release        # Build standalone only (Release)
@@ -104,7 +112,7 @@ The build script handles all necessary steps, including building the Rust librar
 ./build.sh --plugin --release # Build standalone and plugin (Release)
 ```
 
-### **3. Run the Application**
+### **4. Run the Application**
 ```bash
 ./build/standalone/MidiPortalStandalone
 ```
@@ -121,12 +129,9 @@ cd ..
 ```
 
 #### **Configure CMake**
-Use Ninja to configure the build system:
+Use Ninja to configure the build system (the toolchain file will automatically detect Homebrew Clang):
 ```bash
-cmake -B build -G Ninja \
-      -DCMAKE_C_COMPILER=/usr/bin/clang \
-      -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-      -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 ```
 
 #### **Build the Project**
@@ -146,18 +151,20 @@ cmake --build build
   ```
 
 ## **Enforced Build System**
-MidiPortal now enforces the use of Ninja as the build generator and Apple Clang as the compiler on macOS. This ensures consistent builds across different environments and prevents issues with build system switching.
+MidiPortal enforces the use of Ninja as the build generator and Homebrew Clang 19+ as the compiler on macOS. This ensures consistent builds across different environments and prevents issues with build system switching.
 
 ### **How It Works**
-- **CMake Presets**: The project includes CMake presets that specify Ninja and Apple Clang.
+- **Dynamic Compiler Detection**: The build system automatically finds Homebrew Clang 19+ installations.
 - **Toolchain File**: A custom toolchain file (`cmake/toolchains/macos-clang.cmake`) enforces compiler settings.
 - **Build Script**: The `build.sh` script handles all build steps with proper configuration.
+- **Fallback Mechanism**: If Homebrew Clang isn't found, it will be installed automatically.
 
 ### **Benefits**
 - **Consistent Builds**: Prevents accidental switching to Unix Makefiles or other generators.
 - **Faster Compilation**: Ninja provides faster builds than traditional Make.
 - **Modern C++ Support**: Ensures the use of a compiler with full C++23 support.
 - **Simplified Workflow**: Single command to handle the entire build process.
+- **Robust Detection**: Works even if Homebrew Clang version changes.
 
 ## **Continuous Integration (CI/CD)**
 MidiPortal uses **GitHub Actions** for automated **building and testing**.  

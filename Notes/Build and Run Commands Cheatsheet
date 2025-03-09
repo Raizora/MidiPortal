@@ -1,21 +1,26 @@
-# Build Commands
+# Build Commands for MidiPortal
 
-# Recommended: Use the build script (enforces Ninja and Apple Clang)
+## Recommended: Use the build script (automatically finds and uses Homebrew Clang 19+ and Ninja)
 ./build.sh                  # Build standalone only (Debug)
 ./build.sh --release        # Build standalone only (Release)
 ./build.sh --plugin         # Build standalone and plugin (Debug)
 ./build.sh --plugin --release # Build standalone and plugin (Release)
 
-# Initial Setup
-Build Rust library first:
+## Initial Setup (only needed once)
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install LLVM 19+ and Ninja
+brew install llvm ninja
+
+# Build Rust library
 cd rust && cargo build --release && cd ..
 
-# Configure and build with Ninja (enforced)
+## Manual Build Commands (if not using build.sh)
+
+# Configure and build with Homebrew Clang and Ninja
 rm -rf build
-cmake -B build -G Ninja \
-      -DCMAKE_C_COMPILER=/usr/bin/clang \
-      -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-      -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 
 # Build standalone only (avoids VST3 helper issues)
@@ -26,25 +31,27 @@ cmake --build build
 
 # Debug Build:
 rm -rf build
-cmake -B build -G Ninja \
-      -DCMAKE_C_COMPILER=/usr/bin/clang \
-      -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-      -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
-
-# Debug with LLDB:
-lldb ./build/standalone/MidiPortalStandalone
-(lldb) run
 
 # Release Build
 rm -rf build
-cmake -B build -G Ninja \
-      -DCMAKE_C_COMPILER=/usr/bin/clang \
-      -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-      -DCMAKE_BUILD_TYPE=Release
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
-# Run Commands
+# If you need to explicitly specify compiler paths (should not be necessary):
+rm -rf build
+cmake -B build -G Ninja \
+      -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+      -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+      -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+
+## Debug with LLDB:
+lldb ./build/standalone/MidiPortalStandalone
+(lldb) run
+
+## Run Commands
 
 # Run Standalone (Debug)
 ./build/standalone/MidiPortalStandalone
@@ -58,5 +65,20 @@ cmake --build build
 # Run Plugin (Release)
 ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
-# Quick Copy/Paste Combo
+## Quick Copy/Paste Combos
+
+# Build and run standalone (Debug)
 ./build.sh && ./build/standalone/MidiPortalStandalone
+
+# Build and run standalone (Release)
+./build.sh --release && ./build/standalone/MidiPortalStandalone
+
+# Build and run plugin (Debug)
+./build.sh --plugin && ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Verify compiler version (should show Clang 19+)
+cmake -B build -G Ninja | grep "compiler identification"
+
+## Notes
+For detailed information about the build system improvements and how we fixed the Clang version issues, see:
+Notes/Clang_Build_System_Fix.md
