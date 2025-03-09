@@ -14,7 +14,7 @@ namespace MidiPortal {
 class ColorChangeListener : public juce::ChangeListener {
 public:
     enum class ColorType {
-        Background,
+        // X- Removed Background color type as it's now handled in WindowRoutingComponent
         NoteOn,
         NoteOff,
         Controller,
@@ -35,7 +35,7 @@ public:
         if (settings != nullptr && colourSelector != nullptr) {
             auto newColor = colourSelector->getCurrentColour();
             switch (colorType) {
-                case ColorType::Background:     settings->backgroundColor = newColor; break;
+                // X- Removed Background case as it's now handled in WindowRoutingComponent
                 case ColorType::NoteOn:         settings->noteOnColor = newColor; break;
                 case ColorType::NoteOff:        settings->noteOffColor = newColor; break;
                 case ColorType::Controller:      settings->controllerColor = newColor; break;
@@ -103,7 +103,6 @@ private:
         std::unique_ptr<ColorChangeListener> listener;
     };
 
-    ColorSection backgroundColorSection;
     ColorSection noteOnColorSection;
     ColorSection noteOffColorSection;
     ColorSection controllerColorSection;

@@ -26,11 +26,15 @@ namespace MidiPortal {
  */
 LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisplayToControl)
     : logDisplay(logDisplayToControl),
-      currentSettings(logDisplay.getSettingsManager().getSettings()),
-      defaultSettings(currentSettings),
+      isBeingDestroyed(false),
       deviceSection(std::make_unique<SettingsSection>("Device")),
       appearanceSection(std::make_unique<SettingsSection>("Appearance")),
       colorSection(std::make_unique<SettingsSection>("Colors")),
+      currentSettings(logDisplay.getSettingsManager().getSettings()),
+      previousSettings(currentSettings),
+      defaultSettings(currentSettings),
+      currentDevice("Default"),
+      hasAppliedOnce(false),
       colorContainer(std::make_unique<juce::Component>())
 {
     // Create sections
@@ -74,7 +78,6 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     appearanceSection->addAndMakeVisible(fontSizeSlider);
     
     // Set up all color sections
-    setupColorSection(backgroundColorSection, "Background Color", currentSettings.backgroundColor);
     setupColorSection(noteOnColorSection, "Note On Color", currentSettings.noteOnColor);
     setupColorSection(noteOffColorSection, "Note Off Color", currentSettings.noteOffColor);
     setupColorSection(controllerColorSection, "Controller Color", currentSettings.controllerColor);
@@ -86,8 +89,6 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     setupColorSection(defaultColorSection, "Default Color", currentSettings.defaultColor);
     
     // Add color sections to the container
-    colorContainer->addAndMakeVisible(backgroundColorSection.label);
-    colorContainer->addAndMakeVisible(*backgroundColorSection.selector);
     colorContainer->addAndMakeVisible(noteOnColorSection.label);
     colorContainer->addAndMakeVisible(*noteOnColorSection.selector);
     colorContainer->addAndMakeVisible(noteOffColorSection.label);
@@ -137,7 +138,6 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     
     // Remove all listeners from selectors
     for (auto* selector : {
-        backgroundColorSection.selector.get(),
         noteOnColorSection.selector.get(),
         noteOffColorSection.selector.get(),
         controllerColorSection.selector.get(),
@@ -154,7 +154,6 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     }
     
     // Reset all listeners first
-    backgroundColorSection.listener.reset();
     noteOnColorSection.listener.reset();
     noteOffColorSection.listener.reset();
     controllerColorSection.listener.reset();
@@ -166,7 +165,6 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     defaultColorSection.listener.reset();
     
     // Reset all selectors next
-    backgroundColorSection.selector.reset();
     noteOnColorSection.selector.reset();
     noteOffColorSection.selector.reset();
     controllerColorSection.selector.reset();
@@ -270,7 +268,6 @@ void LogDisplaySettingsComponent::resized()
     
     // Position all 10 color sections sequentially
     // Each takes up 180px height + 20px gap = 200px total
-    positionColorSection(backgroundColorSection, containerBounds);
     positionColorSection(noteOnColorSection, containerBounds);
     positionColorSection(noteOffColorSection, containerBounds);
     positionColorSection(controllerColorSection, containerBounds);
@@ -303,7 +300,6 @@ void LogDisplaySettingsComponent::fontSizeChanged()
 void LogDisplaySettingsComponent::updateControls()
 {
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
-    backgroundColorSection.selector->setCurrentColour(currentSettings.backgroundColor, juce::dontSendNotification);
     noteOnColorSection.selector->setCurrentColour(currentSettings.noteOnColor, juce::dontSendNotification);
     noteOffColorSection.selector->setCurrentColour(currentSettings.noteOffColor, juce::dontSendNotification);
     controllerColorSection.selector->setCurrentColour(currentSettings.controllerColor, juce::dontSendNotification);
@@ -333,8 +329,7 @@ void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const
 
     // Determine the color type based on the section name
     ColorChangeListener::ColorType colorType;
-    if (name == "Background Color")        colorType = ColorChangeListener::ColorType::Background;
-    else if (name == "Note On Color")      colorType = ColorChangeListener::ColorType::NoteOn;
+    if (name == "Note On Color")      colorType = ColorChangeListener::ColorType::NoteOn;
     else if (name == "Note Off Color")     colorType = ColorChangeListener::ColorType::NoteOff;
     else if (name == "Controller Color")   colorType = ColorChangeListener::ColorType::Controller;
     else if (name == "Pitch Bend Color")   colorType = ColorChangeListener::ColorType::PitchBend;
@@ -358,9 +353,12 @@ void LogDisplaySettingsComponent::handleApplyButton()
             previousSettings = currentSettings;
         }
         
+        // X- Get the current background color to preserve it
+        juce::Colour currentBgColor = currentSettings.backgroundColor;
+        
         // Update current settings from all controls
         currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-        currentSettings.backgroundColor = backgroundColorSection.selector->getCurrentColour();
+        // X- Removed background color update as it's now handled in WindowRoutingComponent
         currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
         currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
         currentSettings.controllerColor = controllerColorSection.selector->getCurrentColour();
@@ -370,6 +368,9 @@ void LogDisplaySettingsComponent::handleApplyButton()
         currentSettings.clockColor = clockColorSection.selector->getCurrentColour();
         currentSettings.sysExColor = sysExColorSection.selector->getCurrentColour();
         currentSettings.defaultColor = defaultColorSection.selector->getCurrentColour();
+        
+        // X- Preserve the background color
+        currentSettings.backgroundColor = currentBgColor;
         
         // Apply the settings
         logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
@@ -381,6 +382,9 @@ void LogDisplaySettingsComponent::handleResetButton()
 {
     // Don't access logDisplay if we're being destroyed
     if (!isBeingDestroyed) {
+        // X- Get the current background color to preserve it
+        juce::Colour currentBgColor = currentSettings.backgroundColor;
+        
         // If we've applied settings before, reset to the previous settings
         if (hasAppliedOnce) {
             currentSettings = previousSettings;
@@ -388,6 +392,9 @@ void LogDisplaySettingsComponent::handleResetButton()
             // Otherwise reset to default settings
             currentSettings = defaultSettings;
         }
+        
+        // X- Preserve the background color
+        currentSettings.backgroundColor = currentBgColor;
         
         // Update UI to reflect the reset settings
         updateControls();

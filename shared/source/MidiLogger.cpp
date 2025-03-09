@@ -5,6 +5,9 @@ namespace MidiPortal {
 MidiLogger::MidiLogger(const juce::String& logFilePath) 
     : juce::Timer()  // Initialize base class
 {
+    // X- Properly ignore unused parameter
+    juce::ignoreUnused(logFilePath);
+    
     juce::File buildDir = juce::File::getCurrentWorkingDirectory();
     juce::File logDir = buildDir.getChildFile("logs");
 

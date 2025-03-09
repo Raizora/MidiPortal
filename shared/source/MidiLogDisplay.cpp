@@ -106,11 +106,11 @@ void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::St
     auto color = getColorForMessage(message, deviceName);
     
     logEntries.add(LogEntryData(text, color, deviceName));
-    if (logEntries.size() > maxEntries)
+    if (static_cast<size_t>(logEntries.size()) > maxEntries)
         logEntries.remove(0);
     
     messages.emplace_back(text, color, juce::Time::getCurrentTime(), deviceName);
-    if (messages.size() > maxMessages)
+    if (static_cast<size_t>(messages.size()) > maxMessages)
         messages.pop_front();
     
     repaint();

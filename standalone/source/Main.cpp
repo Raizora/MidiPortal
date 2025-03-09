@@ -39,6 +39,8 @@ public:
     //==============================================================================
     void initialise (const juce::String& commandLine) override
     {
+        juce::ignoreUnused(commandLine);
+        
         mainWindow.reset (new MainWindow (getApplicationName()));
     }
 
@@ -55,6 +57,8 @@ public:
 
     void anotherInstanceStarted (const juce::String& commandLine) override
     {
+        juce::ignoreUnused(commandLine);
+        
         // Handle when another instance of the app is started
     }
 

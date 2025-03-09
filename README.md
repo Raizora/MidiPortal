@@ -320,11 +320,52 @@ This section documents some of the most common issues encountered when building 
 
 ---
 
+### **5️⃣ VST3 Plugin Build Fails with `juce_vst3_helper: command not found`**
+**Issue:**
+- When building the VST3 plugin target, the build fails with:
+  ```
+  /bin/sh: juce_vst3_helper: command not found
+  ```
+- This happens because the JUCE VST3 helper tool is not in the PATH or wasn't built correctly.
+
+**Fix:**
+1. **Use Audio Units (AU) Format on macOS (Recommended)**
+   ```bash
+   # The project now uses AU format on macOS instead of VST3
+   ./build.sh --plugin
+   ```
+   Audio Units (AU) is the native plugin format for macOS and doesn't require the VST3 helper tool.
+
+2. **Build Only the Standalone Target**
+   ```bash
+   cmake --build build --target MidiPortalStandalone
+   ```
+   This bypasses the plugin build entirely.
+
+3. **For VST3 Development (Advanced)**
+   If you specifically need VST3 format:
+   - Edit plugin/CMakeLists.txt to change `FORMATS AU Standalone` back to `FORMATS VST3 Standalone`
+   - Build the JUCE extras which include the VST3 helper:
+     ```bash
+     cd /path/to/JUCE
+     cmake -B build -G Ninja
+     cmake --build build --target juce_vst3_helper
+     ```
+   - Add the helper to your PATH:
+     ```bash
+     export PATH="/path/to/JUCE/build/extras/Build/juceaide/juce_vst3_helper:$PATH"
+     ```
+
+**Note**: The standalone application has all the functionality needed for MIDI monitoring. The plugin version is only necessary if you want to use MidiPortal within a DAW.
+
+---
+
 ### **Final Notes**
 If you continue to have issues, ensure you:
 ✅ Run `cmake --build out/build --target help` to verify targets.
 ✅ Clear CMake and CLion caches if targets go missing.
 ✅ Keep `add_subdirectory(shared)` **commented out** in the root `CMakeLists.txt`.
+✅ Use the `build.sh` script for the most reliable build experience.
 
 This should help prevent and quickly fix the most common build issues in **MidiPortal**! 🚀
 
