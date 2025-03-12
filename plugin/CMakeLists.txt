@@ -15,7 +15,7 @@ juce_add_plugin(${PROJECT_NAME}
         NEEDS_MIDI_OUTPUT FALSE # May change this
         PLUGIN_MANUFACTURER_CODE MCMP # Update as needed
         PLUGIN_CODE EXPL # Update as needed
-        FORMATS VST3 Standalone # Use only applicable formats
+        FORMATS AU Standalone # macOS native format
         PRODUCT_NAME "MidiPortalPlugin" # Update to your product name
 )
 
@@ -94,3 +94,5 @@ set(JUCE_SOURCE_DIR "${JUCE_PATH}")
 source_group(TREE "${JUCE_SOURCE_DIR}" FILES "${JUCE_SOURCE_DIR}/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.mm")
 message("JUCE_SOURCE_DIR: ${JUCE_SOURCE_DIR}")
 message("CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+
+# X- Removed VST3 helper custom command since we're using AU format instead

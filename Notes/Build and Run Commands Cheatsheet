@@ -1,48 +1,110 @@
-# Build Commands
+# Build Commands for MidiPortal
 
-# Initial Setup
-Build Rust library first:
+## Recommended: Use the build script (automatically finds and uses Homebrew Clang 19+ and Ninja)
+./build.sh                  # Build standalone only (Debug)
+./build.sh --release        # Build standalone only (Release)
+./build.sh --plugin         # Build standalone and AU plugin (Debug)
+./build.sh --plugin --release # Build standalone and AU plugin (Release)
+
+## Initial Setup (only needed once)
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install LLVM 19+ and Ninja
+brew install llvm ninja
+
+# Build Rust library
 cd rust && cargo build --release && cd ..
 
-Configure and build with Ninja:
-rm -rf build
-cmake -B build -G Ninja
-cmake --build build
+## Manual Build Commands (if not using build.sh)
 
-# Quick Rebuild (when only C++ changed)
-cmake --build build
-
-# Debug Build option A:
+# Configure and build with Homebrew Clang and Ninja
 rm -rf build
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 
-# Debug Build option B:
+# Build standalone only (avoids VST3 helper issues)
+cmake --build build --target MidiPortalStandalone
 
-rm -rf cmake-build-ninja
-cmake -G Ninja -S . -B cmake-build-ninja -DCMAKE_BUILD_TYPE=Debug
+# Quick Rebuild (when only C++ changed)
+cmake --build build
 
-cmake --build cmake-build-ninja
-
-lldb ./cmake-build-ninja/standalone/MidiPortalStandalone
-
-(lldb) run
+# Debug Build:
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
 
 # Release Build
 rm -rf build
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
-# Run Commands
+# If you need to explicitly specify compiler paths (should not be necessary):
+rm -rf build
+cmake -B build -G Ninja \
+      -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+      -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+      -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+
+## Debug with LLDB:
+lldb ./build/standalone/MidiPortalStandalone
+(lldb) run
+
+## Run Commands
 
 # Run Standalone (Debug)
 ./build/standalone/MidiPortalStandalone
 
 # Run Standalone (Release)
-./build/standalone/MidiPortalStandalone_artefacts/Release/MidiPortalStandalone
+./build/standalone/MidiPortalStandalone
 
 # Run Plugin (Debug)
 ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
 # Run Plugin (Release)
 ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+## Quick Copy/Paste Combos
+
+# Build and run standalone (Debug)
+./build.sh && ./build/standalone/MidiPortalStandalone
+
+# Build and run standalone (Release)
+./build.sh --release && ./build/standalone/MidiPortalStandalone
+
+# Build and run plugin (Debug)
+./build.sh --plugin && ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Verify compiler version (should show Clang 19+)
+cmake -B build -G Ninja | grep "compiler identification"
+
+## Handling Plugin Format Issues
+
+# The project now uses Audio Units (AU) format on macOS instead of VST3
+# AU is the native plugin format for macOS and doesn't require the VST3 helper
+
+# Option 1: Use build.sh which now builds AU plugins
+./build.sh --plugin  # Builds AU plugin on macOS
+
+# Option 2: Build only the standalone target
+cmake --build build --target MidiPortalStandalone
+
+# Option 3 (Advanced): If you specifically need VST3 format
+# 1. Edit plugin/CMakeLists.txt to change `FORMATS AU Standalone` to `FORMATS VST3 Standalone`
+# 2. Build the JUCE VST3 helper:
+cd /path/to/JUCE
+cmake -B build -G Ninja
+cmake --build build --target juce_vst3_helper
+# 3. Add to PATH:
+export PATH="/path/to/JUCE/build/extras/Build/juceaide/juce_vst3_helper:$PATH"
+# 4. Build the project:
+cd /path/to/MidiPortal
+cmake --build build
+
+## Notes
+For detailed information about the build system improvements and how we fixed the Clang version issues, see:
+Notepad/Clang_Build_System_Fix
+
+For information about common build issues including the VST3 helper problem, see the "Common Issues & Fixes" 
+section in the README.md file.

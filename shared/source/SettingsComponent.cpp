@@ -1,7 +1,25 @@
+/**
+ * @file SettingsComponent.cpp
+ * @brief Implementation of the SettingsComponent class.
+ * 
+ * This file contains the implementation of the SettingsComponent class methods,
+ * which provide a user interface for configuring audio and MIDI device settings
+ * in the MidiPortal application. It wraps JUCE's AudioDeviceSelectorComponent
+ * and adds custom controls for MIDI channel selection and activity indication.
+ */
+
 #include "SettingsComponent.h"
 
 namespace MidiPortal {
 
+/**
+ * @brief Constructor that initializes the settings component with a reference to the AudioDeviceManager.
+ * @param deviceManager Reference to the application's AudioDeviceManager.
+ * 
+ * Sets up the AudioDeviceSelectorComponent with appropriate configuration for the MidiPortal
+ * application (no audio inputs/outputs, MIDI inputs only), registers as a listener for
+ * device changes, and initializes the MIDI channel selectors.
+ */
 SettingsComponent::SettingsComponent(juce::AudioDeviceManager& deviceManager)
     : audioDeviceManager(deviceManager)
 {
@@ -25,11 +43,25 @@ SettingsComponent::SettingsComponent(juce::AudioDeviceManager& deviceManager)
     updateMidiChannelSelectors();
 }
 
+/**
+ * @brief Destructor that cleans up resources.
+ * 
+ * Stops listening for changes to the audio device manager to prevent
+ * callbacks to a deleted object. The rest of the resources are cleaned up
+ * automatically by the unique_ptr and OwnedArray destructors.
+ */
 SettingsComponent::~SettingsComponent()
 {
     audioDeviceManager.removeChangeListener(this);
 }
 
+/**
+ * @brief Updates the MIDI channel selectors based on enabled devices.
+ * 
+ * Clears existing selectors and creates new ones for each enabled MIDI input device.
+ * Each device gets a MidiChannelSelector for selecting which MIDI channels to listen to
+ * and a MidiActivityIndicator for displaying visual feedback when MIDI activity is detected.
+ */
 void SettingsComponent::updateMidiChannelSelectors()
 {
     // X- Clear existing selectors
@@ -59,6 +91,14 @@ void SettingsComponent::updateMidiChannelSelectors()
     resized();
 }
 
+/**
+ * @brief Handles change notifications from the AudioDeviceManager.
+ * @param source The ChangeBroadcaster that triggered the notification.
+ * 
+ * Called when the audio device configuration changes, such as when
+ * devices are enabled or disabled. Updates the MIDI channel selectors
+ * to reflect the current state of enabled devices.
+ */
 void SettingsComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &audioDeviceManager)
@@ -68,6 +108,13 @@ void SettingsComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
     }
 }
 
+/**
+ * @brief Handles component resizing and positions all child components.
+ * 
+ * Positions the AudioDeviceSelectorComponent and all MIDI channel selectors
+ * and activity indicators based on the new size of the component. Adjusts
+ * the component's size to fit all content if it's inside a viewport.
+ */
 void SettingsComponent::resized()
 {
     // X- Get the parent viewport's width if we're in one
@@ -122,7 +169,14 @@ void SettingsComponent::resized()
     setSize(componentWidth, totalUsedHeight + 20); // +20 for bottom margin
 }
 
-// X- Implement the method to trigger activity for a specific device
+/**
+ * @brief Triggers the activity indicator for a specific device.
+ * @param deviceName The name of the device to trigger activity for.
+ * 
+ * Causes the activity indicator for the specified device to flash,
+ * indicating that MIDI activity has been detected on that device.
+ * This method is called when a MIDI message is received from a device.
+ */
 void SettingsComponent::triggerActivityForDevice(const juce::String& deviceName)
 {
     for (int i = 0; i < midiChannelSelectors.size(); ++i)

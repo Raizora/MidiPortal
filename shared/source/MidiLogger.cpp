@@ -1,10 +1,32 @@
+/**
+ * @file MidiLogger.cpp
+ * @brief Implementation of the MidiLogger class.
+ * 
+ * This file contains the implementation of the MidiLogger class methods,
+ * which handle logging and analysis of MIDI messages.
+ */
+
 #include "MidiLogger.h"
 
 namespace MidiPortal {
 
+/**
+ * @brief Constructor that initializes the logger.
+ * @param logFilePath The path to the log file.
+ * 
+ * Creates a new logger that writes to the specified log file.
+ * The constructor attempts to create a "logs" directory in the current working directory
+ * if it doesn't exist, and then opens a log file named "MidiTraffic.log" in that directory.
+ * If the log file cannot be opened, an error message is logged to the debug output.
+ * 
+ * The constructor also starts a timer that periodically flushes the message buffer to the log file.
+ */
 MidiLogger::MidiLogger(const juce::String& logFilePath) 
     : juce::Timer()  // Initialize base class
 {
+    // X- Properly ignore unused parameter
+    juce::ignoreUnused(logFilePath);
+    
     juce::File buildDir = juce::File::getCurrentWorkingDirectory();
     juce::File logDir = buildDir.getChildFile("logs");
 
@@ -42,6 +64,12 @@ MidiLogger::MidiLogger(const juce::String& logFilePath)
     startTimer(1000);
 }
 
+/**
+ * @brief Destructor that cleans up resources.
+ * 
+ * Stops the timer, flushes any remaining messages to the log file,
+ * and closes the log file.
+ */
 MidiLogger::~MidiLogger() {
     stopTimer();  // Stop the timer first
     flushBuffer();  // Flush any remaining messages
@@ -50,6 +78,12 @@ MidiLogger::~MidiLogger() {
     }
 }
 
+/**
+ * @brief Resets the timing state.
+ * 
+ * Clears all timing-related variables and buffers, including the BPM calculation,
+ * clock timing, and BPM buffer.
+ */
 void MidiLogger::resetTiming() {
     timing.lastClockTime = 0.0;
     timing.currentBPM = 0.0;
@@ -58,6 +92,17 @@ void MidiLogger::resetTiming() {
     std::fill(bpmBuffer.begin(), bpmBuffer.end(), 0.0);
 }
 
+/**
+ * @brief Updates the BPM based on a MIDI clock message.
+ * @param currentTime The time when the clock message was received, in seconds.
+ * 
+ * Calculates the BPM based on the time between consecutive MIDI clock messages.
+ * MIDI clock messages are sent at a rate of 24 per quarter note, so the BPM
+ * can be calculated as 60 / (deltaTime * 24).
+ * 
+ * The method includes validation to detect and handle clock anomalies, such as
+ * very short or very long intervals between clock messages.
+ */
 void MidiLogger::updateBPM(double currentTime) {
     if (!timing.isPlaying) return;
 
@@ -81,6 +126,12 @@ void MidiLogger::updateBPM(double currentTime) {
     timing.lastClockTime = currentTime;
 }
 
+/**
+ * @brief Timer callback that flushes the message buffer.
+ * 
+ * Called regularly by the timer to flush the message buffer to the log file
+ * if new messages have been added since the last flush.
+ */
 void MidiLogger::timerCallback() {
     if (shouldFlushLogs) {
         flushBuffer();
@@ -88,6 +139,13 @@ void MidiLogger::timerCallback() {
     }
 }
 
+/**
+ * @brief Flushes the message buffer to the log file.
+ * 
+ * Writes all messages in the buffer to the log file and clears the buffer.
+ * This method uses a separate thread for writing to avoid blocking the main thread,
+ * and includes synchronization to prevent concurrent write operations.
+ */
 void MidiLogger::flushBuffer() {
     if (isWriting.exchange(true)) return;  // Prevent concurrent writes
     
@@ -111,6 +169,16 @@ void MidiLogger::flushBuffer() {
     }
 }
 
+/**
+ * @brief Logs a MIDI message.
+ * @param message The MIDI message to log.
+ * 
+ * Formats the message as text and adds it to the message buffer.
+ * The message will be written to the log file when the buffer is flushed.
+ * 
+ * This method also extracts and formats information about the MIDI message,
+ * such as the message type, channel, and relevant parameters.
+ */
 void MidiLogger::logMessage(const juce::MidiMessage& message) {
     try {
         juce::String description;

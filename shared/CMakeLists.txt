@@ -16,6 +16,17 @@ if(NOT TARGET MidiPortalShared)
             source/MidiActivityIndicator.h
             source/MidiChannelSelector.cpp
             source/MidiChannelSelector.h
+            source/MidiLogDisplay.cpp
+            source/MidiLogDisplay.h
+            source/LogDisplaySettingsComponent.cpp
+            source/LogDisplaySettingsComponent.h
+            source/LogDisplaySettingsWindow.h
+            source/WindowManager.cpp
+            source/WindowManager.h
+            source/DisplaySettingsManager.cpp
+            source/DisplaySettingsManager.h
+            source/WindowRoutingComponent.cpp
+            source/WindowRoutingComponent.h
     )
 
     target_include_directories(MidiPortalShared
