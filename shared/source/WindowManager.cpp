@@ -51,8 +51,21 @@ void WindowManager::createWindow(const juce::String& windowName)
         };
         
         // Create custom settings for this window
-        // Start with default settings but give it a unique background color
-        auto settings = displaySettingsManager.getSettings("Default");
+        // Start with a fresh set of settings rather than copying from default
+        // This ensures changes to default settings won't affect this window
+        DisplaySettingsManager::DisplaySettings newSettings;
+        
+        // Set default colors for message types (these should be the same for all windows)
+        newSettings.fontSize = 12.0f;
+        newSettings.noteOnColor = juce::Colours::green;
+        newSettings.noteOffColor = juce::Colours::red;
+        newSettings.controllerColor = juce::Colours::yellow;
+        newSettings.pitchBendColor = juce::Colours::orange;
+        newSettings.pressureColor = juce::Colours::purple;
+        newSettings.programChangeColor = juce::Colours::blue;
+        newSettings.clockColor = juce::Colours::grey;
+        newSettings.sysExColor = juce::Colours::white;
+        newSettings.defaultColor = juce::Colours::lightgrey;
         
         // Generate a unique color based on the window name
         // This ensures each window gets its own color
@@ -65,10 +78,10 @@ void WindowManager::createWindow(const juce::String& windowName)
         );
         
         // Set the unique background color
-        settings.backgroundColor = uniqueColor;
+        newSettings.backgroundColor = uniqueColor;
         
         // Add the settings to the settings manager
-        displaySettingsManager.addSettings(windowName, settings);
+        displaySettingsManager.addSettings(windowName, newSettings);
         
         // Store the window
         windows[windowName] = std::move(window);

@@ -56,6 +56,9 @@ public:
         // Create a new MidiLogDisplay that uses the settings manager
         auto* display = new MidiLogDisplay(settingsManager);
         
+        // Set the window name on the display so it knows which settings to use
+        display->setWindowName(name);
+        
         setContentOwned(display, true);
         setResizeLimits(400, 300, 1200, 1200);
         centreWithSize(600, 400);
@@ -114,12 +117,30 @@ public:
      * @brief Applies the background color from settings.
      * 
      * Gets the background color from the DisplaySettingsManager for this window
-     * and applies it to the window background.
+     * and applies it to the window background. Handles the MAIN window specially
+     * by using the Default settings.
      */
     void applyBackgroundColor()
     {
-        auto settings = displaySettingsManager.getSettings(getName());
-        setBackgroundColour(settings.backgroundColor);
+        // Get the window name without the " - MIDI Log" suffix
+        juce::String windowName = getName();
+        int suffixPos = windowName.indexOf(" - MIDI Log");
+        if (suffixPos > 0)
+            windowName = windowName.substring(0, suffixPos);
+        
+        // Use the correct settings based on window name
+        if (windowName == "MAIN")
+        {
+            // For MAIN window, use the Default settings
+            auto settings = displaySettingsManager.getSettings("Default");
+            setBackgroundColour(settings.backgroundColor);
+        }
+        else
+        {
+            // For other windows, use their specific settings
+            auto settings = displaySettingsManager.getSettings(windowName);
+            setBackgroundColour(settings.backgroundColor);
+        }
     }
     
     /**
@@ -127,14 +148,26 @@ public:
      * @param source The ChangeBroadcaster that triggered the notification.
      * 
      * Called when display settings change, updating the window's background color
-     * if the settings for this window have changed.
+     * ONLY if the settings for THIS specific window have changed.
      */
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
     {
         if (source == &displaySettingsManager)
         {
-            // Settings have changed, update the background color
-            applyBackgroundColor();
+            // Get the window name without the " - MIDI Log" suffix
+            juce::String windowName = getName();
+            int suffixPos = windowName.indexOf(" - MIDI Log");
+            if (suffixPos > 0)
+                windowName = windowName.substring(0, suffixPos);
+                
+            // Only update if this is the MAIN window and Default settings changed,
+            // or if this is another window and its specific settings changed
+            if ((windowName == "MAIN" && displaySettingsManager.getSettings("Default").backgroundColor != getBackgroundColour()) ||
+                (windowName != "MAIN" && displaySettingsManager.getSettings(windowName).backgroundColor != getBackgroundColour()))
+            {
+                // Settings have changed for this specific window, update the background color
+                applyBackgroundColor();
+            }
         }
     }
 
