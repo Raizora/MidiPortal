@@ -1,10 +1,47 @@
 # Build Commands for MidiPortal
 
-## Recommended: Use the build script (automatically finds and uses Homebrew Clang 19+ and Ninja)
+## RECOMMENDED: Use the build script
+# This is the simplest and most reliable method
 ./build.sh                  # Build standalone only (Debug)
 ./build.sh --release        # Build standalone only (Release)
 ./build.sh --plugin         # Build standalone and AU plugin (Debug)
 ./build.sh --plugin --release # Build standalone and AU plugin (Release)
+
+## Run the application
+# Run the standalone version
+./build/standalone/MidiPortalStandalone
+
+# Run the plugin version (after building with --plugin)
+./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Run the plugin version (after building with --plugin --release)
+./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+## Quick Copy/Paste Combos
+# Build and run standalone (Debug)
+./build.sh && ./build/standalone/MidiPortalStandalone
+
+# Build and run standalone (Release)
+./build.sh --release && ./build/standalone/MidiPortalStandalone
+
+# Build and run plugin (Debug)
+./build.sh --plugin && ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+# Build and run plugin (Release)
+./build.sh --plugin --release && ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
+
+## Loading the Plugin in a DAW
+# After building with --plugin, the AU plugin is available at:
+# Debug build:
+./build/plugin/AudioPlugin_artefacts/Debug/AU/MidiPortalPlugin.component
+# Release build:
+./build/plugin/AudioPlugin_artefacts/Release/AU/MidiPortalPlugin.component
+
+# You may need to copy the component to the system AU directory:
+# For current user only:
+mkdir -p ~/Library/Audio/Plug-Ins/Components/
+cp -r ./build/plugin/AudioPlugin_artefacts/Debug/AU/MidiPortalPlugin.component ~/Library/Audio/Plug-Ins/Components/
+# Then restart your DAW and scan for new plugins
 
 ## Initial Setup (only needed once)
 # Install Homebrew if not already installed
@@ -16,11 +53,17 @@ brew install llvm ninja
 # Build Rust library
 cd rust && cargo build --release && cd ..
 
-## Manual Build Commands (if not using build.sh)
+## Fix IDE Code Intelligence Issues
+# If you see "#include errors" in your IDE but the build works fine:
+cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cp build/compile_commands.json .
 
-# Configure and build with Homebrew Clang and Ninja
+## ADVANCED: Manual Build Commands
+# Only use these if you have specific needs not covered by build.sh
+
+# Manual build with Ninja
 rm -rf build
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build
 
 # Build standalone only (avoids VST3 helper issues)
@@ -29,82 +72,16 @@ cmake --build build --target MidiPortalStandalone
 # Quick Rebuild (when only C++ changed)
 cmake --build build
 
-# Debug Build:
-rm -rf build
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
-
-# Release Build
-rm -rf build
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-
-# If you need to explicitly specify compiler paths (should not be necessary):
-rm -rf build
+# Explicitly specify compiler paths (rarely needed)
 cmake -B build -G Ninja \
       -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
       -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
       -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
 
-## Debug with LLDB:
+## Debug with LLDB
 lldb ./build/standalone/MidiPortalStandalone
 (lldb) run
 
-## Run Commands
-
-# Run Standalone (Debug)
-./build/standalone/MidiPortalStandalone
-
-# Run Standalone (Release)
-./build/standalone/MidiPortalStandalone
-
-# Run Plugin (Debug)
-./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-# Run Plugin (Release)
-./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-## Quick Copy/Paste Combos
-
-# Build and run standalone (Debug)
-./build.sh && ./build/standalone/MidiPortalStandalone
-
-# Build and run standalone (Release)
-./build.sh --release && ./build/standalone/MidiPortalStandalone
-
-# Build and run plugin (Debug)
-./build.sh --plugin && ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
-
-# Verify compiler version (should show Clang 19+)
-cmake -B build -G Ninja | grep "compiler identification"
-
-## Handling Plugin Format Issues
-
-# The project now uses Audio Units (AU) format on macOS instead of VST3
-# AU is the native plugin format for macOS and doesn't require the VST3 helper
-
-# Option 1: Use build.sh which now builds AU plugins
-./build.sh --plugin  # Builds AU plugin on macOS
-
-# Option 2: Build only the standalone target
-cmake --build build --target MidiPortalStandalone
-
-# Option 3 (Advanced): If you specifically need VST3 format
-# 1. Edit plugin/CMakeLists.txt to change `FORMATS AU Standalone` to `FORMATS VST3 Standalone`
-# 2. Build the JUCE VST3 helper:
-cd /path/to/JUCE
-cmake -B build -G Ninja
-cmake --build build --target juce_vst3_helper
-# 3. Add to PATH:
-export PATH="/path/to/JUCE/build/extras/Build/juceaide/juce_vst3_helper:$PATH"
-# 4. Build the project:
-cd /path/to/MidiPortal
-cmake --build build
-
 ## Notes
-For detailed information about the build system improvements and how we fixed the Clang version issues, see:
-Notepad/Clang_Build_System_Fix
-
-For information about common build issues including the VST3 helper problem, see the "Common Issues & Fixes" 
+For detailed information about the build system and common issues, see the "Common Issues & Fixes" 
 section in the README.md file.
