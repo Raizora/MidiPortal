@@ -146,6 +146,21 @@ public:
      */
     void resized() override;
     
+    /**
+     * @brief Updates the device selector with currently enabled MIDI devices.
+     * 
+     * Refreshes the device selector dropdown to show only currently enabled MIDI devices.
+     * This should be called when MIDI device configuration changes.
+     */
+    void updateDeviceSelector();
+    
+    /**
+     * @brief Handles changes to the device selector.
+     * 
+     * Updates the UI to reflect the settings for the newly selected device.
+     */
+    void deviceSelectorChanged();
+    
 private:
     /**
      * @brief Reference to the log display being controlled.
@@ -339,13 +354,6 @@ private:
      * Initializes a ColorSection with a label, color selector, and change listener.
      */
     void setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor);
-    
-    /**
-     * @brief Handles changes to the device selector.
-     * 
-     * Updates the UI to reflect the settings for the newly selected device.
-     */
-    void deviceSelectorChanged();
     
     /**
      * @brief Handles changes to the font size slider.

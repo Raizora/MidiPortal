@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.0.9.9**
+# **MidiPortal - Version 0.1.0**
 
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -26,6 +26,15 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
   - Automatic log management for MIDI traffic.
 
 ## **Version History**
+### **0.1.0** (First Stable Release):
+- Fixed window background color synchronization issues
+- Improved device-specific settings management
+- Enhanced Log Display Settings UI with proper layout
+- Fixed reset button functionality for device-specific settings
+- Optimized device selector to show relevant MIDI devices
+- Comprehensive documentation throughout the codebase
+- Stable foundation for future feature development
+
 ### **0.0.9.9** (Pre-release):
 - Implemented comprehensive Log Display Settings component with scrollable viewport
 - Added color selectors for each MIDI message type with clearly labeled UI sections

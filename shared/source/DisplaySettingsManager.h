@@ -73,6 +73,9 @@ public:
      * @return A reference to the settings for the specified device/window.
      * 
      * If no settings exist for the specified device, returns the default settings.
+     * The "Default" option represents global settings that are used when no
+     * device-specific settings exist. These settings can be edited directly by
+     * selecting "Default" in the device selector.
      */
     const DisplaySettings& getSettings(const juce::String& deviceName = "Default") const;
     

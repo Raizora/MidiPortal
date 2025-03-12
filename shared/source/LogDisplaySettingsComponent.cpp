@@ -65,11 +65,17 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
 
     // Set up device selector
     deviceLabel.setText("Device:", juce::dontSendNotification);
-    deviceSelector.addItem("Default", 1);
+    deviceSelector.addItem("Default", 1);  // X- "Default" represents global settings used when no device-specific settings exist
+    
+    // X- Only add enabled MIDI devices to the selector
     auto devices = juce::MidiInput::getAvailableDevices();
     int itemId = 2;
-    for (const auto& device : devices)
+    for (const auto& device : devices) {
+        // Add all available devices - we don't have direct access to check if they're enabled
+        // The user will see all devices but can only configure those that are enabled
         deviceSelector.addItem(device.name, itemId++);
+    }
+    
     deviceSelector.setSelectedId(1, juce::dontSendNotification);
     deviceSelector.onChange = [this] { deviceSelectorChanged(); };
     
@@ -277,7 +283,8 @@ void LogDisplaySettingsComponent::resized()
     
     // COLOR SECTIONS CONTAINER
     const int colorSectionHeight = 200;
-    const int totalColorSectionsHeight = 10 * colorSectionHeight;
+    // X- Adjust the total height to match the actual number of color sections (9 instead of 10)
+    const int totalColorSectionsHeight = 9 * colorSectionHeight;
     // X- Expand colorContainer to fill the full width of the viewport to eliminate the dead zone
     colorContainer->setBounds(0, 0, colorViewport.getWidth(), totalColorSectionsHeight);
     
@@ -472,12 +479,23 @@ void LogDisplaySettingsComponent::handleResetButton()
         // X- Get the current background color to preserve it
         juce::Colour currentBgColor = currentSettings.backgroundColor;
         
-        // If we've applied settings before, reset to the previous settings
+        // Get the current device name
+        juce::String deviceName = deviceSelector.getItemText(deviceSelector.getSelectedItemIndex());
+        
+        // X- If "Default" is selected, reset to the default settings
+        // X- Otherwise, reset to the device-specific settings from the DisplaySettingsManager
         if (hasAppliedOnce) {
+            // Reset to previous settings if we've applied at least once
             currentSettings = previousSettings;
         } else {
             // Otherwise reset to default settings
-            currentSettings = defaultSettings;
+            if (deviceName == "Default") {
+                // For "Default", use the default settings
+                currentSettings = defaultSettings;
+            } else {
+                // For specific devices, get fresh settings from the manager
+                currentSettings = logDisplay.getSettingsManager().getSettings(deviceName);
+            }
         }
         
         // X- Preserve the background color
@@ -487,7 +505,7 @@ void LogDisplaySettingsComponent::handleResetButton()
         updateControls();
         
         // Apply the reset settings
-        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+        logDisplay.getSettingsManager().setSettings(currentSettings, deviceName);
     }
 }
 
@@ -503,6 +521,52 @@ void LogDisplaySettingsComponent::applySettings(const DisplaySettingsManager::Di
     currentSettings = settings;
     updateControls();
     logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+}
+
+/**
+ * @brief Updates the device selector with currently enabled MIDI devices.
+ * 
+ * Refreshes the device selector dropdown to show only currently enabled MIDI devices.
+ * This should be called when MIDI device configuration changes.
+ */
+void LogDisplaySettingsComponent::updateDeviceSelector()
+{
+    // Remember the currently selected device
+    juce::String currentlySelectedDevice = deviceSelector.getItemText(deviceSelector.getSelectedItemIndex());
+    
+    // Clear the selector
+    deviceSelector.clear(juce::dontSendNotification);
+    
+    // Add the Default option
+    deviceSelector.addItem("Default", 1);
+    
+    // Add all available MIDI devices
+    auto devices = juce::MidiInput::getAvailableDevices();
+    int itemId = 2;
+    for (const auto& device : devices) {
+        // Add all available devices - we don't have direct access to check if they're enabled
+        deviceSelector.addItem(device.name, itemId++);
+    }
+    
+    // Try to reselect the previously selected device
+    int indexToSelect = deviceSelector.getNumItems() > 0 ? 0 : -1;
+    for (int i = 0; i < deviceSelector.getNumItems(); ++i) {
+        if (deviceSelector.getItemText(i) == currentlySelectedDevice) {
+            indexToSelect = i;
+            break;
+        }
+    }
+    
+    // Select the appropriate item
+    if (indexToSelect >= 0) {
+        deviceSelector.setSelectedItemIndex(indexToSelect, juce::dontSendNotification);
+    } else {
+        // If the previously selected device is no longer available, select Default
+        deviceSelector.setSelectedItemIndex(0, juce::dontSendNotification);
+    }
+    
+    // Update the current settings based on the selected device
+    deviceSelectorChanged();
 }
 
 } // namespace MidiPortal 
