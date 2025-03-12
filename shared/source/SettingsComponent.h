@@ -1,3 +1,13 @@
+/**
+ * @file SettingsComponent.h
+ * @brief Component for configuring audio and MIDI device settings.
+ * 
+ * This file defines the SettingsComponent class, which provides a user interface
+ * for configuring audio and MIDI device settings in the MidiPortal application.
+ * It wraps JUCE's AudioDeviceSelectorComponent and adds custom controls for
+ * MIDI channel selection and activity indication.
+ */
+
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -9,40 +19,107 @@
 
 namespace MidiPortal {
 
-// X- SettingsComponent that wraps an AudioDeviceSelectorComponent and shows MIDI channel selectors
+/**
+ * @class SettingsComponent
+ * @brief Component for configuring audio and MIDI device settings.
+ * 
+ * This component provides a user interface for configuring audio and MIDI device
+ * settings in the MidiPortal application. It wraps JUCE's AudioDeviceSelectorComponent
+ * and adds custom controls for MIDI channel selection and activity indication.
+ * 
+ * The component listens for changes to the audio device manager and updates
+ * the MIDI channel selectors accordingly.
+ */
 class SettingsComponent : public juce::Component,
                          public juce::ChangeListener
 {
 public:
-    // X- Constructor takes a reference to the shared AudioDeviceManager
+    /**
+     * @brief Constructor that takes a reference to the shared AudioDeviceManager.
+     * @param deviceManager Reference to the application's AudioDeviceManager.
+     * 
+     * Initializes the SettingsComponent with a reference to the shared AudioDeviceManager
+     * and sets up the initial UI state.
+     */
     SettingsComponent(juce::AudioDeviceManager& deviceManager);
+    
+    /**
+     * @brief Destructor that cleans up resources.
+     * 
+     * Stops listening for changes to the audio device manager and cleans up resources.
+     */
     ~SettingsComponent() override;
 
-    // Called when the component needs to lay out its child components
+    /**
+     * @brief Handles component resizing.
+     * 
+     * Positions all child components based on the new size of the component.
+     */
     void resized() override;
     
-    // X- Method to trigger activity indicator for a specific device
+    /**
+     * @brief Triggers the activity indicator for a specific device.
+     * @param deviceName The name of the device to trigger activity for.
+     * 
+     * Causes the activity indicator for the specified device to flash,
+     * indicating that MIDI activity has been detected on that device.
+     */
     void triggerActivityForDevice(const juce::String& deviceName);
     
-    // X- ChangeListener implementation
+    /**
+     * @brief Handles change notifications from the AudioDeviceManager.
+     * @param source The ChangeBroadcaster that triggered the notification.
+     * 
+     * Called when the audio device configuration changes, such as when
+     * devices are enabled or disabled. Updates the MIDI channel selectors.
+     */
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
 private:
-
-    // X- Method to update MIDI channel selectors based on enabled devices
+    /**
+     * @brief Updates the MIDI channel selectors based on enabled devices.
+     * 
+     * Creates or updates MIDI channel selectors for each enabled MIDI input device.
+     * This method is called when the audio device configuration changes.
+     */
     void updateMidiChannelSelectors();
     
-    // X- We'll store a reference to the device manager (owned by MainComponent or elsewhere)
+    /**
+     * @brief Reference to the application's AudioDeviceManager.
+     * 
+     * Used to access and modify audio and MIDI device settings.
+     */
     juce::AudioDeviceManager& audioDeviceManager;
 
-    // X- The built-in JUCE component that shows audio+MIDI device controls
+    /**
+     * @brief The built-in JUCE component that shows audio+MIDI device controls.
+     * 
+     * This component provides the standard JUCE interface for selecting
+     * audio and MIDI devices and configuring their settings.
+     */
     std::unique_ptr<juce::AudioDeviceSelectorComponent> deviceSelector;
 
-    // X- Store MIDI inputs for display
+    /**
+     * @brief Array of available MIDI input devices.
+     * 
+     * Stores information about available MIDI input devices for display.
+     */
     juce::Array<juce::MidiDeviceInfo> midiInputs;
     
-    // X- Arrays to hold our custom UI components
+    /**
+     * @brief Array of MIDI channel selector components.
+     * 
+     * These components allow selecting which MIDI channels to listen to
+     * for each enabled MIDI input device.
+     */
     juce::OwnedArray<MidiChannelSelector> midiChannelSelectors;
+    
+    /**
+     * @brief Array of MIDI activity indicator components.
+     * 
+     * These components display visual feedback when MIDI activity is
+     * detected on a specific device.
+     */
     juce::OwnedArray<MidiActivityIndicator> midiActivityIndicators;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SettingsComponent)

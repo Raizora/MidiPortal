@@ -1,3 +1,13 @@
+/**
+ * @file LogDisplaySettingsComponent.cpp
+ * @brief Implementation of the LogDisplaySettingsComponent class.
+ * 
+ * This file contains the implementation of the LogDisplaySettingsComponent class methods,
+ * which provide a user interface for configuring the visual appearance of MIDI message logs
+ * in the MidiPortal application, including colors for different message types, font size,
+ * and other display properties.
+ */
+
 // LogDisplaySettingsComponent is like a form that lets users view and edit DisplaySettingsManager settings
 
 #include "LogDisplaySettingsComponent.h"
@@ -23,6 +33,15 @@ namespace MidiPortal {
  * 
  * If you encounter segmentation faults with JUCE components, always check for ownership
  * conflicts between smart pointers and JUCE's internal deletion mechanisms.
+ */
+
+/**
+ * @brief Constructor that initializes the settings component with all UI elements.
+ * @param logDisplayToControl Reference to the MidiLogDisplay that this component will control.
+ * 
+ * Creates and configures all UI elements including device selector, font size controls,
+ * color selectors for different MIDI message types, and Apply/Reset buttons. Sets up
+ * the component layout and initializes all settings from the provided log display.
  */
 LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisplayToControl)
     : logDisplay(logDisplayToControl),
@@ -126,6 +145,13 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     updateControls();
 }
 
+/**
+ * @brief Destructor that carefully cleans up resources to prevent memory leaks and crashes.
+ * 
+ * Implements a specific destruction sequence to prevent double-deletion issues with the
+ * colorContainer component. Sets a flag to prevent callbacks during destruction, clears
+ * the viewport, removes all listeners, and then resets all smart pointers in a specific order.
+ */
 LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
 {
     // Set the flag to indicate we're being destroyed
@@ -179,6 +205,13 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     colorContainer.reset();
 }
 
+/**
+ * @brief Paints the component background and adds a border around the color viewport.
+ * @param g The Graphics context to paint into.
+ * 
+ * Fills the component background with the default window background color and
+ * draws a border around the color viewport for visual separation.
+ */
 void LogDisplaySettingsComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
@@ -187,6 +220,12 @@ void LogDisplaySettingsComponent::paint(juce::Graphics& g)
     g.drawRect(colorViewport.getBounds().reduced(-1), 2); // 2px thick border
 }
 
+/**
+ * @brief Handles component resizing and positions all child components.
+ * 
+ * Positions all sections, controls, and the viewport based on the new size of the component.
+ * Uses a sophisticated layout system to ensure all elements are properly positioned and sized.
+ */
 void LogDisplaySettingsComponent::resized()
 {
     // Start with the entire component bounds, reduced by 10px on all sides
@@ -279,6 +318,12 @@ void LogDisplaySettingsComponent::resized()
     positionColorSection(defaultColorSection, containerBounds);
 }
 
+/**
+ * @brief Handles changes to the device selector dropdown.
+ * 
+ * Updates the current settings to reflect the selected device and refreshes
+ * all UI controls to show the device-specific settings.
+ */
 void LogDisplaySettingsComponent::deviceSelectorChanged()
 {
     // Don't access logDisplay if we're being destroyed
@@ -288,6 +333,12 @@ void LogDisplaySettingsComponent::deviceSelectorChanged()
     }
 }
 
+/**
+ * @brief Handles changes to the font size slider.
+ * 
+ * Updates the current settings with the new font size and applies the change
+ * to the settings manager for the selected device.
+ */
 void LogDisplaySettingsComponent::fontSizeChanged()
 {
     // Don't access logDisplay if we're being destroyed
@@ -297,6 +348,12 @@ void LogDisplaySettingsComponent::fontSizeChanged()
     }
 }
 
+/**
+ * @brief Updates all UI controls to reflect the current settings.
+ * 
+ * Sets the values of all sliders, color selectors, and other controls
+ * based on the current settings for the selected device.
+ */
 void LogDisplaySettingsComponent::updateControls()
 {
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
@@ -311,6 +368,13 @@ void LogDisplaySettingsComponent::updateControls()
     defaultColorSection.selector->setCurrentColour(currentSettings.defaultColor, juce::dontSendNotification);
 }
 
+/**
+ * @brief Handles changes to combo boxes.
+ * @param comboBoxThatHasChanged The combo box that changed.
+ * 
+ * Called when a combo box value changes, such as the device selector.
+ * Delegates to the appropriate handler method based on which combo box changed.
+ */
 void LogDisplaySettingsComponent::comboBoxChanged(juce::ComboBox* comboBoxThatHasChanged)
 {
     if (comboBoxThatHasChanged == &deviceSelector)
@@ -319,6 +383,16 @@ void LogDisplaySettingsComponent::comboBoxChanged(juce::ComboBox* comboBoxThatHa
     }
 }
 
+/**
+ * @brief Sets up a color section with a label, color selector, and change listener.
+ * @param section The ColorSection to set up.
+ * @param name The name to display in the label.
+ * @param initialColor The initial color for the selector.
+ * 
+ * Creates and configures a ColorSection with a label, color selector, and change listener
+ * for a specific MIDI message type. The change listener updates the appropriate color
+ * in the current settings when the user selects a new color.
+ */
 void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor)
 {
     section.label.setText(name, juce::dontSendNotification);
@@ -344,6 +418,12 @@ void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const
     addAndMakeVisible(section.selector.get());
 }
 
+/**
+ * @brief Handles clicks on the Apply button.
+ * 
+ * Applies the current settings to the log display by updating the settings manager
+ * with the values from all UI controls. Caches the settings for potential reset.
+ */
 void LogDisplaySettingsComponent::handleApplyButton()
 {
     // Don't access logDisplay if we're being destroyed
@@ -378,6 +458,13 @@ void LogDisplaySettingsComponent::handleApplyButton()
     }
 }
 
+/**
+ * @brief Handles clicks on the Reset button.
+ * 
+ * Resets the settings to either the previous settings (if Apply has been clicked)
+ * or the default settings (if Apply has not been clicked). Updates the UI controls
+ * and applies the reset settings to the log display.
+ */
 void LogDisplaySettingsComponent::handleResetButton()
 {
     // Don't access logDisplay if we're being destroyed
@@ -404,6 +491,13 @@ void LogDisplaySettingsComponent::handleResetButton()
     }
 }
 
+/**
+ * @brief Applies settings to the log display.
+ * @param settings The settings to apply.
+ * 
+ * Updates the current settings with the specified settings, updates the UI controls,
+ * and applies the settings to the log display for the selected device.
+ */
 void LogDisplaySettingsComponent::applySettings(const DisplaySettingsManager::DisplaySettings& settings)
 {
     currentSettings = settings;

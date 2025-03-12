@@ -1,3 +1,13 @@
+/**
+ * @file MainComponent.cpp
+ * @brief Implementation of the MainComponent class.
+ * 
+ * This file contains the implementation of the MainComponent class, which is the central
+ * component of the MidiPortal application. It handles MIDI input, manages the user interface,
+ * and coordinates the various features of the application, such as MIDI logging, display settings,
+ * and window routing.
+ */
+
 //
 // Created by Jamie Benchia on 1/3/25.
 //
@@ -11,10 +21,34 @@
 
 namespace MidiPortal {
 
-// Define the MidiInputCallback class
+/**
+ * @class MainComponent::MidiInputCallback
+ * @brief Handles incoming MIDI messages from connected devices.
+ * 
+ * This nested class implements the JUCE MidiInputCallback interface to receive
+ * MIDI messages from connected devices. It forwards these messages to the
+ * MainComponent for processing and display.
+ */
 class MainComponent::MidiInputCallback : public juce::MidiInputCallback {
 public:
+  /**
+   * @brief Constructor that takes a reference to the parent MainComponent.
+   * @param parentOwner Reference to the parent MainComponent.
+   * 
+   * Initializes the callback with a reference to the MainComponent that will
+   * process the incoming MIDI messages.
+   */
   explicit MidiInputCallback(MainComponent& parentOwner) : owner(parentOwner) {}
+  
+  /**
+   * @brief Handles incoming MIDI messages from a MIDI input device.
+   * @param source Pointer to the MIDI input device that sent the message.
+   * @param message The MIDI message that was received.
+   * 
+   * This method is called by JUCE when a MIDI message is received from a
+   * connected device. It asynchronously forwards the message to the MainComponent
+   * for processing if the message's channel is enabled.
+   */
   void handleIncomingMidiMessage(juce::MidiInput* source,
                                  const juce::MidiMessage& message) override {
       juce::MessageManager::callAsync([this, message, sourceName = source->getName()]() {
@@ -30,6 +64,12 @@ private:
     MainComponent& owner;
 };
 
+/**
+ * @brief Constructor that initializes the MainComponent.
+ * 
+ * Sets up the MIDI input devices, initializes the Rust engine for MIDI processing,
+ * creates the user interface components, and configures the menu bar.
+ */
 MainComponent::MainComponent()
     : settingsManager(), // Initialize settings manager
       windowManager(settingsManager) // Initialize window manager with settings manager
@@ -103,6 +143,13 @@ MainComponent::MainComponent()
     updateCurrentView();
 }
 
+/**
+ * @brief Destructor that cleans up resources.
+ * 
+ * Closes any open windows, cleans up the menu bar, stops MIDI input,
+ * and destroys the Rust engine. The rest of the resources are cleaned up
+ * automatically by the unique_ptr destructors.
+ */
 MainComponent::~MainComponent() {
   // Close any open windows first to prevent accessing destroyed components
   if (logDisplaySettingsWindow != nullptr) {
@@ -132,6 +179,14 @@ MainComponent::~MainComponent() {
   // - midiLogDisplay
 }
 
+/**
+ * @brief Processes and displays a MIDI message.
+ * @param message The MIDI message to process and display.
+ * 
+ * This method is called when a MIDI message is received from a connected device.
+ * It processes the message using the Rust engine, stores it for display/history,
+ * logs it to the MIDI logger, and routes it to the appropriate displays.
+ */
 void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
     juce::MessageManager::callAsync([this, message]() {
         try {
@@ -179,6 +234,13 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
     });
 }
 
+/**
+ * @brief Paints the component.
+ * @param g The Graphics context to paint into.
+ * 
+ * Fills the background with black and draws the application name
+ * if no child components are visible.
+ */
 void MainComponent::paint(juce::Graphics& g) {
   // X- Only fill background if we're not showing a view
   if (getNumChildComponents() == 0) {
@@ -189,6 +251,11 @@ void MainComponent::paint(juce::Graphics& g) {
   }
 }
 
+/**
+ * @brief Handles component resizing.
+ * 
+ * Resizes the MidiLogDisplay to fill the entire component.
+ */
 void MainComponent::resized()
 {
     // Make the midiLogDisplay fill the entire component
@@ -198,7 +265,13 @@ void MainComponent::resized()
     }
 }
 
-// Add a method to trigger activity indicators
+/**
+ * @brief Triggers activity indicators for a specific device.
+ * @param deviceName The name of the device to trigger activity for.
+ * 
+ * This method is called when a MIDI message is received from a device,
+ * and triggers the activity indicator for that device in the settings component.
+ */
 void MainComponent::triggerMidiActivity(const juce::String& deviceName)
 {
     if (settingsComponent != nullptr)
@@ -207,7 +280,15 @@ void MainComponent::triggerMidiActivity(const juce::String& deviceName)
     }
 }
 
-// Update the getMenuForIndex method to include device windows
+/**
+ * @brief Gets the menu for a specific menu bar index.
+ * @param index The index of the menu in the menu bar.
+ * @param name The name of the menu.
+ * @return A PopupMenu containing the menu items for the specified menu.
+ * 
+ * This method is called by JUCE to get the menu for a specific menu bar index.
+ * It returns different menus based on the platform (Mac or other) and the menu name.
+ */
 juce::PopupMenu MainComponent::getMenuForIndex(int /*index*/, const juce::String& name)
 {
     juce::PopupMenu menu;
@@ -244,7 +325,15 @@ juce::PopupMenu MainComponent::getMenuForIndex(int /*index*/, const juce::String
     return menu;
 }
 
-// Update menuItemSelected to handle device window toggles
+/**
+ * @brief Handles menu item selection.
+ * @param menuItemID The ID of the selected menu item.
+ * @param topLevelMenuIndex The index of the top-level menu containing the selected item.
+ * 
+ * This method is called when a menu item is selected. It handles different
+ * actions based on the selected menu item, such as opening settings windows
+ * or changing the view mode.
+ */
 void MainComponent::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
 {
     if (menuItemID == kSettingsMenuItemId)  // Settings
@@ -297,6 +386,13 @@ void MainComponent::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
     }
 }
 
+/**
+ * @brief Gets the names of the menu bar items.
+ * @return A StringArray containing the names of the menu bar items.
+ * 
+ * This method is called by JUCE to get the names of the menu bar items.
+ * It returns different names based on the platform (Mac or other).
+ */
 juce::StringArray MainComponent::getMenuBarNames()
 {
     #if JUCE_MAC
@@ -306,11 +402,23 @@ juce::StringArray MainComponent::getMenuBarNames()
     #endif
 }
 
+/**
+ * @brief Gets the number of menu bar items.
+ * @return The number of menu bar items.
+ * 
+ * This method is called by JUCE to get the number of menu bar items.
+ */
 int MainComponent::getNumMenuBarItems()
 {
     return getMenuBarNames().size();
 }
 
+/**
+ * @brief Sets the current view mode.
+ * @param newMode The new view mode to set.
+ * 
+ * Changes the current view mode and updates the UI to reflect the change.
+ */
 void MainComponent::setViewMode(ViewMode newMode)
 {
     if (currentViewMode != newMode)
@@ -321,6 +429,13 @@ void MainComponent::setViewMode(ViewMode newMode)
     }
 }
 
+/**
+ * @brief Updates the current view based on the view mode.
+ * 
+ * Shows or hides components based on the current view mode.
+ * Currently only handles the list view, but will be expanded
+ * to handle grid and timeline views in the future.
+ */
 void MainComponent::updateCurrentView()
 {
     // For now, we only have the list view
@@ -331,6 +446,11 @@ void MainComponent::updateCurrentView()
     }
 }
 
+/**
+ * @brief Updates the view menu to reflect the current view mode.
+ * 
+ * Updates the view menu items to show the current view mode as selected.
+ */
 void MainComponent::updateViewMenu()
 {
     #if JUCE_MAC
@@ -343,6 +463,16 @@ void MainComponent::updateViewMenu()
     menuItemsChanged();
 }
 
+/**
+ * @brief Determines if a MIDI message should be processed.
+ * @param message The MIDI message to check.
+ * @param deviceName The name of the device that sent the message.
+ * @return true if the message should be processed, false otherwise.
+ * 
+ * Checks if the MIDI message's channel is enabled for the specified device.
+ * If the device is not found in the device channel states, a new state is created
+ * with all channels enabled.
+ */
 bool MainComponent::shouldProcessMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
     // Find the device state

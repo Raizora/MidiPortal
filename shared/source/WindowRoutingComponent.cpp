@@ -1,7 +1,28 @@
+/**
+ * @file WindowRoutingComponent.cpp
+ * @brief Implementation of the WindowRoutingComponent class.
+ * 
+ * This file contains the implementation of the WindowRoutingComponent class methods,
+ * which provide a user interface for managing the routing of MIDI devices to display
+ * windows and customizing the background colors of those windows.
+ * 
+ * The component displays a grid showing which MIDI devices are routed to which windows,
+ * with toggle buttons for enabling/disabling routing and RGB sliders for customizing
+ * window background colors.
+ */
+
 #include "WindowRoutingComponent.h"
 
 namespace MidiPortal {
 
+/**
+ * @brief Constructor that initializes the component with a reference to the WindowManager.
+ * @param manager Reference to the WindowManager that will be used for window management.
+ * 
+ * Sets up the "New Window" button and initializes the grid with current windows and devices.
+ * The grid displays which MIDI devices are routed to which windows and provides controls
+ * for changing routing and window background colors.
+ */
 WindowRoutingComponent::WindowRoutingComponent(WindowManager& manager)
     : windowManager(manager)
 {
@@ -19,6 +40,14 @@ WindowRoutingComponent::WindowRoutingComponent(WindowManager& manager)
     updateGrid();
 }
 
+/**
+ * @brief Paints the component background and grid lines.
+ * @param g The Graphics context to paint into.
+ * 
+ * Fills the background with the default window background color and draws
+ * grid lines to separate the cells in the routing grid. The grid has one column
+ * for each window and one row for each MIDI device.
+ */
 void WindowRoutingComponent::paint(juce::Graphics& g)
 {
     // Fill the background with the default window background color
@@ -61,6 +90,13 @@ void WindowRoutingComponent::paint(juce::Graphics& g)
     }
 }
 
+/**
+ * @brief Handles component resizing and positions all child components.
+ * 
+ * Positions the "New Window" button, window labels, device labels, routing cells,
+ * and RGB sliders based on the new size of the component. The layout is organized
+ * as a grid with one column for each window and one row for each MIDI device.
+ */
 void WindowRoutingComponent::resized()
 {
     // Get the component bounds, reduced by 10 pixels on all sides for padding
@@ -202,6 +238,15 @@ void WindowRoutingComponent::resized()
     }
 }
 
+/**
+ * @brief Handles button clicks from the "New Window" button and routing cells.
+ * @param button Pointer to the button that was clicked.
+ * 
+ * Handles different actions based on the button that was clicked:
+ * - If the "New Window" button was clicked, creates a new window
+ * - If a routing cell was clicked, updates the routing between the device and window
+ * - If an Apply button from an RGB slider was clicked, applies the color to the window
+ */
 void WindowRoutingComponent::buttonClicked(juce::Button* button)
 {
     // Handle button clicks based on the button type
@@ -240,6 +285,13 @@ void WindowRoutingComponent::buttonClicked(juce::Button* button)
     }
 }
 
+/**
+ * @brief Handles slider value changes from the RGB sliders.
+ * @param slider Pointer to the slider that changed.
+ * 
+ * This method is called when one of the RGB sliders is adjusted.
+ * No action is taken here since colors are only applied when the Apply button is clicked.
+ */
 void WindowRoutingComponent::sliderValueChanged(juce::Slider* slider)
 {
     // X- Intentionally unused parameter as we only apply color changes when the Apply button is clicked
@@ -249,6 +301,13 @@ void WindowRoutingComponent::sliderValueChanged(juce::Slider* slider)
     // We don't need to do anything here since we only apply the color when the Apply button is clicked
 }
 
+/**
+ * @brief Handles change notifications from the color selector.
+ * @param source The ChangeBroadcaster that triggered the notification.
+ * 
+ * Called when the color selector's color changes. Updates the color button and RGB sliders
+ * for the selected window, and applies the new color to the window's background.
+ */
 void WindowRoutingComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     // Handle changes from the color selector
@@ -298,6 +357,13 @@ void WindowRoutingComponent::changeListenerCallback(juce::ChangeBroadcaster* sou
     }
 }
 
+/**
+ * @brief Updates the grid with current windows and devices.
+ * 
+ * Clears all existing components and rebuilds the grid based on the current
+ * windows and MIDI devices. Creates labels for windows and devices, routing cells
+ * for device-window combinations, and RGB sliders for window background colors.
+ */
 void WindowRoutingComponent::updateGrid()
 {
     // Clear all existing components
@@ -446,6 +512,13 @@ void WindowRoutingComponent::updateGrid()
     resized();
 }
 
+/**
+ * @brief Creates a new window with a unique name.
+ * 
+ * Generates a new window name (A, B, C, etc.) that isn't already in use,
+ * creates the window using the WindowManager, and updates the grid to include
+ * the new window. Preserves existing window colors during the update.
+ */
 void WindowRoutingComponent::createNewWindow()
 {
     // Generate next window name (A, B, C, etc.)
@@ -508,6 +581,13 @@ void WindowRoutingComponent::createNewWindow()
     }
 }
 
+/**
+ * @brief Shows a color selector for a specific window.
+ * @param windowName The name of the window to show the color selector for.
+ * 
+ * Creates a color selector popup next to the color button for the specified window.
+ * The color selector allows the user to choose a new background color for the window.
+ */
 void WindowRoutingComponent::showColorSelectorForWindow(const juce::String& windowName)
 {
     // Find the color button for this window
@@ -555,6 +635,14 @@ void WindowRoutingComponent::showColorSelectorForWindow(const juce::String& wind
     colorSelectorCallout->setDismissalMouseClicksAreAlwaysConsumed(true);
 }
 
+/**
+ * @brief Applies the RGB slider values to a window's background color.
+ * @param windowName The name of the window to apply the color to.
+ * 
+ * Gets the current color from the RGB sliders for the specified window,
+ * updates the color button to match, and applies the color to the window's
+ * background by updating the settings in the DisplaySettingsManager.
+ */
 void WindowRoutingComponent::applyRGBSlidersToWindow(const juce::String& windowName)
 {
     // Find the RGB sliders for this window
