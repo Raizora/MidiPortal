@@ -55,13 +55,13 @@ const juce::String StandaloneApp::getApplicationName() {
 
 /**
  * @brief Gets the application version.
- * @return The version of the application ("0.0.8").
+ * @return The version of the application ("0.1.0").
  * 
  * This version is used in various places, such as the about box
  * and for checking for updates.
  */
 const juce::String StandaloneApp::getApplicationVersion() {
-  return "0.0.8";
+  return "0.1.0";
 }
 
 /**

@@ -76,7 +76,7 @@ public:
      * This version is used in various places, such as the about box
      * and for checking for updates.
      */
-    const juce::String getApplicationVersion() override    { return "0.0.9.9"; }
+    const juce::String getApplicationVersion() override    { return "0.1.0"; }
     
     /**
      * @brief Determines if multiple instances of the application are allowed.
