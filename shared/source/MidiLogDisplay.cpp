@@ -62,9 +62,24 @@ MidiLogDisplay::~MidiLogDisplay()
  */
 void MidiLogDisplay::paint(juce::Graphics& g)
 {
-    // Get default settings for background
-    const auto& defaultSettings = settingsManager.getSettings("Default");
-    g.fillAll(defaultSettings.backgroundColor);
+    // Get the correct settings for background based on window name
+    juce::Colour backgroundColor;
+    
+    if (windowName.isEmpty() || windowName == "MAIN")
+    {
+        // For MAIN window or if no window name is set, use the Default settings
+        const auto& defaultSettings = settingsManager.getSettings("Default");
+        backgroundColor = defaultSettings.backgroundColor;
+    }
+    else
+    {
+        // For other windows, use their specific settings
+        const auto& windowSettings = settingsManager.getSettings(windowName);
+        backgroundColor = windowSettings.backgroundColor;
+    }
+    
+    // Fill the background with the correct color
+    g.fillAll(backgroundColor);
     
     float y = getHeight() - 10.0f;  // Start from bottom
     

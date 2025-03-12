@@ -127,6 +127,21 @@ public:
      */
     DisplaySettingsManager& getSettingsManager() { return settingsManager; }
     
+    /**
+     * @brief Sets the window name that this display belongs to.
+     * @param name The name of the window.
+     * 
+     * This allows the display to use the correct settings for its window
+     * rather than always using the default settings.
+     */
+    void setWindowName(const juce::String& name) { windowName = name; }
+    
+    /**
+     * @brief Gets the window name that this display belongs to.
+     * @return The name of the window.
+     */
+    const juce::String& getWindowName() const { return windowName; }
+    
 private:
     /**
      * @struct LogEntry
@@ -263,6 +278,14 @@ private:
      * memory usage. Older entries are removed when the limit is reached.
      */
     static constexpr size_t maxEntries = 1000;
+    
+    /**
+     * @brief Name of the window that this display belongs to.
+     * 
+     * Used to get the correct settings for the display's background color.
+     * If empty, the display will use the default settings.
+     */
+    juce::String windowName;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiLogDisplay)
 };
