@@ -1,7 +1,22 @@
+/**
+ * @file WindowManager.cpp
+ * @brief Implementation of the WindowManager class.
+ * 
+ * This file contains the implementation of the WindowManager class methods,
+ * which manage multiple display windows and MIDI device routing in the MidiPortal application.
+ */
+
 #include "WindowManager.h"
 
 namespace MidiPortal {
 
+/**
+ * @brief Constructor that takes a reference to the DisplaySettingsManager.
+ * @param settingsManager Reference to the DisplaySettingsManager that will be used for window settings.
+ * 
+ * Initializes the WindowManager with a reference to the DisplaySettingsManager.
+ * The "MAIN" window is considered to always exist as it's the main application window.
+ */
 WindowManager::WindowManager(DisplaySettingsManager& settingsManager)
     : displaySettingsManager(settingsManager)
 {
@@ -10,6 +25,17 @@ WindowManager::WindowManager(DisplaySettingsManager& settingsManager)
     // but we don't need to create it as it's already part of the application
 }
 
+/**
+ * @brief Creates a new display window with the specified name.
+ * @param windowName The name for the new window.
+ * 
+ * Creates a new LogDisplayWindow with the specified name and registers it
+ * with the DisplaySettingsManager. If a window with the same name already
+ * exists or if the name is "MAIN", this method does nothing.
+ * 
+ * Each new window is assigned a unique background color based on its name
+ * to help visually distinguish between different windows.
+ */
 void WindowManager::createWindow(const juce::String& windowName)
 {
     // Don't allow creating a window named "MAIN" as it's the main application window
@@ -49,6 +75,14 @@ void WindowManager::createWindow(const juce::String& windowName)
     }
 }
 
+/**
+ * @brief Closes and destroys a window with the specified name.
+ * @param windowName The name of the window to close.
+ * 
+ * Closes the specified window and removes all device routings to it.
+ * If the window doesn't exist or if the name is "MAIN", this method does nothing.
+ * The "MAIN" window cannot be closed as it's the main application window.
+ */
 void WindowManager::closeWindow(const juce::String& windowName)
 {
     // Don't allow closing the MAIN window as it's the main application window
@@ -73,6 +107,14 @@ void WindowManager::closeWindow(const juce::String& windowName)
     windows.erase(windowName);
 }
 
+/**
+ * @brief Checks if a window with the specified name exists.
+ * @param windowName The name of the window to check.
+ * @return true if the window exists, false otherwise.
+ * 
+ * Note that "MAIN" is always considered to exist, as it's the main application window,
+ * even though it's not stored in the windows map.
+ */
 bool WindowManager::hasWindow(const juce::String& windowName) const
 {
     // MAIN is always considered to exist, even though it's not in our windows map
@@ -82,6 +124,13 @@ bool WindowManager::hasWindow(const juce::String& windowName) const
     return windows.find(windowName) != windows.end();
 }
 
+/**
+ * @brief Gets a list of all window names.
+ * @return A StringArray containing the names of all windows.
+ * 
+ * The returned list always includes "MAIN" (the main application window)
+ * as the first item, followed by any additional windows.
+ */
 juce::StringArray WindowManager::getWindowNames() const
 {
     juce::StringArray names;
@@ -98,6 +147,15 @@ juce::StringArray WindowManager::getWindowNames() const
     return names;
 }
 
+/**
+ * @brief Routes a MIDI device to a specific window.
+ * @param deviceName The name of the MIDI device to route.
+ * @param windowName The name of the window to route the device to.
+ * 
+ * After routing, MIDI messages from the specified device will be
+ * forwarded to the specified window. If the window doesn't exist,
+ * this method does nothing.
+ */
 void WindowManager::routeDeviceToWindow(const juce::String& deviceName, const juce::String& windowName)
 {
     if (hasWindow(windowName))
@@ -107,6 +165,15 @@ void WindowManager::routeDeviceToWindow(const juce::String& deviceName, const ju
     }
 }
 
+/**
+ * @brief Removes a routing between a MIDI device and a window.
+ * @param deviceName The name of the MIDI device to unroute.
+ * @param windowName The name of the window to remove the device from.
+ * 
+ * After unrouting, MIDI messages from the specified device will no
+ * longer be forwarded to the specified window. If the device or window
+ * doesn't exist, this method does nothing.
+ */
 void WindowManager::unrouteDeviceFromWindow(const juce::String& deviceName, const juce::String& windowName)
 {
     auto deviceIt = deviceToWindows.find(deviceName);
@@ -126,12 +193,25 @@ void WindowManager::unrouteDeviceFromWindow(const juce::String& deviceName, cons
     }
 }
 
+/**
+ * @brief Checks if a MIDI device is routed to a specific window.
+ * @param deviceName The name of the MIDI device to check.
+ * @param windowName The name of the window to check.
+ * @return true if the device is routed to the window, false otherwise.
+ */
 bool WindowManager::isDeviceRoutedToWindow(const juce::String& deviceName, const juce::String& windowName) const
 {
     auto it = deviceToWindows.find(deviceName);
     return it != deviceToWindows.end() && it->second.find(windowName) != it->second.end();
 }
 
+/**
+ * @brief Gets a list of all windows that a MIDI device is routed to.
+ * @param deviceName The name of the MIDI device to check.
+ * @return A StringArray containing the names of all windows the device is routed to.
+ * 
+ * If the device isn't routed to any windows, an empty StringArray is returned.
+ */
 juce::StringArray WindowManager::getWindowsForDevice(const juce::String& deviceName) const
 {
     juce::StringArray windowNames;
@@ -144,6 +224,13 @@ juce::StringArray WindowManager::getWindowsForDevice(const juce::String& deviceN
     return windowNames;
 }
 
+/**
+ * @brief Gets a list of all MIDI devices that are routed to a window.
+ * @param windowName The name of the window to check.
+ * @return A StringArray containing the names of all devices routed to the window.
+ * 
+ * If no devices are routed to the window, an empty StringArray is returned.
+ */
 juce::StringArray WindowManager::getDevicesForWindow(const juce::String& windowName) const
 {
     juce::StringArray deviceNames;
@@ -156,6 +243,15 @@ juce::StringArray WindowManager::getDevicesForWindow(const juce::String& windowN
     return deviceNames;
 }
 
+/**
+ * @brief Routes a MIDI message to all windows that the specified device is routed to.
+ * @param message The MIDI message to route.
+ * @param deviceName The name of the MIDI device that the message came from.
+ * 
+ * This method is called when a MIDI message is received from a device,
+ * and forwards the message to all windows that the device is routed to.
+ * If the device isn't routed to any windows, this method does nothing.
+ */
 void WindowManager::routeMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
     auto it = deviceToWindows.find(deviceName);
@@ -172,6 +268,13 @@ void WindowManager::routeMidiMessage(const juce::MidiMessage& message, const juc
     }
 }
 
+/**
+ * @brief Registers a window component with the WindowManager.
+ * @param window Pointer to the window component to register.
+ * 
+ * This allows the WindowManager to track windows that aren't LogDisplayWindows.
+ * If the window is already registered, this method does nothing.
+ */
 void WindowManager::registerWindow(juce::Component* window)
 {
     if (window != nullptr && !registeredWindows.contains(window))
@@ -180,11 +283,25 @@ void WindowManager::registerWindow(juce::Component* window)
     }
 }
 
+/**
+ * @brief Unregisters a window component from the WindowManager.
+ * @param window Pointer to the window component to unregister.
+ * 
+ * This should be called when a window is closed to prevent memory leaks.
+ * If the window isn't registered, this method does nothing.
+ */
 void WindowManager::unregisterWindow(juce::Component* window)
 {
     registeredWindows.removeFirstMatchingValue(window);
 }
 
+/**
+ * @brief Gets a reference to the DisplaySettingsManager.
+ * @return A reference to the DisplaySettingsManager.
+ * 
+ * This allows other components to access the DisplaySettingsManager
+ * through the WindowManager.
+ */
 DisplaySettingsManager& WindowManager::getSettingsManager()
 {
     return displaySettingsManager;
