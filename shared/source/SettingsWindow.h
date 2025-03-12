@@ -1,115 +1,88 @@
 /**
- * @file SettingsSection.h
- * @brief Defines a reusable UI component for settings sections.
+ * @file SettingsWindow.h
+ * @brief Defines a dialog window for configuring application settings.
  * 
- * This file defines the SettingsSection class, which provides a consistent
- * visual container for groups of related settings in the MidiPortal application.
- * Each section has a title, a separator line, and a content area where child
- * components can be placed.
+ * This file defines the SettingsWindow class, which creates a dialog window
+ * containing a SettingsComponent for configuring audio and MIDI device settings
+ * in the MidiPortal application. The window provides scrolling capabilities
+ * to accommodate settings that don't fit in the visible area.
  */
 
 #pragma once
-#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_gui_extra/juce_gui_extra.h>
+#include "SettingsComponent.h"
+#include <functional>
 
 namespace MidiPortal {
 
 /**
- * @class SettingsSection
- * @brief A container component for grouping related settings.
+ * @class SettingsWindow
+ * @brief A dialog window for configuring application settings.
  * 
- * This component provides a consistent visual style for sections of settings
- * in the MidiPortal application. Each section has a title, a separator line,
- * and a content area where child components can be placed.
+ * This class creates a dialog window containing a SettingsComponent for
+ * configuring audio and MIDI device settings in the MidiPortal application.
+ * The window provides scrolling capabilities to accommodate settings that
+ * don't fit in the visible area.
  * 
- * The component handles its own layout and styling, providing a clean API
- * for adding settings controls to the content area.
+ * The window is typically opened from the main application menu and
+ * allows users to configure audio and MIDI devices.
  */
-class SettingsSection : public juce::Component
+class SettingsWindow : public juce::DialogWindow
 {
 public:
     /**
-     * @brief Constructor that takes a title for the section.
-     * @param titleText The text to display as the section title.
+     * @brief Callback function type for window close events.
      * 
-     * Creates a new settings section with the specified title and
-     * sets up the visual appearance of the section.
+     * This callback is triggered when the window is closed, allowing
+     * the owner to perform cleanup or update UI state.
      */
-    SettingsSection(const juce::String& titleText)
+    std::function<void()> onCloseCallback;
+
+    /**
+     * @brief Constructor that creates a new settings dialog.
+     * @param name The name of the window, which will appear in the title bar.
+     * @param deviceManager Reference to the application's AudioDeviceManager.
+     * 
+     * Creates a new dialog window with a SettingsComponent and configures it
+     * with the provided AudioDeviceManager reference. The window includes
+     * a viewport for scrolling if the settings don't fit in the visible area.
+     */
+    SettingsWindow(const juce::String& name, juce::AudioDeviceManager& deviceManager)
+        : DialogWindow(name, juce::Colours::lightgrey, true, true)
     {
-        // Create and set up the header label
-        title.setText(titleText, juce::dontSendNotification);
+        auto* content = new SettingsComponent(deviceManager);
         
-        // X- Use the correct approach for JUCE 8
-        juce::FontOptions options;
-        options = options.withHeight(16.0f);
-        juce::Font font(options);
-        font = font.boldened();
-        title.setFont(font);
+        // X- Create viewport for scrolling
+        auto* viewport = new juce::Viewport();
+        viewport->setViewedComponent(content, true);
+        viewport->setScrollBarsShown(true, true);
         
-        addAndMakeVisible(title);
+        // X- Make viewport fill the window and resize with it
+        viewport->setSize(550, 400);
         
-        // Add a separator line below the title
-        addAndMakeVisible(separator);
+        setContentOwned(viewport, true);
+        setResizeLimits(500, 300, 1200, 1200);
+        centreWithSize(550, 400);
+        
+        // X- Make sure content gets viewport's width
+        content->setSize(viewport->getWidth(), content->getHeight());
+        
+        setResizable(true, true);  // Allow both horizontal and vertical resizing
+        setVisible(true);
+        setAlwaysOnTop(true);
     }
-    
+
     /**
-     * @brief Handles component resizing.
+     * @brief Handles the window close button being pressed.
      * 
-     * Positions the title and separator based on the new size of the component.
+     * Hides the window and calls the onCloseCallback if one is set.
+     * This allows the owner to perform cleanup or update UI state.
      */
-    void resized() override
+    void closeButtonPressed() override
     {
-        auto bounds = getLocalBounds().reduced(5);
-        title.setBounds(bounds.removeFromTop(24));
-        bounds.removeFromTop(5);
-        separator.setBounds(bounds.removeFromTop(1));
+        setVisible(false);
+        if (onCloseCallback) onCloseCallback();
     }
-    
-    /**
-     * @brief Paints the component.
-     * @param g The Graphics context to paint into.
-     * 
-     * Draws the background of the section with a rounded rectangle and
-     * a slightly brighter color than the window background.
-     */
-    void paint(juce::Graphics& g) override
-    {
-        auto backgroundColor = getLookAndFeel().findColour(
-            juce::ResizableWindow::backgroundColourId).brighter(0.1f);
-        
-        g.setColour(backgroundColor);
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), 5.0f);
-    }
-    
-    /**
-     * @brief Gets the bounds of the content area.
-     * @return A Rectangle representing the bounds of the content area.
-     * 
-     * Returns the bounds of the area where child components should be placed,
-     * accounting for the space taken by the title and separator.
-     */
-    juce::Rectangle<int> getContentBounds()
-    {
-        return getLocalBounds().reduced(5)
-                             .withTrimmedTop(35);
-    }
-    
-private:
-    /**
-     * @brief Label for the section title.
-     * 
-     * Displays the title of the section at the top.
-     */
-    juce::Label title;
-    
-    /**
-     * @brief Separator line below the title.
-     * 
-     * Provides a visual separation between the title and the content area.
-     */
-    juce::DrawablePath separator;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsSection)
 };
 
-} // namespace MidiPortal 
+} // namespace MidiPortal
