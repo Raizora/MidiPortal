@@ -105,7 +105,8 @@ cmake -B build -G Ninja \
       -DCMAKE_C_COMPILER="$CLANG_PATH" \
       -DCMAKE_CXX_COMPILER="$CLANGPP_PATH" \
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DRUST_LIBRARY_PATH="${PWD}/rust/target/release/deps"
 
 # Build the project
 echo -e "${BLUE}Building project...${NC}"
