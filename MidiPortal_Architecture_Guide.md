@@ -12,12 +12,28 @@ The MIDI processing pipeline follows this flow:
 
 1. **MIDI Input**: JUCE's `MidiInputCallback` receives messages from enabled MIDI devices
 2. **Channel Filtering**: Messages are filtered based on enabled MIDI channels (1-16)
-3. **Rust Engine Processing**: Messages are sent to the Rust `midi_engine` for analysis
-4. **Routing**: Messages are routed to appropriate display windows
-5. **Visualization**: Messages are displayed with color-coding based on message type
-6. **AI Analysis**: Messages are analyzed for patterns and insights
+3. **Shared Memory Buffer**: Messages are written to a lock-free ring buffer shared between C++ and Rust
+4. **Rust Engine Processing**: Messages are processed by the Rust `midi_engine` for analysis
+5. **Routing**: Messages are routed to appropriate display windows
+6. **Visualization**: Messages are displayed with color-coding based on message type
+7. **AI Analysis**: Messages are analyzed for patterns and insights
 
-### 2. Window System
+### 2. Shared Memory Architecture
+
+MidiPortal uses a zero-copy architecture for efficient data exchange:
+
+- **Lock-Free Ring Buffer**: A shared memory buffer implemented as a lock-free ring buffer
+- **Atomic Operations**: Thread-safe access using atomic operations without locks
+- **Zero-Copy Design**: Both C++ and Rust code access the same memory without copying data
+- **FFI Interface**: Clean C/Rust FFI boundary with proper memory management
+
+The `SharedMidiBuffer` class provides:
+- Memory allocation and management
+- Thread-safe write and read operations
+- Timestamp generation for accurate timing
+- Device name propagation throughout the system
+
+### 3. Window System
 
 MidiPortal uses a multi-window architecture:
 
@@ -27,7 +43,7 @@ MidiPortal uses a multi-window architecture:
 
 Each window can be customized with its own background color and can display MIDI messages from specific devices.
 
-### 3. Routing System
+### 4. Routing System
 
 The routing system determines which MIDI messages appear in which windows:
 
@@ -37,7 +53,7 @@ The routing system determines which MIDI messages appear in which windows:
 
 The routing configuration is stored in the `WindowManager` class in a map of device names to window names.
 
-### 4. Display Settings
+### 5. Display Settings
 
 Display settings control the visual appearance of MIDI messages:
 
@@ -50,7 +66,7 @@ Settings include:
 - Background color
 - Colors for different MIDI message types (Note On, Note Off, Controller, etc.)
 
-### 5. Machine Learning Integration
+### 6. Machine Learning Integration
 
 The ML system analyzes MIDI data for patterns and insights:
 
@@ -61,6 +77,15 @@ The ML system analyzes MIDI data for patterns and insights:
 
 ## Key Classes
 
+### SharedMidiBuffer
+
+The core of the zero-copy architecture:
+
+- Manages a shared memory region accessible by both C++ and Rust
+- Provides thread-safe read and write operations using atomic operations
+- Stores MIDI events with timestamps and device information
+- Enables efficient data exchange without copying
+
 ### MainComponent
 
 The central component that coordinates all aspects of the application:
@@ -69,6 +94,16 @@ The central component that coordinates all aspects of the application:
 - Creates and manages windows
 - Handles menu bar and user interface
 - Coordinates between C++ and Rust components
+- Writes MIDI messages to the shared buffer
+
+### MidiAIManager
+
+Manages the AI analysis of MIDI data:
+
+- Interfaces with the Rust ML engine
+- Processes MIDI messages for pattern recognition
+- Generates insights based on analysis results
+- Provides real-time feedback on musical patterns
 
 ### WindowManager
 
@@ -102,26 +137,29 @@ Provides the user interface for configuring window routing:
 - Allows toggling routing with checkboxes
 - Provides controls for setting window background colors
 
-### MidiAIManager
-
-Manages the AI analysis of MIDI data:
-
-- Interfaces with the Rust ML engine
-- Processes MIDI messages for pattern recognition
-- Generates insights based on analysis results
-
 ## Data Flow
 
 1. MIDI messages are received by `MidiInputCallback`
 2. Messages are passed to `MainComponent::addMidiMessage` with the device name
-3. Messages are processed by the Rust engine via `process_midi_message`
-4. Messages are stored in `midiMessages` for history
-5. Messages are logged via `midiLogger`
-6. Messages are routed via `routeMidiMessage` to:
+3. Messages are written to the shared memory buffer via `SharedMidiBuffer::write`
+4. Rust code reads from the shared buffer via `SharedMidiBuffer::read`
+5. Messages are processed by the Rust engine for analysis
+6. Messages are stored in `midiMessages` for history
+7. Messages are logged via `midiLogger`
+8. Messages are routed via `routeMidiMessage` to:
    - The main display (`midiLogDisplay`)
    - Additional windows via `windowManager.routeMidiMessage`
    - The AI manager via `impl->processMidiMessage`
-7. Each display renders the messages with appropriate colors and formatting
+9. Each display renders the messages with appropriate colors and formatting
+10. AI insights are generated based on pattern analysis
+
+## Responsibility Split
+
+The architecture clearly separates responsibilities:
+
+- **C++/JUCE**: Handles UI, device management, and real-time visualization
+- **Rust**: Focuses on deep analysis, pattern recognition, and ML processing
+- **Shared Memory**: Enables efficient communication between the two languages
 
 ## Configuration
 
@@ -168,7 +206,8 @@ Manages the AI analysis of MIDI data:
 - JUCE framework provides cross-platform compatibility
 - Rust engine provides high-performance, memory-safe processing
 - C++/Rust FFI (Foreign Function Interface) bridges the two languages
-- MIDI messages are passed as raw byte arrays for efficiency
+- Lock-free shared memory buffer eliminates copying overhead
+- Atomic operations ensure thread safety without locks
 - Display settings use JUCE's color system for consistent rendering
 
 ## Common Workflows
