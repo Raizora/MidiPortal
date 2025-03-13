@@ -31,6 +31,7 @@
 #include "DisplaySettingsManager.h"
 #include "WindowManager.h"
 #include "WindowRoutingWindow.h"
+#include "SettingsManager.h"
 
 namespace MidiPortal {
 
@@ -110,10 +111,13 @@ public:
   /**
    * @brief Adds a MIDI message to the display.
    * @param message The MIDI message to add.
+   * @param deviceName The name of the device that sent the message.
    * 
-   * Processes a MIDI message, logs it, and updates the display.
+   * This method is called when a MIDI message is received from a device.
+   * It processes the message using the Rust engine, stores it for display/history,
+   * logs it to the MIDI logger, and routes it to the appropriate displays.
    */
-  void addMidiMessage(const juce::MidiMessage& message);
+  void addMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName);
   
   /**
    * @brief Triggers the activity indicator for a specific device.
@@ -197,6 +201,20 @@ public:
 
 private:
   /**
+   * @brief Forward declaration of the implementation class.
+   * 
+   * This class contains the actual implementation of the MainComponent.
+   */
+  class Impl;
+  
+  /**
+   * @brief Pointer to the implementation.
+   * 
+   * Contains the actual implementation of the MainComponent.
+   */
+  std::unique_ptr<Impl> impl;
+
+  /**
    * @brief Forward declaration of the MidiInputCallback class.
    * 
    * This class handles MIDI input callbacks from the JUCE MIDI system.
@@ -239,25 +257,74 @@ private:
   std::unique_ptr<MidiLogDisplay> midiLogDisplay;
 
   /**
-   * @brief Manager for display settings.
+   * @brief Manager for application settings.
    * 
-   * Manages display settings for MIDI message visualization.
+   * Manages application settings.
    */
-  DisplaySettingsManager settingsManager;
+  SettingsManager settingsManager;
   
   /**
    * @brief Manager for windows and routing.
    * 
-   * Manages display windows and MIDI device routing.
+   * Manages windows and routing of MIDI messages.
    */
   WindowManager windowManager;
 
   /**
+   * @brief Pointer to the Rust MIDI engine.
+   * 
+   * Handles MIDI processing in Rust.
+   */
+  void* rustEngine = nullptr;
+
+  /**
+   * @brief Pointer to the settings component.
+   * 
+   * Displays settings for the application.
+   */
+  std::unique_ptr<SettingsComponent> settingsComponent;
+
+  /**
+   * @brief Pointer to the settings window.
+   * 
+   * Displays the settings component in a window.
+   */
+  std::unique_ptr<SettingsWindow> settingsWindow;
+
+  /**
+   * @brief Pointer to the log display settings window.
+   * 
+   * Displays settings for the log display.
+   */
+  std::unique_ptr<LogDisplaySettingsWindow> logDisplaySettingsWindow;
+
+  /**
    * @brief Pointer to the window routing window.
    * 
-   * Dialog window for configuring MIDI device routing to display windows.
+   * Displays the window routing component in a window.
    */
   std::unique_ptr<WindowRoutingWindow> windowRoutingWindow;
+
+  /**
+   * @brief Array of device windows.
+   * 
+   * Stores windows for displaying MIDI messages from specific devices.
+   */
+  juce::OwnedArray<LogDisplayWindow> deviceWindows;
+
+  /**
+   * @brief The application menu.
+   * 
+   * Contains menu items for the application menu.
+   */
+  juce::PopupMenu applicationMenu;
+
+  /**
+   * @brief The view menu.
+   * 
+   * Contains menu items for the view menu.
+   */
+  juce::PopupMenu viewMenu;
 
   /**
    * @struct TimestampedMidiMessage
@@ -309,35 +376,6 @@ private:
   static constexpr size_t maxMessages = 1000; // Maximum number of messages to store
 
   /**
-   * @brief Pointer to the settings component.
-   * 
-   * Component for configuring audio and MIDI device settings.
-   */
-  std::unique_ptr<SettingsComponent> settingsComponent;
-  
-  /**
-   * @brief Pointer to the settings window.
-   * 
-   * Dialog window for configuring audio and MIDI device settings.
-   */
-  std::unique_ptr<SettingsWindow> settingsWindow;
-  
-  /**
-   * @brief Pointer to the log display settings window.
-   * 
-   * Dialog window for configuring MIDI log display settings.
-   */
-  std::unique_ptr<LogDisplaySettingsWindow> logDisplaySettingsWindow;
-
-  /**
-   * @brief Handle to the Rust engine instance.
-   * 
-   * Used by the Rust FFI functions to identify the specific
-   * instance of the Rust engine to operate on.
-   */
-  void* rustEngine = nullptr;
-
-  /**
    * @brief Audio device manager.
    * 
    * Manages audio and MIDI devices for the application.
@@ -368,13 +406,6 @@ private:
    */
   std::vector<MidiDeviceChannelState> deviceChannelStates;
 
-  /**
-   * @brief Map of device names to log display windows.
-   * 
-   * Stores the log display windows for each device.
-   */
-  std::map<juce::String, std::unique_ptr<LogDisplayWindow>> deviceWindows;
-  
   /**
    * @brief Opens a device window.
    * @param deviceName The name of the device to open a window for.
@@ -408,20 +439,6 @@ private:
    * and window routing configuration.
    */
   void routeMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName);
-
-  /**
-   * @brief Application menu.
-   * 
-   * Popup menu for the Application menu item in the menu bar.
-   */
-  juce::PopupMenu applicationMenu;
-  
-  /**
-   * @brief View menu.
-   * 
-   * Popup menu for the View menu item in the menu bar.
-   */
-  juce::PopupMenu viewMenu;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
