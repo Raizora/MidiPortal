@@ -313,7 +313,6 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message, const juce:
             
             // Log the message
             if (midiLogger) {
-                const auto& deviceName = midiLogger->getDeviceName();
                 midiLogger->logMessage(message);
             }
             

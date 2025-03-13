@@ -1,5 +1,5 @@
-# shared/CMakeLists.txt
-set(JUCE_PATH "/Users/jbenchia/JUCE" CACHE PATH "Path to JUCE")
+# Specify the minimum version of CMake required
+cmake_minimum_required(VERSION 3.30.5)
 
 # Create a library for shared functionality
 if(NOT TARGET MidiPortalShared)
@@ -83,13 +83,14 @@ if(NOT TARGET MidiPortalShared)
     # Link libraries in correct order
     target_link_libraries(MidiPortalShared
         PRIVATE
-        ${MIDI_ENGINE_LIB}  # Must be first
-        PUBLIC
-        juce::juce_core
-        juce::juce_gui_basics
-        juce::juce_audio_processors
-        juce::juce_audio_devices
+        ${MIDI_ENGINE_LIB}  # Make sure this is first
+        MidiPortalShared
         juce::juce_analytics
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        # juce::juce_audio_plugin_client
+        juce::juce_audio_processors
         juce::juce_audio_utils
     )
 
