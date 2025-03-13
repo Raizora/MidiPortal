@@ -18,6 +18,9 @@
 #include <iostream> // Include for console output
 #include "MidiLogger.h"
 #include "SettingsComponent.h"
+#include "MidiAIManager.h"
+#include "AIInsightComponent.h"
+#include "WindowManager.h"
 
 namespace MidiPortal {
 
@@ -54,14 +57,118 @@ public:
       juce::MessageManager::callAsync([this, message, sourceName = source->getName()]() {
           // Only process if the channel is enabled
           if (owner.shouldProcessMidiMessage(message, sourceName)) {
-              owner.midiLogger->setDeviceName(sourceName);
-              owner.addMidiMessage(message);
+              // Process the message
+              owner.addMidiMessage(message, sourceName);
+              
+              // Trigger activity indicator
+              owner.triggerMidiActivity(sourceName);
           }
       });
   }
 
 private:
     MainComponent& owner;
+};
+
+/**
+ * @class AIInsightTimer
+ * @brief Timer for checking AI insights.
+ * 
+ * This class is a timer that periodically checks for AI insights.
+ */
+class AIInsightTimer : public juce::Timer
+{
+public:
+    /**
+     * @brief Constructor.
+     * @param aiManager The AI manager to get insights from.
+     * @param aiInsightComponent The component to display insights in.
+     * 
+     * Creates a new AIInsightTimer.
+     */
+    AIInsightTimer(MidiAIManager& aiManager, AIInsightComponent& aiInsightComponent)
+        : aiManager(aiManager),
+          aiInsightComponent(aiInsightComponent)
+    {
+    }
+    
+    /**
+     * @brief Timer callback.
+     * 
+     * Called periodically to check for AI insights.
+     */
+    void timerCallback() override
+    {
+        // Get insights from the AI manager
+        auto insights = aiManager.getInsights();
+        
+        // Add them to the insight component
+        if (!insights.empty())
+        {
+            aiInsightComponent.addInsights(insights);
+        }
+    }
+    
+private:
+    /**
+     * @brief The AI manager to get insights from.
+     * 
+     * The AI manager that generates insights.
+     */
+    MidiAIManager& aiManager;
+    
+    /**
+     * @brief The component to display insights in.
+     * 
+     * The component that displays insights.
+     */
+    AIInsightComponent& aiInsightComponent;
+};
+
+class MainComponent::Impl
+{
+public:
+    Impl(MainComponent& owner, SettingsManager& settingsManager, WindowManager& windowManager)
+        : owner(owner),
+          aiManager(std::make_unique<MidiAIManager>()),
+          aiInsightComponent(std::make_unique<AIInsightComponent>()),
+          aiInsightTimer(std::make_unique<AIInsightTimer>(*aiManager, *aiInsightComponent))
+    {
+        // X- Added AI manager and insight component
+        
+        // Add the AI insight component
+        owner.addAndMakeVisible(*aiInsightComponent);
+        
+        // Start the timer to check for insights every 500ms
+        aiInsightTimer->startTimer(500);
+    }
+    
+    ~Impl()
+    {
+        // Stop the AI insight timer
+        aiInsightTimer->stopTimer();
+    }
+    
+    void resized()
+    {
+        // Position the AI insight component at the bottom of the window
+        const int insightHeight = 150;
+        aiInsightComponent->setBounds(0, owner.getHeight() - insightHeight, owner.getWidth(), insightHeight);
+    }
+    
+    void processMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
+    {
+        // Process the message with the AI manager
+        if (aiManager != nullptr) {
+            aiManager->processMidiMessage(message, deviceName);
+        }
+    }
+    
+private:
+    MainComponent& owner;
+    std::unique_ptr<MidiAIManager> aiManager;
+    std::unique_ptr<AIInsightComponent> aiInsightComponent;
+    std::unique_ptr<AIInsightTimer> aiInsightTimer;
 };
 
 /**
@@ -72,10 +179,11 @@ private:
  */
 MainComponent::MainComponent()
     : settingsManager(), // Initialize settings manager
-      windowManager(settingsManager) // Initialize window manager with settings manager
+      windowManager(settingsManager.getDisplaySettingsManager()), // Initialize window manager with display settings manager
+      impl(std::make_unique<Impl>(*this, settingsManager, windowManager))
 {
     // Initialize device manager with no default devices
-    deviceManager.initialiseWithDefaultDevices(0, 0);  // No audio inputs/outputs
+    settingsManager.getAudioDeviceManager().initialiseWithDefaultDevices(0, 0);  // No audio inputs/outputs
     
     // Initialize other components
     rustEngine = create_midi_engine();
@@ -86,11 +194,11 @@ MainComponent::MainComponent()
     midiLogger = std::make_unique<MidiPortal::MidiLogger>("MidiTraffic.log");
     
     // X- Initialize MidiLogDisplay with settings manager
-    midiLogDisplay = std::make_unique<MidiLogDisplay>(settingsManager);
+    midiLogDisplay = std::make_unique<MidiLogDisplay>(settingsManager.getDisplaySettingsManager());
     addAndMakeVisible(midiLogDisplay.get());
 
     // Set up MIDI callback for the AudioDeviceManager
-    deviceManager.addMidiInputDeviceCallback({}, midiInputCallback.get());
+    settingsManager.getAudioDeviceManager().addMidiInputDeviceCallback({}, midiInputCallback.get());
 
     // Set up menu bar
     #if JUCE_MAC
@@ -117,27 +225,7 @@ MainComponent::MainComponent()
     #endif
 
     // Create settings component with device manager
-    settingsComponent = std::make_unique<SettingsComponent>(deviceManager);
-
-    // Update settings window creation
-    juce::MessageManager::callAsync([this]() {
-        if (settingsWindow == nullptr) {
-            settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
-            settingsWindow->onCloseCallback = [this]() {
-                settingsWindow.reset();
-            };
-            settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
-                .findColour(juce::ResizableWindow::backgroundColourId));
-        }
-    });
-
-    // Ensure the window is displayed and focused
-    juce::MessageManager::callAsync([this]() {
-        if (isShowing() || isOnDesktop()) {
-            toFront(true);
-            grabKeyboardFocus();
-        }
-    });
+    settingsComponent = std::make_unique<SettingsComponent>(settingsManager.getAudioDeviceManager());
     
     // X- Initialize the view
     updateCurrentView();
@@ -180,15 +268,16 @@ MainComponent::~MainComponent() {
 }
 
 /**
- * @brief Processes and displays a MIDI message.
- * @param message The MIDI message to process and display.
+ * @brief Adds a MIDI message to the display.
+ * @param message The MIDI message to add.
+ * @param deviceName The name of the device that sent the message.
  * 
- * This method is called when a MIDI message is received from a connected device.
+ * This method is called when a MIDI message is received from a device.
  * It processes the message using the Rust engine, stores it for display/history,
  * logs it to the MIDI logger, and routes it to the appropriate displays.
  */
-void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
-    juce::MessageManager::callAsync([this, message]() {
+void MainComponent::addMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName) {
+    juce::MessageManager::callAsync([this, message, deviceName]() {
         try {
             DBG("Received MIDI message, size: " + juce::String(message.getRawDataSize()));
             
@@ -213,18 +302,13 @@ void MainComponent::addMidiMessage(const juce::MidiMessage& message) {
                 midiMessages.erase(midiMessages.begin());
             }
             
-            // Route the message to appropriate displays
+            // Log the message
             if (midiLogger) {
-                const auto& deviceName = midiLogger->getDeviceName();
                 midiLogger->logMessage(message);
-                
-                // Route to main display
-                if (midiLogDisplay)
-                    midiLogDisplay->addMessage(message, deviceName);
-                    
-                // Route to device windows
-                windowManager.routeMidiMessage(message, deviceName);
             }
+            
+            // Route the message to all appropriate displays
+            routeMidiMessage(message, deviceName);
 
             repaint();
         }
@@ -258,11 +342,7 @@ void MainComponent::paint(juce::Graphics& g) {
  */
 void MainComponent::resized()
 {
-    // Make the midiLogDisplay fill the entire component
-    if (midiLogDisplay != nullptr)
-    {
-        midiLogDisplay->setBounds(getLocalBounds());
-    }
+    impl->resized();
 }
 
 /**
@@ -334,20 +414,19 @@ juce::PopupMenu MainComponent::getMenuForIndex(int /*index*/, const juce::String
  * actions based on the selected menu item, such as opening settings windows
  * or changing the view mode.
  */
-void MainComponent::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
+void MainComponent::menuItemSelected(int menuItemID, int topLevelMenuIndex)
 {
-    if (menuItemID == kSettingsMenuItemId)  // Settings
+    if (menuItemID == kSettingsMenuItemId)
     {
         if (settingsWindow == nullptr) {
-            settingsWindow.reset(new SettingsWindow("MidiPortal Settings", deviceManager));
+            settingsWindow.reset(new SettingsWindow("MidiPortal Settings", settingsManager.getAudioDeviceManager()));
             settingsWindow->onCloseCallback = [this]() {
                 settingsWindow.reset();
             };
-            
-            // X- Set background color to match system theme
             settingsWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
                 .findColour(juce::ResizableWindow::backgroundColourId));
         }
+        
         settingsWindow->toFront(true);
     }
     else if (menuItemID == kLogDisplaySettingsMenuItemId) // Log Display Settings
@@ -366,7 +445,7 @@ void MainComponent::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
             logDisplaySettingsWindow->toFront(true);
         }
     }
-    else if (menuItemID == kWindowRoutingMenuItemId) // Window Routing
+    else if (menuItemID == kWindowRoutingMenuItemId)
     {
         if (windowRoutingWindow == nullptr) {
             windowRoutingWindow.reset(new WindowRoutingWindow("Window Routing", windowManager));
@@ -374,10 +453,11 @@ void MainComponent::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
                 windowRoutingWindow.reset();
             };
             
-            // X- Set background color to match system theme
+            // Set the background color to match the application
             windowRoutingWindow->setBackgroundColour(juce::LookAndFeel::getDefaultLookAndFeel()
                 .findColour(juce::ResizableWindow::backgroundColourId));
         }
+        
         windowRoutingWindow->toFront(true);
     }
     else if (menuItemID >= kViewModeListId && menuItemID <= kViewModeTimelineId)  // View modes
@@ -495,6 +575,30 @@ bool MainComponent::shouldProcessMidiMessage(const juce::MidiMessage& message, c
     }
         
     return true;  // Process non-channel messages by default
+}
+
+/**
+ * @brief Routes a MIDI message to the appropriate windows.
+ * @param message The MIDI message to route.
+ * @param deviceName The name of the device that sent the message.
+ * 
+ * Routes a MIDI message to the appropriate windows based on the device
+ * and window routing configuration.
+ */
+void MainComponent::routeMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
+{
+    // Always add to main display if it exists
+    if (midiLogDisplay != nullptr) {
+        midiLogDisplay->addMessage(message, deviceName);
+    }
+    
+    // Route to device-specific windows through the window manager
+    windowManager.routeMidiMessage(message, deviceName);
+    
+    // Also send to AI manager for processing
+    if (impl != nullptr) {
+        impl->processMidiMessage(message, deviceName);
+    }
 }
 
 }  // namespace MidiPortal

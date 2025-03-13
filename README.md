@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.1.0**
+# **MidiPortal - Version 0.2.0**
 
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -15,6 +15,8 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
 - **Unit Testing**: Ready-to-go unit testing with GoogleTest.
 - **Enforced Code Quality**: Highest warning levels with "treat warnings as errors" for maximum safety.
 - **Consistent Build System**: Enforced Ninja generator and Homebrew Clang 19+ compiler for reliable builds.
+- **Machine Learning Integration**: AI-powered analysis of MIDI patterns and performance metrics.
+- **Intelligent Insights**: Real-time feedback and suggestions based on MIDI input analysis.
 
 ## **Roadmap**
 - Visualize incoming and outgoing MIDI messages.
@@ -24,8 +26,21 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
   - Expand to include MIDI manipulation and visualization features.
   - Integrate with iLumidi for an all-encompassing audio-visual experience.
   - Automatic log management for MIDI traffic.
+  - Advanced machine learning models for deeper musical analysis.
+  - Pattern recognition for compositional assistance.
 
 ## **Version History**
+### **0.2.0** (Machine Learning Integration):
+- Added AI-powered MIDI analysis capabilities
+- Implemented shared memory buffer for efficient data exchange between C++ and Rust
+- Integrated machine learning context for pattern recognition
+- Added AIInsightComponent for displaying real-time insights
+- Enhanced MIDI routing system with device name propagation
+- Improved window management for multi-window MIDI monitoring
+- Upgraded Rust midi_engine to version 0.2.0 with ML capabilities
+- Added comprehensive architecture documentation
+- Fixed MIDI routing issues between windows
+
 ### **0.1.0** (First Stable Release):
 - Fixed window background color synchronization issues
 - Improved device-specific settings management
@@ -428,6 +443,50 @@ MidiPortal uses a JUCE-first architecture where:
 - `cursor-main`: Stable, protected branch with working features
 - `cursor-development`: Active development branch
 
+## Machine Learning Features
+
+### **Pattern Recognition**
+The new machine learning integration in MidiPortal 0.2.0 enables sophisticated pattern recognition capabilities:
+
+- **Real-time Analysis**: Identifies patterns as you play without noticeable latency
+- **Pattern Library**: Builds a database of recurring patterns for future reference
+- **Variation Detection**: Recognizes variations on established patterns
+- **Context-Aware Processing**: Understands musical context for more relevant insights
+
+### **Performance Analysis**
+MidiPortal now analyzes your MIDI performance in real-time:
+
+- **Timing Analysis**: Measures timing accuracy and consistency
+- **Velocity Patterns**: Evaluates dynamics and expression
+- **Articulation Detection**: Identifies playing techniques
+- **Style Recognition**: Learns your playing style over time
+
+### **AI Insights**
+The new AIInsightComponent provides intelligent feedback:
+
+- **Real-time Suggestions**: Offers tips to improve your playing
+- **Pattern Identification**: Highlights recurring motifs in your performance
+- **Performance Metrics**: Shows quantitative measures of your playing
+- **Learning Progression**: Tracks improvement over time
+
+## Architecture Improvements
+
+### **Shared Memory Buffer**
+Version 0.2.0 introduces a shared memory buffer system for efficient data exchange:
+
+- **Zero-Copy Design**: Eliminates redundant data copying between C++ and Rust
+- **Lock-Free Operation**: Minimizes contention for high-performance operation
+- **Circular Buffer**: Efficiently handles continuous MIDI data streams
+- **Thread-Safe Implementation**: Ensures data integrity in multi-threaded contexts
+
+### **Enhanced MIDI Routing**
+The MIDI routing system has been significantly improved:
+
+- **Device Name Propagation**: MIDI messages now carry device name information throughout the system
+- **Multi-Window Routing**: Messages can be selectively routed to specific windows
+- **Flexible Configuration**: Routing can be changed dynamically through the Window Routing panel
+- **Consistent Behavior**: Ensures messages appear in all appropriate windows
+
 [package]
 name = "midi_engine"
-version = "0.1.2"
+version = "0.2.0"

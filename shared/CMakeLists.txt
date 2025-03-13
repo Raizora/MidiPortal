@@ -1,108 +1,112 @@
-# shared/CMakeLists.txt
-set(JUCE_PATH "/Users/jbenchia/JUCE" CACHE PATH "Path to JUCE")
+# Specify the minimum version of CMake required
+cmake_minimum_required(VERSION 3.30.5)
 
-# Create a library for shared functionality
-if(NOT TARGET MidiPortalShared)
-    add_library(MidiPortalShared
-            source/MainComponent.cpp
-            source/MainComponent.h
-            source/MidiLogger.cpp
-            source/MidiLogger.h
-            source/SettingsComponent.cpp
-            source/SettingsComponent.h
-            source/SettingsWindow.h
-            source/RustMidiEngine.h
-            source/MidiActivityIndicator.cpp
-            source/MidiActivityIndicator.h
-            source/MidiChannelSelector.cpp
-            source/MidiChannelSelector.h
-            source/MidiLogDisplay.cpp
-            source/MidiLogDisplay.h
-            source/LogDisplaySettingsComponent.cpp
-            source/LogDisplaySettingsComponent.h
-            source/LogDisplaySettingsWindow.h
-            source/WindowManager.cpp
-            source/WindowManager.h
-            source/DisplaySettingsManager.cpp
-            source/DisplaySettingsManager.h
-            source/WindowRoutingComponent.cpp
-            source/WindowRoutingComponent.h
-    )
+# Set the project name and version
+project(MidiPortalStandalone VERSION 0.1.0)
 
-    target_include_directories(MidiPortalShared
-            PUBLIC
-            ${JUCE_PATH}/modules
-            ${CMAKE_BINARY_DIR}/JUCE/modules
-            ${CMAKE_BINARY_DIR}/JuceLibraryCode
-    )
+# Use C++ 23 standard
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-    # Extract Rust target directory
-    execute_process(
-            COMMAND cargo metadata --format-version 1 --no-deps
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../rust
-            OUTPUT_VARIABLE CARGO_METADATA
-            ERROR_QUIET
-    )
+# Ensure GTK3 and WebKit2GTK are found before building
+find_program(PKG_CONFIG_EXECUTABLE NAMES pkg-config PATHS /opt/homebrew/bin NO_DEFAULT_PATH)
+if(NOT PKG_CONFIG_EXECUTABLE)
+    message(FATAL_ERROR "pkg-config not found! Set PKG_CONFIG_EXECUTABLE manually.")
+endif()
 
-    # Extract the target directory
-    string(REGEX MATCH "\"target_directory\":\"([^\"]+)\"" _ ${CARGO_METADATA})
-    string(REGEX REPLACE ".*\"target_directory\":\"([^\"]+)\".*" "\\1" RUST_LIBRARY_PATH ${CARGO_METADATA})
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
-    # Set CMAKE_PREFIX_PATH
-    set(CMAKE_PREFIX_PATH "${RUST_LIBRARY_PATH}/release" PARENT_SCOPE)
+# Handle WebKit differently on macOS vs Linux
+if(APPLE)
+    find_library(WEBKIT_LIBRARY WebKit)
+    mark_as_advanced(WEBKIT_LIBRARY)
+else()
+    pkg_check_modules(WEBKIT2 REQUIRED webkit2gtk-4.1)
+endif()
 
-    # Debug: Print the extracted target directory
-    message("Rust library target directory: ${RUST_LIBRARY_PATH}")
+# Include GTK3 and WebKit2GTK headers and link their libraries
+include_directories(${GTK3_INCLUDE_DIRS})
+link_directories(${GTK3_LIBRARY_DIRS})
+add_definitions(${GTK3_CFLAGS_OTHER})
 
-    # Look for the Rust library
-    message(STATUS "Looking for Rust library in: ${CMAKE_SOURCE_DIR}/rust/target/debug and ${CMAKE_SOURCE_DIR}/rust/target/release")
-    find_library(MIDI_ENGINE_LIB 
-        NAMES midi_engine
-        PATHS 
-            "${CMAKE_SOURCE_DIR}/rust/target/debug/deps"
-            "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
-        NO_DEFAULT_PATH
-        REQUIRED
-    )
-    message(STATUS "MIDI_ENGINE_LIB = ${MIDI_ENGINE_LIB}")
+if(NOT APPLE)
+    include_directories(${WEBKIT2_INCLUDE_DIRS})
+    link_directories(${WEBKIT2_LIBRARY_DIRS})
+    add_definitions(${WEBKIT2_CFLAGS_OTHER})
+endif()
 
-    # Link libraries in correct order
-    target_link_libraries(MidiPortalShared
+# Create an executable for the standalone app
+add_executable(MidiPortalStandalone
+        source/Main.cpp
+)
+
+# Add shared directory
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../shared shared)
+
+# Set include directories for the standalone target
+target_include_directories(MidiPortalStandalone
         PRIVATE
-        ${MIDI_ENGINE_LIB}  # Must be first
-        PUBLIC
-        juce::juce_core
-        juce::juce_gui_basics
-        juce::juce_audio_processors
-        juce::juce_audio_devices
+        ${JUCE_PATH}/modules
+        ${CMAKE_CURRENT_SOURCE_DIR}/../shared/source
+        ${GTK3_INCLUDE_DIRS}  # Ensure GTK3 include paths are set
+)
+
+if(NOT APPLE)
+    target_include_directories(MidiPortalStandalone PRIVATE ${WEBKIT2_INCLUDE_DIRS})
+endif()
+
+# Find and link the Rust library (midi_engine)
+find_library(MIDI_ENGINE_LIB NAMES midi_engine)
+if(NOT MIDI_ENGINE_LIB)
+    execute_process(COMMAND cargo metadata --format-version 1 --no-deps
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_VARIABLE CARGO_METADATA)
+    string(JSON target_directory CARGO_TARGET_DIRECTORY ${CARGO_METADATA})
+    set(CMAKE_PREFIX_PATH ${CARGO_TARGET_DIRECTORY}/release ${CMAKE_PREFIX_PATH})
+    find_library(MIDI_ENGINE_LIB NAMES midi_engine)
+    if(NOT MIDI_ENGINE_LIB)
+        message(FATAL_ERROR "Rust library midi_engine still not found even with CMAKE_PREFIX_PATH")
+    endif()
+endif()
+
+# Add the JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP definition
+target_compile_definitions(MidiPortalStandalone
+        PRIVATE
+        JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1  # Enables custom standalone app support in JUCE
+)
+
+# Link the shared library, JUCE modules, GTK3, and WebKit2 to the standalone app
+target_link_libraries(MidiPortalStandalone
+        PRIVATE
+        ${MIDI_ENGINE_LIB}  # Make sure this is first
+        MidiPortalShared
         juce::juce_analytics
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        # juce::juce_audio_plugin_client
+        juce::juce_audio_processors
         juce::juce_audio_utils
-    )
+        juce::juce_box2d
+        juce::juce_core
+        # juce::juce_cryptography
+        juce::juce_data_structures
+        # juce::juce_dsp
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_gui_basics
+        juce::juce_gui_extra
+        juce::juce_javascript
+        juce::juce_midi_ci
+        juce::juce_opengl
+        juce::juce_osc
+        ${GTK3_LIBRARIES}  # ✅ Ensures GTK3 is linked
+)
 
-    target_compile_definitions(MidiPortalShared
-        PUBLIC
-        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
-        JUCE_MODULE_AVAILABLE_juce_core=1
-        JUCE_MODULE_AVAILABLE_juce_data_structures=1
-        JUCE_MODULE_AVAILABLE_juce_events=1
-        JUCE_MODULE_AVAILABLE_juce_graphics=1
-        JUCE_MODULE_AVAILABLE_juce_gui_basics=1
-        JUCE_MODULE_AVAILABLE_juce_audio_basics=1
-        JUCE_MODULE_AVAILABLE_juce_audio_devices=1
-        JUCE_MODULE_AVAILABLE_juce_audio_processors=1
-        JUCE_MODULE_AVAILABLE_juce_audio_utils=1
-        JUCE_MODULE_AVAILABLE_juce_analytics=1
-    )
-
-    # Make sure RustMidiEngine.h is included in the build
-    target_sources(MidiPortalShared 
-        PRIVATE
-        source/RustMidiEngine.h
-    )
-
-    # Add the Rust library directory to runtime path
-    set_target_properties(MidiPortalShared PROPERTIES
-        BUILD_WITH_INSTALL_RPATH TRUE
-        INSTALL_RPATH "${CMAKE_SOURCE_DIR}/rust/target/release/deps"
-    )
+# Ensure correct WebKit linking on macOS vs Linux
+if(APPLE)
+    target_link_libraries(MidiPortalStandalone PRIVATE ${WEBKIT_LIBRARY})
+else()
+    target_link_libraries(MidiPortalStandalone PRIVATE ${WEBKIT2_LIBRARIES})
 endif()

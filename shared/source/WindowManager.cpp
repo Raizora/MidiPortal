@@ -267,11 +267,18 @@ juce::StringArray WindowManager::getDevicesForWindow(const juce::String& windowN
  */
 void WindowManager::routeMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
+    // Check if this device is routed to any windows
     auto it = deviceToWindows.find(deviceName);
     if (it != deviceToWindows.end())
     {
+        // Route to all windows that this device is routed to
         for (const auto& windowName : it->second)
         {
+            // Skip MAIN window as it's handled separately in MainComponent
+            if (windowName == "MAIN")
+                continue;
+                
+            // Find the window and add the message
             auto windowIt = windows.find(windowName);
             if (windowIt != windows.end() && windowIt->second != nullptr)
             {

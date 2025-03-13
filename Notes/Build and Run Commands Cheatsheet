@@ -1,158 +1,87 @@
-# Commonly Used Git Commands for MidiPortal Project
+# Build Commands for MidiPortal
 
-## Branch Management
-cd ~/JUCE_Projects/MidiPortal        # Navigate to the MidiPortal Repository
-git branch                           # List local branches
-git branch -r                        # List remote branches
-git checkout cursor-development            # Switch to cursor-development branch
-git checkout main                    # Switch to main branch
-git checkout -b new-branch           # Create and switch to a new branch
-git fetch origin                      # Fetch latest updates from remote
-git pull origin cursor-development         # Pull latest changes from cursor-development branch
-git push origin cursor-development         # Push local changes to cursor-development branch
+## RECOMMENDED: Use the build script
+# This is the simplest and most reliable method
+./build.sh                  # Build standalone only (Debug)
+./build.sh --release        # Build standalone only (Release)
+./build.sh --plugin         # Build standalone and AU plugin (Debug)
+./build.sh --plugin --release # Build standalone and AU plugin (Release)
 
-## Committing Changes
-git status                           # Check status of working directory
-git add .                            # Stage all changes
-git add README.md                    # Stage specific file
-git commit -m "Commit message"       # Commit changes with a message
-git commit --amend                   # Edit last commit message
+## Run the application
+# Run the standalone version
+./build/standalone/MidiPortalStandalone
 
-## Pushing & Merging
-git push origin cursor-development         # Push changes to cursor-development branch
-git merge cursor-development               # Merge cursor-development into current branch
-git merge --abort                    # Abort a merge in case of conflicts
+# Run the plugin version (after building with --plugin)
+./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
-## Resolving Conflicts
-git status                           # Identify conflicting files
-git add <file>                        # Mark conflict as resolved
-git commit                           # Commit resolved merge
+# Run the plugin version (after building with --plugin --release)
+./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
-## Undoing Changes
-git reset --soft HEAD~1              # Undo last commit, keep changes staged
-git reset --hard HEAD~1              # Undo last commit, discard changes
-git checkout -- <file>                # Discard local changes in a file
+## Quick Copy/Paste Combos
+# Build and run standalone (Debug)
+./build.sh && ./build/standalone/MidiPortalStandalone
 
-## Managing Remote Repositories
-git remote -v                        # Show remote repository URLs
-git remote add origin <repo-url>     # Add a new remote repository
-git push -u origin cursor-development      # Push cursor-development branch to remote and track it
+# Build and run standalone (Release)
+./build.sh --release && ./build/standalone/MidiPortalStandalone
 
-## Deleting Branches
-git branch -d old-branch             # Delete local branch
-git push origin --delete old-branch  # Delete remote branch
+# Build and run plugin (Debug)
+./build.sh --plugin && ./build/plugin/AudioPlugin_artefacts/Debug/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
-## CI/CD Related
-git push origin cursor-development         # Push changes to trigger GitHub Actions
-git log --oneline --graph --all      # View commit history graph
+# Build and run plugin (Release)
+./build.sh --plugin --release && ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
-# ----------------------------------------
-# Git Command Combos for MidiPortal Project
-# ----------------------------------------
+## Loading the Plugin in a DAW
+# After building with --plugin, the AU plugin is available at:
+# Debug build:
+./build/plugin/AudioPlugin_artefacts/Debug/AU/MidiPortalPlugin.component
+# Release build:
+./build/plugin/AudioPlugin_artefacts/Release/AU/MidiPortalPlugin.component
 
-# 1. Add, Commit, and Push All Changes
-git add . && git commit -m "Your commit message" && git push origin cursor-development
+# You may need to copy the component to the system AU directory:
+# For current user only:
+mkdir -p ~/Library/Audio/Plug-Ins/Components/
+cp -r ./build/plugin/AudioPlugin_artefacts/Debug/AU/MidiPortalPlugin.component ~/Library/Audio/Plug-Ins/Components/
+# Then restart your DAW and scan for new plugins
 
-# 2. Add a Specific File, Commit, and Push
-git add <file-name> && git commit -m "Updated <file-name>" && git push origin cursor-development
+## Initial Setup (only needed once)
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 3. Amend Last Commit and Push (If You Forgot Something)
-git commit --amend --no-edit && git push --force origin cursor-development
+# Install LLVM 19+ and Ninja
+brew install llvm ninja
 
-# 4. Fetch Latest Changes and Merge Into cursor-development
-git fetch origin && git merge origin/cursor-development
+# Build Rust library
+cd rust && cargo build --release && cd ..
 
-# 5. Stash Changes, Pull Latest, Apply Stash
-git stash && git pull origin cursor-development && git stash pop
+## Fix IDE Code Intelligence Issues
+# If you see "#include errors" in your IDE but the build works fine:
+cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cp build/compile_commands.json .
 
-# 6. Hard Reset to Remote (Dangerous, Be Careful!)
-git fetch origin && git reset --hard origin/cursor-development
+## ADVANCED: Manual Build Commands
+# Only use these if you have specific needs not covered by build.sh
 
-# 7. Create a New Branch, Switch to It, and Push to Remote
-git checkout -b new-feature-branch && git push -u origin new-feature-branch
+# Manual build with Ninja
+rm -rf build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build
 
-# 8. Delete a Local and Remote Branch
-git branch -d old-branch && git push origin --delete old-branch
+# Build standalone only (avoids VST3 helper issues)
+cmake --build build --target MidiPortalStandalone
 
-# 9. Undo Last Commit (But Keep Changes Staged)
-git reset --soft HEAD~1
+# Quick Rebuild (when only C++ changed)
+cmake --build build
 
-# 10. View Log Graph (Clean Commit History)
-git log --oneline --graph --all --decorate
+# Explicitly specify compiler paths (rarely needed)
+cmake -B build -G Ninja \
+      -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+      -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+      -DCMAKE_BUILD_TYPE=Debug
 
-1. Create a Temporary Branch: This will save your current state.
-    git checkout -b temp-save
+## Debug with LLDB
+lldb ./build/standalone/MidiPortalStandalone
+(lldb) run
 
-2. Continue Working: You can now make changes, try new things, etc.
-
-3. Revert to the Saved State: If you want to go back to the saved state, you can switch back to the temporary branch.
-   git checkout temp-save
-
-4. Save Again or Merge Changes: If you decide to keep the changes you made, you can merge them back into your main branch or save them in the temporary branch.
-   git checkout main
-   git merge temp-save
-
-5. Delete the Temporary Branch: Once you're done and no longer need the temporary save, you can delete the branch.
-   git branch -d temp-save
-
-Basic Git Workflow Protocol
-
-# Ensure you're on the cursor-development branch
-git checkout cursor-development
-
-# Push the current state of cursor-development to the remote repository
-git push origin cursor-development
-
-# Delete the local cursor-development-backup branch
-git branch -d cursor-development-backup
-
-# Delete the remote cursor-development-backup branch
-git push origin --delete cursor-development-backup
-
-# Create a new local cursor-development-backup branch based on the current state
-git checkout -b cursor-development-backup
-
-# Push the new cursor-development-backup branch to the remote repository and set it to track the remote branch
-git push -u origin cursor-development-backup
-
-quick recovery cheat code:
-git config --global credential.helper osxkeychain
-
-or
-
-rm ~/.git-credentials   # (optional cleanup if it exists)
-git config --global credential.helper osxkeychain
-
-# ----------------------------------------
-# Cursor Development Branch Management Protocol
-# ----------------------------------------
-
-# Quick Protocol for Updating cursor-development and cursor-development-backup
-
-## 1. Update cursor-development-backup from cursor-development (after making changes to cursor-development)
-# This single command sequence will:
-# - Switch to cursor-development-backup
-# - Merge changes from cursor-development (fast-forward if possible)
-# - Push changes to remote
-# - Switch back to cursor-development
-git checkout cursor-development-backup && git merge cursor-development && git push origin cursor-development-backup && git checkout cursor-development
-
-## 2. Create a fresh cursor-development-backup from cursor-development
-# This will delete the old backup and create a new one (useful for a clean backup)
-git checkout cursor-development && git branch -D cursor-development-backup && git push origin --delete cursor-development-backup && git checkout -b cursor-development-backup && git push -u origin cursor-development-backup && git checkout cursor-development
-
-## 3. Push changes to both branches at once
-# First commit your changes to cursor-development, then:
-git push origin cursor-development && git checkout cursor-development-backup && git merge cursor-development && git push origin cursor-development-backup && git checkout cursor-development
-
-## 4. Check if branches are in sync
-# This will show if cursor-development-backup is behind cursor-development
-git checkout cursor-development && git log -1 --pretty=format:"%H" > /tmp/cursor-dev-hash && git checkout cursor-development-backup && git log -1 --pretty=format:"%H" > /tmp/cursor-backup-hash && diff /tmp/cursor-dev-hash /tmp/cursor-backup-hash && echo "Branches are in sync!" || echo "Branches are NOT in sync!"
-
-## 5. Quick recovery if something goes wrong
-# If you accidentally mess up the branches, this will reset cursor-development-backup to match cursor-development exactly
-git checkout cursor-development && git branch -D cursor-development-backup && git checkout -b cursor-development-backup && git push -f origin cursor-development-backup
-
-# Note: Always make changes to cursor-development first, then update cursor-development-backup.
-# cursor-development-backup should be treated as a read-only backup that mirrors cursor-development.
-
+## Notes
+For detailed information about the build system and common issues, see the "Common Issues & Fixes" 
+section in the README.md file.
