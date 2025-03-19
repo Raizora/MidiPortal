@@ -55,6 +55,18 @@ public:
         juce::Colour clockColor = juce::Colours::grey;           ///< Color for MIDI Clock messages
         juce::Colour sysExColor = juce::Colours::white;          ///< Color for System Exclusive messages
         juce::Colour defaultColor = juce::Colours::lightgrey;    ///< Default color for other message types
+        
+        // X- Added mute flags for each MIDI message type
+        bool muteNoteOn = false;           ///< Whether to mute Note On messages
+        bool muteNoteOff = false;          ///< Whether to mute Note Off messages
+        bool muteController = false;       ///< Whether to mute Controller Change messages
+        bool mutePitchBend = false;        ///< Whether to mute Pitch Bend messages
+        bool mutePressure = false;         ///< Whether to mute Pressure/Aftertouch messages
+        bool muteProgramChange = false;    ///< Whether to mute Program Change messages
+        bool muteClock = false;            ///< Whether to mute MIDI Clock messages
+        bool muteSysEx = false;            ///< Whether to mute System Exclusive messages
+        bool muteDefault = false;          ///< Whether to mute other message types
+
     };
 
     /**

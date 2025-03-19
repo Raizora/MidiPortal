@@ -171,9 +171,31 @@ void MidiLogDisplay::changeListenerCallback(juce::ChangeBroadcaster* source)
  * Formats the message as text, assigns an appropriate color based on the
  * message type and device settings, and adds it to both the animated messages
  * queue and the persistent log entries array.
+ * Respects mute settings for each message type.
  */
 void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
+    // Check if this message type is muted based on settings
+    const auto& settings = settingsManager.getSettings(deviceName);
+    
+    // Check mute settings based on message type
+    if ((message.isNoteOn() && settings.muteNoteOn) ||
+        (message.isNoteOff() && settings.muteNoteOff) ||
+        (message.isPitchWheel() && settings.mutePitchBend) ||
+        (message.isController() && settings.muteController) ||
+        ((message.isChannelPressure() || message.isAftertouch()) && settings.mutePressure) ||
+        (message.isProgramChange() && settings.muteProgramChange) ||
+        ((message.isMidiClock() || message.isMidiStart() || message.isMidiStop() || message.isMidiContinue()) && settings.muteClock) ||
+        (message.isSysEx() && settings.muteSysEx) ||
+        ((!message.isNoteOn() && !message.isNoteOff() && !message.isPitchWheel() && 
+          !message.isController() && !message.isChannelPressure() && !message.isAftertouch() && 
+          !message.isProgramChange() && !message.isMidiClock() && !message.isMidiStart() && 
+          !message.isMidiStop() && !message.isMidiContinue() && !message.isSysEx()) && settings.muteDefault))
+    {
+        // Message type is muted, don't display it
+        return;
+    }
+    
     auto text = formatMidiMessage(message, deviceName);
     auto color = getColorForMessage(message, deviceName);
     

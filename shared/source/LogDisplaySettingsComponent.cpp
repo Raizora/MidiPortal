@@ -102,36 +102,53 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     appearanceSection->addAndMakeVisible(fontSizeLabel);
     appearanceSection->addAndMakeVisible(fontSizeSlider);
     
-    // Set up all color sections
-    setupColorSection(noteOnColorSection, "Note On Color", currentSettings.noteOnColor);
-    setupColorSection(noteOffColorSection, "Note Off Color", currentSettings.noteOffColor);
-    setupColorSection(controllerColorSection, "Controller Color", currentSettings.controllerColor);
-    setupColorSection(pitchBendColorSection, "Pitch Bend Color", currentSettings.pitchBendColor);
-    setupColorSection(pressureColorSection, "Pressure Color", currentSettings.pressureColor);
-    setupColorSection(programChangeColorSection, "Program Change Color", currentSettings.programChangeColor);
-    setupColorSection(clockColorSection, "Clock Color", currentSettings.clockColor);
-    setupColorSection(sysExColorSection, "SysEx Color", currentSettings.sysExColor);
-    setupColorSection(defaultColorSection, "Default Color", currentSettings.defaultColor);
+    // Set up all color sections with their initial mute states
+    setupColorSection(noteOnColorSection, "Note On Color", currentSettings.noteOnColor, currentSettings.muteNoteOn);
+    setupColorSection(noteOffColorSection, "Note Off Color", currentSettings.noteOffColor, currentSettings.muteNoteOff);
+    setupColorSection(controllerColorSection, "Controller Color", currentSettings.controllerColor, currentSettings.muteController);
+    setupColorSection(pitchBendColorSection, "Pitch Bend Color", currentSettings.pitchBendColor, currentSettings.mutePitchBend);
+    setupColorSection(pressureColorSection, "Pressure Color", currentSettings.pressureColor, currentSettings.mutePressure);
+    setupColorSection(programChangeColorSection, "Program Change Color", currentSettings.programChangeColor, currentSettings.muteProgramChange);
+    setupColorSection(clockColorSection, "Clock Color", currentSettings.clockColor, currentSettings.muteClock);
+    setupColorSection(sysExColorSection, "SysEx Color", currentSettings.sysExColor, currentSettings.muteSysEx);
+    setupColorSection(defaultColorSection, "Default Color", currentSettings.defaultColor, currentSettings.muteDefault);
     
     // Add color sections to the container
     colorContainer->addAndMakeVisible(noteOnColorSection.label);
     colorContainer->addAndMakeVisible(*noteOnColorSection.selector);
+    colorContainer->addAndMakeVisible(noteOnColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(noteOffColorSection.label);
     colorContainer->addAndMakeVisible(*noteOffColorSection.selector);
+    colorContainer->addAndMakeVisible(noteOffColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(controllerColorSection.label);
     colorContainer->addAndMakeVisible(*controllerColorSection.selector);
+    colorContainer->addAndMakeVisible(controllerColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(pitchBendColorSection.label);
     colorContainer->addAndMakeVisible(*pitchBendColorSection.selector);
+    colorContainer->addAndMakeVisible(pitchBendColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(pressureColorSection.label);
     colorContainer->addAndMakeVisible(*pressureColorSection.selector);
+    colorContainer->addAndMakeVisible(pressureColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(programChangeColorSection.label);
     colorContainer->addAndMakeVisible(*programChangeColorSection.selector);
+    colorContainer->addAndMakeVisible(programChangeColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(clockColorSection.label);
     colorContainer->addAndMakeVisible(*clockColorSection.selector);
+    colorContainer->addAndMakeVisible(clockColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(sysExColorSection.label);
     colorContainer->addAndMakeVisible(*sysExColorSection.selector);
+    colorContainer->addAndMakeVisible(sysExColorSection.muteButton);
+    
     colorContainer->addAndMakeVisible(defaultColorSection.label);
     colorContainer->addAndMakeVisible(*defaultColorSection.selector);
+    colorContainer->addAndMakeVisible(defaultColorSection.muteButton);
 
     // Set up the viewport with the color container
     colorViewport.setViewedComponent(colorContainer.get(), false); // X- JUCE won't delete colorContainer
@@ -168,7 +185,7 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     // The 'false' parameter ensures JUCE doesn't try to delete the component itself
     colorViewport.setViewedComponent(nullptr, false);
     
-    // Remove all listeners from selectors
+    // Remove all listeners from selectors and mute buttons
     for (auto* selector : {
         noteOnColorSection.selector.get(),
         noteOffColorSection.selector.get(),
@@ -185,6 +202,17 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
         }
     }
     
+    // Remove all button listeners
+    noteOnColorSection.muteButton.removeListener(noteOnColorSection.muteListener.get());
+    noteOffColorSection.muteButton.removeListener(noteOffColorSection.muteListener.get());
+    controllerColorSection.muteButton.removeListener(controllerColorSection.muteListener.get());
+    pitchBendColorSection.muteButton.removeListener(pitchBendColorSection.muteListener.get());
+    pressureColorSection.muteButton.removeListener(pressureColorSection.muteListener.get());
+    programChangeColorSection.muteButton.removeListener(programChangeColorSection.muteListener.get());
+    clockColorSection.muteButton.removeListener(clockColorSection.muteListener.get());
+    sysExColorSection.muteButton.removeListener(sysExColorSection.muteListener.get());
+    defaultColorSection.muteButton.removeListener(defaultColorSection.muteListener.get());
+    
     // Reset all listeners first
     noteOnColorSection.listener.reset();
     noteOffColorSection.listener.reset();
@@ -195,6 +223,17 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     clockColorSection.listener.reset();
     sysExColorSection.listener.reset();
     defaultColorSection.listener.reset();
+    
+    // Reset all mute listeners
+    noteOnColorSection.muteListener.reset();
+    noteOffColorSection.muteListener.reset();
+    controllerColorSection.muteListener.reset();
+    pitchBendColorSection.muteListener.reset();
+    pressureColorSection.muteListener.reset();
+    programChangeColorSection.muteListener.reset();
+    clockColorSection.muteListener.reset();
+    sysExColorSection.muteListener.reset();
+    defaultColorSection.muteListener.reset();
     
     // Reset all selectors next
     noteOnColorSection.selector.reset();
@@ -288,8 +327,6 @@ void LogDisplaySettingsComponent::resized()
     // X- Expand colorContainer to fill the full width of the viewport to eliminate the dead zone
     colorContainer->setBounds(0, 0, colorViewport.getWidth(), totalColorSectionsHeight);
     
-    
-    
     // COLOR SECTIONS LAYOUT
     auto containerBounds = colorContainer->getLocalBounds().reduced(15);
     
@@ -298,8 +335,10 @@ void LogDisplaySettingsComponent::resized()
         // Total section height: 180px
         auto sectionArea = area.removeFromTop(180);
         
-        // Label: 24px height at top
-        section.label.setBounds(sectionArea.removeFromTop(24));
+        // Label row: 24px height at top with mute button on the right
+        auto labelRow = sectionArea.removeFromTop(24);
+        section.label.setBounds(labelRow.removeFromLeft(labelRow.getWidth() - 80)); // Leave space for mute button
+        section.muteButton.setBounds(labelRow.reduced(0, 2)); // Reduce height slightly for better appearance
         
         // 8px gap between label and color selector
         sectionArea.removeFromTop(8);
@@ -312,7 +351,7 @@ void LogDisplaySettingsComponent::resized()
         area.removeFromTop(20);
     };
     
-    // Position all 10 color sections sequentially
+    // Position all 9 color sections sequentially
     // Each takes up 180px height + 20px gap = 200px total
     positionColorSection(noteOnColorSection, containerBounds);
     positionColorSection(noteOffColorSection, containerBounds);
@@ -364,15 +403,33 @@ void LogDisplaySettingsComponent::fontSizeChanged()
 void LogDisplaySettingsComponent::updateControls()
 {
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
+    
     noteOnColorSection.selector->setCurrentColour(currentSettings.noteOnColor, juce::dontSendNotification);
+    noteOnColorSection.muteButton.setToggleState(currentSettings.muteNoteOn, juce::dontSendNotification);
+    
     noteOffColorSection.selector->setCurrentColour(currentSettings.noteOffColor, juce::dontSendNotification);
+    noteOffColorSection.muteButton.setToggleState(currentSettings.muteNoteOff, juce::dontSendNotification);
+    
     controllerColorSection.selector->setCurrentColour(currentSettings.controllerColor, juce::dontSendNotification);
+    controllerColorSection.muteButton.setToggleState(currentSettings.muteController, juce::dontSendNotification);
+    
     pitchBendColorSection.selector->setCurrentColour(currentSettings.pitchBendColor, juce::dontSendNotification);
+    pitchBendColorSection.muteButton.setToggleState(currentSettings.mutePitchBend, juce::dontSendNotification);
+    
     pressureColorSection.selector->setCurrentColour(currentSettings.pressureColor, juce::dontSendNotification);
+    pressureColorSection.muteButton.setToggleState(currentSettings.mutePressure, juce::dontSendNotification);
+    
     programChangeColorSection.selector->setCurrentColour(currentSettings.programChangeColor, juce::dontSendNotification);
+    programChangeColorSection.muteButton.setToggleState(currentSettings.muteProgramChange, juce::dontSendNotification);
+    
     clockColorSection.selector->setCurrentColour(currentSettings.clockColor, juce::dontSendNotification);
+    clockColorSection.muteButton.setToggleState(currentSettings.muteClock, juce::dontSendNotification);
+    
     sysExColorSection.selector->setCurrentColour(currentSettings.sysExColor, juce::dontSendNotification);
+    sysExColorSection.muteButton.setToggleState(currentSettings.muteSysEx, juce::dontSendNotification);
+    
     defaultColorSection.selector->setCurrentColour(currentSettings.defaultColor, juce::dontSendNotification);
+    defaultColorSection.muteButton.setToggleState(currentSettings.muteDefault, juce::dontSendNotification);
 }
 
 /**
@@ -395,12 +452,13 @@ void LogDisplaySettingsComponent::comboBoxChanged(juce::ComboBox* comboBoxThatHa
  * @param section The ColorSection to set up.
  * @param name The name to display in the label.
  * @param initialColor The initial color for the selector.
+ * @param initialMute The initial mute state for the mute button.
  * 
  * Creates and configures a ColorSection with a label, color selector, and change listener
  * for a specific MIDI message type. The change listener updates the appropriate color
  * in the current settings when the user selects a new color.
  */
-void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor)
+void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor, bool initialMute)
 {
     section.label.setText(name, juce::dontSendNotification);
     addAndMakeVisible(section.label);
@@ -408,20 +466,59 @@ void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const
     section.selector = std::make_unique<juce::ColourSelector>();
     section.selector->setCurrentColour(initialColor);
 
+    // Setup mute button
+    section.muteButton.setButtonText("Mute");
+    section.muteButton.setToggleState(initialMute, juce::dontSendNotification);
+    addAndMakeVisible(section.muteButton);
+
     // Determine the color type based on the section name
     ColorChangeListener::ColorType colorType;
-    if (name == "Note On Color")      colorType = ColorChangeListener::ColorType::NoteOn;
-    else if (name == "Note Off Color")     colorType = ColorChangeListener::ColorType::NoteOff;
-    else if (name == "Controller Color")   colorType = ColorChangeListener::ColorType::Controller;
-    else if (name == "Pitch Bend Color")   colorType = ColorChangeListener::ColorType::PitchBend;
-    else if (name == "Pressure Color")     colorType = ColorChangeListener::ColorType::Pressure;
-    else if (name == "Program Change Color") colorType = ColorChangeListener::ColorType::ProgramChange;
-    else if (name == "Clock Color")        colorType = ColorChangeListener::ColorType::Clock;
-    else if (name == "SysEx Color")       colorType = ColorChangeListener::ColorType::SysEx;
-    else                                   colorType = ColorChangeListener::ColorType::Default;
+    MuteButtonListener::MuteType muteType;
+    
+    if (name == "Note On Color") {
+        colorType = ColorChangeListener::ColorType::NoteOn;
+        muteType = MuteButtonListener::MuteType::NoteOn;
+    }
+    else if (name == "Note Off Color") {
+        colorType = ColorChangeListener::ColorType::NoteOff;
+        muteType = MuteButtonListener::MuteType::NoteOff;
+    }
+    else if (name == "Controller Color") {
+        colorType = ColorChangeListener::ColorType::Controller;
+        muteType = MuteButtonListener::MuteType::Controller;
+    }
+    else if (name == "Pitch Bend Color") {
+        colorType = ColorChangeListener::ColorType::PitchBend;
+        muteType = MuteButtonListener::MuteType::PitchBend;
+    }
+    else if (name == "Pressure Color") {
+        colorType = ColorChangeListener::ColorType::Pressure;
+        muteType = MuteButtonListener::MuteType::Pressure;
+    }
+    else if (name == "Program Change Color") {
+        colorType = ColorChangeListener::ColorType::ProgramChange;
+        muteType = MuteButtonListener::MuteType::ProgramChange;
+    }
+    else if (name == "Clock Color") {
+        colorType = ColorChangeListener::ColorType::Clock;
+        muteType = MuteButtonListener::MuteType::Clock;
+    }
+    else if (name == "SysEx Color") {
+        colorType = ColorChangeListener::ColorType::SysEx;
+        muteType = MuteButtonListener::MuteType::SysEx;
+    }
+    else {
+        colorType = ColorChangeListener::ColorType::Default;
+        muteType = MuteButtonListener::MuteType::Default;
+    }
 
     section.listener = std::make_unique<ColorChangeListener>(&currentSettings, section.selector.get(), colorType);
     section.selector->addChangeListener(section.listener.get());
+    
+    // Setup mute button listener
+    section.muteListener = std::make_unique<MuteButtonListener>(&currentSettings, &section.muteButton, muteType);
+    section.muteButton.addListener(section.muteListener.get());
+    
     addAndMakeVisible(section.selector.get());
 }
 
@@ -445,7 +542,8 @@ void LogDisplaySettingsComponent::handleApplyButton()
         
         // Update current settings from all controls
         currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-        // X- Removed background color update as it's now handled in WindowRoutingComponent
+        
+        // Update colors
         currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
         currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
         currentSettings.controllerColor = controllerColorSection.selector->getCurrentColour();
@@ -455,6 +553,17 @@ void LogDisplaySettingsComponent::handleApplyButton()
         currentSettings.clockColor = clockColorSection.selector->getCurrentColour();
         currentSettings.sysExColor = sysExColorSection.selector->getCurrentColour();
         currentSettings.defaultColor = defaultColorSection.selector->getCurrentColour();
+        
+        // Update mute states
+        currentSettings.muteNoteOn = noteOnColorSection.muteButton.getToggleState();
+        currentSettings.muteNoteOff = noteOffColorSection.muteButton.getToggleState();
+        currentSettings.muteController = controllerColorSection.muteButton.getToggleState();
+        currentSettings.mutePitchBend = pitchBendColorSection.muteButton.getToggleState();
+        currentSettings.mutePressure = pressureColorSection.muteButton.getToggleState();
+        currentSettings.muteProgramChange = programChangeColorSection.muteButton.getToggleState();
+        currentSettings.muteClock = clockColorSection.muteButton.getToggleState();
+        currentSettings.muteSysEx = sysExColorSection.muteButton.getToggleState();
+        currentSettings.muteDefault = defaultColorSection.muteButton.getToggleState();
         
         // X- Preserve the background color
         currentSettings.backgroundColor = currentBgColor;
