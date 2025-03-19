@@ -66,6 +66,7 @@ public:
         bool muteClock = false;            ///< Whether to mute MIDI Clock messages
         bool muteSysEx = false;            ///< Whether to mute System Exclusive messages
         bool muteDefault = false;          ///< Whether to mute other message types
+
     };
 
     /**
