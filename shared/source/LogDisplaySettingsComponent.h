@@ -103,6 +103,85 @@ private:
 };
 
 /**
+ * @class MuteButtonListener
+ * @brief Listener for mute button changes that updates display settings.
+ * 
+ * This class listens for changes to a mute button and updates the appropriate
+ * mute flag in the display settings when a change is detected.
+ */
+class MuteButtonListener : public juce::Button::Listener {
+public:
+    /**
+     * @enum MuteType
+     * @brief Enumeration of different MIDI message types for muting.
+     * 
+     * Each type corresponds to a different kind of MIDI message that can be muted.
+     */
+    enum class MuteType {
+        NoteOn,
+        NoteOff,
+        Controller,
+        PitchBend,
+        Pressure,
+        ProgramChange,
+        Clock,
+        SysEx,
+        Default
+    };
+
+    /**
+     * @brief Constructor that initializes the listener with settings and button references.
+     * @param settingsPtr Pointer to the display settings to update.
+     * @param button Pointer to the toggle button to listen to.
+     * @param type The type of MIDI message to mute.
+     */
+    MuteButtonListener(DisplaySettingsManager::DisplaySettings* settingsPtr, 
+                       juce::ToggleButton* button,
+                       MuteType type)
+        : settings(settingsPtr), muteButton(button), muteType(type) {}
+
+    /**
+     * @brief Handles button state changes.
+     * @param button The button that changed state.
+     * 
+     * Updates the appropriate mute flag in the display settings based on the
+     * current state of the button and the configured mute type.
+     */
+    void buttonClicked(juce::Button* button) override {
+        if (settings != nullptr && button == muteButton) {
+            bool muted = button->getToggleState();
+            switch (muteType) {
+                case MuteType::NoteOn:         settings->muteNoteOn = muted; break;
+                case MuteType::NoteOff:        settings->muteNoteOff = muted; break;
+                case MuteType::Controller:     settings->muteController = muted; break;
+                case MuteType::PitchBend:      settings->mutePitchBend = muted; break;
+                case MuteType::Pressure:       settings->mutePressure = muted; break;
+                case MuteType::ProgramChange:  settings->muteProgramChange = muted; break;
+                case MuteType::Clock:          settings->muteClock = muted; break;
+                case MuteType::SysEx:          settings->muteSysEx = muted; break;
+                case MuteType::Default:        settings->muteDefault = muted; break;
+            }
+        }
+    }
+
+private:
+    /**
+     * @brief Pointer to the display settings to update.
+     */
+    DisplaySettingsManager::DisplaySettings* settings;
+    
+    /**
+     * @brief Pointer to the mute button to listen to.
+     */
+    juce::ToggleButton* muteButton;
+    
+    /**
+     * @brief The type of MIDI message to mute.
+     */
+    MuteType muteType;
+};
+
+/**
  * @class LogDisplaySettingsComponent
  * @brief Component for configuring MIDI log display settings.
  * 
@@ -284,6 +363,9 @@ private:
         juce::Label label;
         std::unique_ptr<juce::ColourSelector> selector;
         std::unique_ptr<ColorChangeListener> listener;
+        // X- Added mute button and its listener
+        juce::ToggleButton muteButton;
+        std::unique_ptr<MuteButtonListener> muteListener;
     };
 
     /**
@@ -350,10 +432,11 @@ private:
      * @param section The ColorSection to set up.
      * @param name The name to display in the label.
      * @param initialColor The initial color for the selector.
+     * @param initialMute The initial mute state.
      * 
-     * Initializes a ColorSection with a label, color selector, and change listener.
+     * Initializes a ColorSection with a label, color selector, mute button, and listeners.
      */
-    void setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor);
+    void setupColorSection(ColorSection& section, const juce::String& name, const juce::Colour& initialColor, bool initialMute);
     
     /**
      * @brief Handles changes to the font size slider.
