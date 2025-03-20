@@ -192,6 +192,7 @@ private:
  */
 class LogDisplaySettingsComponent : public juce::Component,
                                   private juce::ComboBox::Listener
+                                  
 {
 public:
     /**
@@ -295,7 +296,7 @@ private:
      * 
      * Stores the default display settings for reference.
      */
-    DisplaySettingsManager::DisplaySettings defaultSettings;   // Original defaults
+    DisplaySettingsManager::DisplaySettings overrideAllDevices;   // Original defaults
     
     /**
      * @brief Name of the current device being edited.
@@ -316,28 +317,28 @@ private:
      * 
      * Displays a label for the device selector dropdown.
      */
-    juce::Label deviceLabel;
+    juce::Label deviceLabel{"Device Label", "Device:"};
     
     /**
      * @brief Dropdown for selecting which device's settings to edit.
      * 
      * Allows the user to select which device's settings to edit.
      */
-    juce::ComboBox deviceSelector;
+    juce::ComboBox deviceSelector{"Device Selector"};
     
     /**
      * @brief Label for the font size slider.
      * 
      * Displays a label for the font size slider.
      */
-    juce::Label fontSizeLabel;
+    juce::Label fontSizeLabel{"Font Size Label", "Font Size:"};
     
     /**
      * @brief Slider for adjusting font size.
      * 
      * Allows the user to adjust the font size used in the log display.
      */
-    juce::Slider fontSizeSlider;
+    juce::Slider fontSizeSlider{"Font Size Slider"};
 
     /**
      * @brief Container for color selectors.
@@ -488,6 +489,16 @@ private:
      * Updates the log display with the specified settings.
      */
     void applySettings(const DisplaySettingsManager::DisplaySettings& settings);
+    
+    // X- Added override toggle button for ALL device settings
+    juce::ToggleButton overrideToggle{"Override Toggle"};
+    
+    /**
+     * @brief Label for the override description.
+     * 
+     * Displays a label for the override description.
+     */
+    juce::Label overrideDescription{"Override Description"};
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LogDisplaySettingsComponent)
 };
