@@ -20,18 +20,18 @@ namespace MidiPortal {
  */
 DisplaySettingsManager::DisplaySettingsManager()
 {
-    // Initialize with default settings
-    defaultSettings.fontSize = 12.0f;
-    defaultSettings.backgroundColor = juce::Colours::black;
-    defaultSettings.noteOnColor = juce::Colours::green;
-    defaultSettings.noteOffColor = juce::Colours::red;
-    defaultSettings.controllerColor = juce::Colours::yellow;
-    defaultSettings.pitchBendColor = juce::Colours::orange;
-    defaultSettings.pressureColor = juce::Colours::purple;
-    defaultSettings.programChangeColor = juce::Colours::blue;
-    defaultSettings.clockColor = juce::Colours::grey;
-    defaultSettings.sysExColor = juce::Colours::white;
-    defaultSettings.defaultColor = juce::Colours::lightgrey;
+    // Initialize with overrided settings
+    overrideAllDevices.fontSize = 12.0f;
+    overrideAllDevices.backgroundColor = juce::Colours::black;
+    overrideAllDevices.noteOnColor = juce::Colours::green;
+    overrideAllDevices.noteOffColor = juce::Colours::red;
+    overrideAllDevices.controllerColor = juce::Colours::yellow;
+    overrideAllDevices.pitchBendColor = juce::Colours::orange;
+    overrideAllDevices.pressureColor = juce::Colours::purple;
+    overrideAllDevices.programChangeColor = juce::Colours::blue;
+    overrideAllDevices.clockColor = juce::Colours::grey;
+    overrideAllDevices.sysExColor = juce::Colours::white;
+    overrideAllDevices.defaultColor = juce::Colours::lightgrey;
 }
 
 /**
@@ -58,10 +58,22 @@ void DisplaySettingsManager::addSettings(const juce::String& deviceName, const D
  */
 const DisplaySettingsManager::DisplaySettings& DisplaySettingsManager::getSettings(const juce::String& deviceName) const
 {
+    // X- First check if ALL settings exist and have override enabled
+    if (deviceName != "ALL") {  // Don't check for override when getting ALL settings themselves
+        auto allIt = deviceSettings.find("ALL");
+        if (allIt != deviceSettings.end() && allIt->second.overrideAllDevices) {
+            return allIt->second;  // Return ALL settings if override is enabled
+        }
+    }
+    
+    // X- If no override or getting ALL settings directly, return device-specific settings
     auto it = deviceSettings.find(deviceName);
-    if (it != deviceSettings.end())
+    if (it != deviceSettings.end()) {
         return it->second;
-    return defaultSettings;
+    }
+    
+    // X- If no settings found, return default settings
+    return overrideAllDevices;
 }
 
 /**
@@ -111,14 +123,14 @@ void DisplaySettingsManager::unregisterDisplay(MidiLogDisplay* display)
  * @return A StringArray containing the names of all devices/windows with custom settings.
  * 
  * Returns a list of all device/window names that have custom settings defined.
- * The "Default" settings are excluded from this list.
+ * The "ALL" settings are excluded from this list.
  */
 juce::StringArray DisplaySettingsManager::getDevicesWithCustomSettings() const
 {
     juce::StringArray devices;
     for (const auto& [device, settings] : deviceSettings)
     {
-        if (device != "Default")
+        if (device != "ALL")
         {
             devices.add(device);
         }

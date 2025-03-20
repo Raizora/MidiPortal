@@ -65,8 +65,8 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
       colorSection(std::make_unique<SettingsSection>("Colors")),
       currentSettings(logDisplay.getSettingsManager().getSettings()),
       previousSettings(currentSettings),
-      defaultSettings(currentSettings),
-      currentDevice("Default"),
+      overrideAllDevices(currentSettings),
+      currentDevice("ALL"),
       hasAppliedOnce(false),
       colorContainer(std::make_unique<juce::Component>())
 {
@@ -79,7 +79,7 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
 
     // Set up device selector
     deviceLabel.setText("Device:", juce::dontSendNotification);
-    deviceSelector.addItem("Default", 1);  // X- "Default" represents global settings used when no device-specific settings exist
+    deviceSelector.addItem("ALL", 1);  // X- "ALL" represents global settings used when override mode is enabled
     
     // X- Only add enabled MIDI devices to the selector
     auto devices = juce::MidiInput::getAvailableDevices();
@@ -97,6 +97,26 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     deviceSection->addAndMakeVisible(deviceLabel);
     deviceSection->addAndMakeVisible(deviceSelector);
     
+    // X- Set up override toggle button and description
+    overrideToggle.setButtonText("Override all device settings");
+    overrideToggle.setToggleState(currentSettings.overrideAllDevices, juce::dontSendNotification);
+    overrideToggle.onClick = [this] {
+        // X- Update the override state in ALL settings
+        currentSettings.overrideAllDevices = overrideToggle.getToggleState();
+        // X- Apply the change immediately so it takes effect
+        logDisplay.getSettingsManager().setSettings(currentSettings, "ALL");
+        // X- Only show the override toggle when "ALL" is selected
+        overrideToggle.setVisible(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()) == "ALL");
+    };
+    deviceSection->addAndMakeVisible(overrideToggle);
+    
+    // X- Add description label for override toggle
+    overrideDescription.setText("When enabled, these settings will override individual device settings",
+                              juce::dontSendNotification);
+    overrideDescription.setFont(juce::Font(12.0f));
+    overrideDescription.setColour(juce::Label::textColourId, juce::Colours::grey);
+    deviceSection->addAndMakeVisible(overrideDescription);
+    
     // Set up font size controls
     fontSizeLabel.setText("Font Size:", juce::dontSendNotification);
     juce::FontOptions options;
@@ -110,7 +130,6 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     fontSizeSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
     fontSizeSlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
     fontSizeSlider.setColour(juce::Slider::trackColourId, juce::Colours::darkgrey);
-    fontSizeSlider.onValueChange = [this] { fontSizeChanged(); };
     
     // Add components to the appearance section
     appearanceSection->addAndMakeVisible(fontSizeLabel);
@@ -300,7 +319,13 @@ void LogDisplaySettingsComponent::resized()
     deviceSection->setBounds(deviceBounds);
     auto innerDeviceBounds = deviceBounds.reduced(10);
     deviceLabel.setBounds(innerDeviceBounds.removeFromLeft(100));  // Increased from 80 to 100
-    deviceSelector.setBounds(innerDeviceBounds.reduced(5, 0));  // Add 5px padding from label
+    deviceSelector.setBounds(innerDeviceBounds.removeFromLeft(200).reduced(5, 0));  // Add 5px padding from label
+    
+    // X- Position override toggle button to the right of the device selector
+    overrideToggle.setBounds(innerDeviceBounds.removeFromLeft(200).reduced(5, 0));
+    // Only show the override toggle when "ALL" is selected
+    overrideToggle.setVisible(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()) == "ALL");
+    
     bounds.removeFromTop(sectionSpacing);
     
     // Appearance section
@@ -386,11 +411,28 @@ void LogDisplaySettingsComponent::resized()
  */
 void LogDisplaySettingsComponent::deviceSelectorChanged()
 {
-    // Don't access logDisplay if we're being destroyed
-    if (!isBeingDestroyed) {
-        currentSettings = logDisplay.getSettingsManager().getSettings(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-        updateControls();
+    // Get the selected device name
+    juce::String selectedDevice = deviceSelector.getItemText(deviceSelector.getSelectedItemIndex());
+    
+    // Cache current settings before switching
+    if (hasAppliedOnce) {
+        cacheCurrentSettings();
     }
+    
+    // Update current device
+    currentDevice = selectedDevice;
+    
+    // Get settings for the selected device
+    currentSettings = logDisplay.getSettingsManager().getSettings(selectedDevice);
+    
+    // X- Show/hide override toggle only for "ALL" device and update its state
+    overrideToggle.setVisible(selectedDevice == "ALL");
+    if (selectedDevice == "ALL") {
+        overrideToggle.setToggleState(currentSettings.overrideAllDevices, juce::dontSendNotification);
+    }
+    
+    // Update all controls to reflect the new device's settings
+    updateControls();
 }
 
 /**
@@ -417,6 +459,10 @@ void LogDisplaySettingsComponent::fontSizeChanged()
 void LogDisplaySettingsComponent::updateControls()
 {
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
+    
+    // X- Update override toggle state
+    overrideToggle.setToggleState(currentSettings.overrideAllDevices, juce::dontSendNotification);
+    overrideToggle.setVisible(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()) == "ALL");
     
     noteOnColorSection.selector->setCurrentColour(currentSettings.noteOnColor, juce::dontSendNotification);
     noteOnColorSection.muteButton.setToggleState(currentSettings.muteNoteOn, juce::dontSendNotification);
@@ -560,6 +606,9 @@ void LogDisplaySettingsComponent::handleApplyButton()
         // Update current settings from all controls
         currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
         
+        // X- Update override state
+        currentSettings.overrideAllDevices = overrideToggle.getToggleState();
+        
         // Update colors
         currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
         currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
@@ -617,7 +666,7 @@ void LogDisplaySettingsComponent::handleResetButton()
             // Otherwise reset to default settings
             if (deviceName == "Default") {
                 // For "Default", use the default settings
-                currentSettings = defaultSettings;
+                currentSettings = overrideAllDevices;
             } else {
                 // For specific devices, get fresh settings from the manager
                 currentSettings = logDisplay.getSettingsManager().getSettings(deviceName);
@@ -693,6 +742,17 @@ void LogDisplaySettingsComponent::updateDeviceSelector()
     
     // Update the current settings based on the selected device
     deviceSelectorChanged();
+}
+
+/**
+ * @brief Caches the current settings for later reset.
+ * 
+ * Stores the current settings so they can be restored if the user clicks Reset.
+ */
+void LogDisplaySettingsComponent::cacheCurrentSettings()
+{
+    // X- Cache the current settings before switching devices
+    previousSettings = currentSettings;
 }
 
 } // namespace MidiPortal 

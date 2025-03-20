@@ -66,6 +66,9 @@ public:
         bool muteClock = false;            ///< Whether to mute MIDI Clock messages
         bool muteSysEx = false;            ///< Whether to mute System Exclusive messages
         bool muteDefault = false;          ///< Whether to mute other message types
+        
+        // X- Added override flag to control whether these settings override all device-specific settings
+        bool overrideAllDevices = false;
     };
 
     /**
@@ -84,11 +87,11 @@ public:
      * @return A reference to the settings for the specified device/window.
      * 
      * If no settings exist for the specified device, returns the default settings.
-     * The "Default" option represents global settings that are used when no
+     * The "ALL" option represents global settings that are used when no
      * device-specific settings exist. These settings can be edited directly by
-     * selecting "Default" in the device selector.
+     * selecting "ALL" in the device selector.
      */
-    const DisplaySettings& getSettings(const juce::String& deviceName = "Default") const;
+    const DisplaySettings& getSettings(const juce::String& deviceName = "ALL") const;
     
     /**
      * @brief Update settings for a specific device or window.
@@ -154,12 +157,12 @@ private:
     std::map<juce::String, DisplaySettings> deviceSettings;
     
     /**
-     * @brief Default settings used when no device-specific settings exist.
+     * @brief Settings used when "ALL" device is selected and override is enabled.
      * 
-     * These settings are returned when getSettings() is called with a device
-     * name that doesn't have custom settings.
+     * These settings are used to override all device-specific settings when
+     * the "ALL" device's override toggle is enabled.
      */
-    DisplaySettings defaultSettings;
+    DisplaySettings overrideAllDevices;
     
     /**
      * @brief List of registered display components that should be notified of settings changes.
