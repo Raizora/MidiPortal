@@ -14,20 +14,6 @@
 
 namespace MidiPortal {
 
-// X- Custom LookAndFeel class to increase text size in RGB value boxes
-class LargeTextLookAndFeel : public juce::LookAndFeel_V4 {
-public:
-    juce::Font getLabelFont(juce::Label& label) override {
-        // Make the font larger for RGB value boxes
-        if (auto* parent = label.getParentComponent()) {
-            if (dynamic_cast<juce::ColourSelector*>(parent->getParentComponent()) != nullptr) {
-                return juce::Font(12.0f); // X- Reduced from 16.0f to fit better in the boxes
-            }
-        }
-        return LookAndFeel_V4::getLabelFont(label);
-    }
-};
-
 /*
  * IMPORTANT MEMORY MANAGEMENT NOTE:
  * 
@@ -199,7 +185,7 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
     // The 'false' parameter ensures JUCE doesn't try to delete the component itself
     colorViewport.setViewedComponent(nullptr, false);
     
-    // X- Remove custom LookAndFeel from all selectors before they are destroyed
+    // Remove all listeners from selectors and mute buttons
     for (auto* selector : {
         noteOnColorSection.selector.get(),
         noteOffColorSection.selector.get(),
@@ -212,7 +198,6 @@ LogDisplaySettingsComponent::~LogDisplaySettingsComponent()
         defaultColorSection.selector.get()
     }) {
         if (selector != nullptr) {
-            selector->setLookAndFeel(nullptr);
             selector->removeAllChangeListeners();
         }
     }
@@ -336,7 +321,7 @@ void LogDisplaySettingsComponent::resized()
     colorViewport.setBounds(bounds);
     
     // COLOR SECTIONS CONTAINER
-    const int colorSectionHeight = 240;
+    const int colorSectionHeight = 200;
     // X- Adjust the total height to match the actual number of color sections (9 instead of 10)
     const int totalColorSectionsHeight = 9 * colorSectionHeight;
     // X- Expand colorContainer to fill the full width of the viewport to eliminate the dead zone
@@ -347,26 +332,27 @@ void LogDisplaySettingsComponent::resized()
     
     // Each color section layout:
     auto positionColorSection = [](ColorSection& section, juce::Rectangle<int>& area) {
-        // X- Increased total section height to give more room for the RGB value boxes
-        auto sectionArea = area.removeFromTop(220);  // Increased from 180
+        // Total section height: 180px
+        auto sectionArea = area.removeFromTop(180);
         
         // Label row: 24px height at top with mute button on the right
         auto labelRow = sectionArea.removeFromTop(24);
         section.label.setBounds(labelRow.removeFromLeft(labelRow.getWidth() - 80)); // Leave space for mute button
         section.muteButton.setBounds(labelRow.reduced(0, 2)); // Reduce height slightly for better appearance
         
-        // X- Increased gap between label and color selector for better spacing
-        sectionArea.removeFromTop(16);  // Increased from 8
+        // 8px gap between label and color selector
+        sectionArea.removeFromTop(8);
         
-        // X- Make the color selector taller to accommodate the larger text boxes
-        section.selector->setBounds(sectionArea.withHeight(180));  // Increased from 148
+        // Color selector gets remaining height (148px)
+        // This gives more room for RGB value boxes and labels
+        section.selector->setBounds(sectionArea);
         
         // 20px gap between sections
         area.removeFromTop(20);
     };
     
     // Position all 9 color sections sequentially
-    // X- Update section height calculation to match new size
+    // Each takes up 180px height + 20px gap = 200px total
     positionColorSection(noteOnColorSection, containerBounds);
     positionColorSection(noteOffColorSection, containerBounds);
     positionColorSection(controllerColorSection, containerBounds);
@@ -479,10 +465,7 @@ void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const
     
     section.selector = std::make_unique<juce::ColourSelector>();
     section.selector->setCurrentColour(initialColor);
-    // X- Apply custom LookAndFeel to increase text size in RGB value boxes
-    static LargeTextLookAndFeel largeTextLookAndFeel;
-    section.selector->setLookAndFeel(&largeTextLookAndFeel);
-    
+
     // Setup mute button
     section.muteButton.setButtonText("Mute");
     section.muteButton.setToggleState(initialMute, juce::dontSendNotification);
