@@ -1,0 +1,54 @@
+How to add or remove components from the color selector sections, using a practical example. Let's say we want to add an intensity slider:
+struct ColorSection {
+    juce::Label label;
+    std::unique_ptr<juce::ColourSelector> selector;
+    std::unique_ptr<ColorChangeListener> listener;
+    std::unique_ptr<juce::ToggleButton> muteToggle;
+    // Add new component:
+    std::unique_ptr<juce::Slider> intensitySlider; // New component
+};
+
+2. Initialize in the ColorSection constructor:
+ColorSection() {
+    muteToggle = std::make_unique<juce::ToggleButton>("Mute");
+
+    // Initialize new component:
+    intensitySlider = std::make_unique<juce::Slider>();
+    intensitySlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    intensitySlider->setRange(0.0, 1.0);
+    intensitySlider->setValue(1.0);
+}
+
+3. Add to container (in LogDisplaySettingsComponent.cpp constructor):
+// Add each section's components to container
+colorContainer->addAndMakeVisible(noteOnColorSection.label);
+colorContainer->addAndMakeVisible(*noteOnColorSection.selector);
+colorContainer->addAndMakeVisible(*noteOnColorSection.muteToggle);
+colorContainer->addAndMakeVisible(*noteOnColorSection.intensitySlider); // New component
+
+// Repeat for other color sections...
+
+4. Position in layout (in LogDisplaySettingsComponent::resized()):
+for (auto* section : { &noteOnColorSection, &noteOffColorSection, /*...*/ }) {
+    auto sectionBounds = containerBounds.removeFromTop(sectionHeight);
+
+    // Layout header row
+    auto headerBounds = sectionBounds.removeFromTop(labelHeight);
+    section->label.setBounds(headerBounds.removeFromLeft(150));
+    section->muteToggle->setBounds(headerBounds.removeFromRight(60).withHeight(20));
+    section->intensitySlider->setBounds(headerBounds.removeFromRight(100).withHeight(20));
+
+    // Color selector below
+    sectionBounds.removeFromTop(spacing);
+    section->selector->setBounds(sectionBounds.reduced(0, spacing));
+}
+
+Removing a Component:
+
+To remove a component, follow these steps:
+	1.	Remove its declaration from the ColorSection struct.
+	2.	Remove its initialization in the constructor.
+	3.	Remove its addAndMakeVisible call.
+	4.	Remove its positioning code from the resized() method.
+
+The layout will automatically adjust when components are removed since we’re using JUCE’s layout system with removeFromTop/Left/Right.

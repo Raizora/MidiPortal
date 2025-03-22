@@ -500,6 +500,16 @@ private:
      */
     juce::Label overrideDescription{"Override Description"};
     
+    /**
+     * @brief Gets the current settings.
+     * 
+     * Returns the current settings of the component.
+     */
+    DisplaySettingsManager::DisplaySettings getCurrentSettings();
+    
+    // Add this member variable
+    std::map<juce::String, DisplaySettingsManager::DisplaySettings> deviceOriginalSettings;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LogDisplaySettingsComponent)
 };
 

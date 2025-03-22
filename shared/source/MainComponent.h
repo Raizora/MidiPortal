@@ -440,6 +440,27 @@ private:
    */
   void routeMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName);
 
+  /**
+   * @brief Saves the current settings.
+   * 
+   * Saves the current settings to a file.
+   */
+  void saveSettings();
+
+  /**
+   * @brief Loads the current settings.
+   * 
+   * Loads the current settings from a file.
+   */
+  void loadSettings();
+
+  /**
+   * @brief Initializes the log display settings window.
+   * 
+   * Initializes the log display settings window.
+   */
+  void initialiseLogDisplaySettingsWindow();
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 

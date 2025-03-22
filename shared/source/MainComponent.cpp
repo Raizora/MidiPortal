@@ -183,7 +183,10 @@ MainComponent::MainComponent()
       impl(std::make_unique<Impl>(*this, settingsManager, windowManager))
 {
     // Initialize device manager with no default devices
-    settingsManager.getAudioDeviceManager().initialiseWithDefaultDevices(0, 0);  // No audio inputs/outputs
+    settingsManager.getAudioDeviceManager().initialiseWithDefaultDevices(0, 0);
+    
+    // Load saved device settings
+    loadSettings();
     
     // Initialize other components
     rustEngine = create_midi_engine();
@@ -229,6 +232,9 @@ MainComponent::MainComponent()
     
     // X- Initialize the view
     updateCurrentView();
+
+    // Initialize the Log Display Settings window at startup
+    initialiseLogDisplaySettingsWindow();
 }
 
 /**
@@ -265,6 +271,9 @@ MainComponent::~MainComponent() {
   // - settingsComponent
   // - settingsWindow
   // - midiLogDisplay
+
+  // Save settings
+  saveSettings();
 }
 
 /**
@@ -598,6 +607,88 @@ void MainComponent::routeMidiMessage(const juce::MidiMessage& message, const juc
     // Also send to AI manager for processing
     if (impl != nullptr) {
         impl->processMidiMessage(message, deviceName);
+    }
+}
+
+/**
+ * @brief Saves the application settings.
+ * 
+ * This method saves the application settings to a file.
+ */
+void MainComponent::saveSettings()
+{
+    // Create a ValueTree to store settings
+    juce::ValueTree settingsTree("MidiPortalSettings");
+    
+    // Store enabled MIDI input devices - fix the method call
+    juce::StringArray enabledDevices;
+    auto midiInputs = juce::MidiInput::getAvailableDevices();
+    
+    for (auto& device : midiInputs)
+    {
+        if (settingsManager.getAudioDeviceManager().isMidiInputDeviceEnabled(device.identifier))
+            enabledDevices.add(device.identifier);
+    }
+    
+    // Save to ValueTree
+    settingsTree.setProperty("enabledMidiDevices", enabledDevices.joinIntoString(";"), nullptr);
+    
+    // Save to file
+    juce::File settingsFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                                .getChildFile("MidiPortal")
+                                .getChildFile("settings.xml");
+    
+    // Ensure directory exists
+    settingsFile.getParentDirectory().createDirectory();
+    
+    // Write to file
+    if (auto xml = settingsTree.createXml())
+        xml->writeTo(settingsFile);
+}
+
+/**
+ * @brief Loads the application settings.
+ * 
+ * This method loads the application settings from a file.
+ */
+void MainComponent::loadSettings()
+{
+    juce::File settingsFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                                .getChildFile("MidiPortal")
+                                .getChildFile("settings.xml");
+    
+    if (settingsFile.exists())
+    {
+        if (auto xml = juce::XmlDocument::parse(settingsFile))
+        {
+            juce::ValueTree settingsTree = juce::ValueTree::fromXml(*xml);
+            
+            // Get enabled devices
+            juce::String deviceList = settingsTree.getProperty("enabledMidiDevices", "");
+            juce::StringArray enabledDevices;
+            enabledDevices.addTokens(deviceList, ";", "");
+            
+            // Enable each device
+            for (auto& deviceId : enabledDevices)
+                settingsManager.getAudioDeviceManager().setMidiInputDeviceEnabled(deviceId, true);
+        }
+    }
+}
+
+/**
+ * @brief Initializes the Log Display Settings window.
+ * 
+ * This method initializes the Log Display Settings window if it is not already initialized.
+ */
+void MainComponent::initialiseLogDisplaySettingsWindow()
+{
+    // Remove debug-only condition so it always opens at startup
+    if (logDisplaySettingsWindow == nullptr)
+    {
+        logDisplaySettingsWindow.reset(new LogDisplaySettingsWindow("Log Display Settings", *midiLogDisplay));
+        logDisplaySettingsWindow->onCloseCallback = [this]() {
+            logDisplaySettingsWindow = nullptr;
+        };
     }
 }
 

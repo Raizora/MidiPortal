@@ -1,0 +1,60 @@
+To add new menu items that open additional windows in the future, follow these steps:
+
+1. Define a unique menu item ID:
+   // At the top of your class or in an enum
+   static constexpr int kSettingsMenuItemId = 1;
+   static constexpr int kNewWindowMenuItemId = 2; // New ID for your window
+
+2. Add the menu item to the appropriate menu:
+   // In your constructor
+   #if JUCE_MAC
+       // For macOS, add to application menu
+       applicationMenu.addItem(kSettingsMenuItemId, "Settings...", true, false);
+       applicationMenu.addItem(kNewWindowMenuItemId, "My New Window...", true, false);
+   #else
+       // For other platforms, add to your custom menu
+       // This will be handled in getMenuForIndex
+   #endif
+   
+3. Update the getMenuForIndex method for non-macOS platforms:
+      if (name == "MidiPortal") {
+       juce::PopupMenu menu;
+       menu.addItem(kSettingsMenuItemId, "Settings...", true, false);
+       menu.addItem(kNewWindowMenuItemId, "My New Window...", true, false);
+       return menu;
+   }
+
+4. Handle the menu item selection in menuItemSelected:
+      void menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/) override
+   {
+       if (menuItemID == kSettingsMenuItemId)
+       {
+           // Open settings window
+           openSettingsWindow();
+       }
+       else if (menuItemID == kNewWindowMenuItemId)
+       {
+           // Open your new window
+           openMyNewWindow();
+       }
+       else if (menuItemID >= 100 && menuItemID <= 102)
+       {
+           // View modes
+           setViewMode(static_cast<ViewMode>(menuItemID - 100));
+       }
+   }
+
+5. Create a method to open your new window:
+      void openMyNewWindow()
+   {
+       if (myNewWindow == nullptr) {
+           myNewWindow.reset(new MyNewWindowClass("Window Title"));
+           myNewWindow->onCloseCallback = [this]() {
+               myNewWindow.reset();
+           };
+       }
+       myNewWindow->toFront(true);
+   }
+
+6. Add the window as a member variable:
+      std::unique_ptr<MyNewWindowClass> myNewWindow;

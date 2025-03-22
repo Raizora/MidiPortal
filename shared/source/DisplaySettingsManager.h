@@ -147,6 +147,13 @@ public:
         juce::ChangeBroadcaster::removeChangeListener(listener);
     }
 
+    // Method to get the original device settings map
+    std::map<juce::String, DisplaySettings>& getDeviceOriginalSettings() { return deviceOriginalSettings; }
+
+    // Add these method declarations
+    void storeDeviceSettingsBeforeOverride();
+    void restoreDeviceSettingsAfterOverride();
+
 private:
     /**
      * @brief Map of device/window names to their specific display settings.
@@ -171,6 +178,9 @@ private:
      * any registered ChangeListeners.
      */
     std::vector<MidiLogDisplay*> registeredDisplays;
+
+    // Add this to store original device settings
+    std::map<juce::String, DisplaySettings> deviceOriginalSettings;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DisplaySettingsManager)
 };

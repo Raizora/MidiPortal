@@ -18,6 +18,9 @@
 ./build/plugin/AudioPlugin_artefacts/Release/Standalone/MidiPortalPlugin.app/Contents/MacOS/MidiPortalPlugin
 
 ## Quick Copy/Paste Combos
+# Clean, Build, and run standalone (Debug)
+rm -rf build && ./build.sh && ./build/standalone/MidiPortalStandalone
+
 # Build and run standalone (Debug)
 ./build.sh && ./build/standalone/MidiPortalStandalone
 
