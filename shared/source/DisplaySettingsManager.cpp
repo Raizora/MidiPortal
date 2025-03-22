@@ -58,7 +58,9 @@ void DisplaySettingsManager::addSettings(const juce::String& deviceName, const D
  */
 const DisplaySettingsManager::DisplaySettings& DisplaySettingsManager::getSettings(const juce::String& deviceName) const
 {
-    // X- First check if ALL settings exist and have override enabled
+    static DisplaySettings defaultSettings; // Fallback default settings
+    
+    // First check if ALL settings exist and have override enabled
     if (deviceName != "ALL") {  // Don't check for override when getting ALL settings themselves
         auto allIt = deviceSettings.find("ALL");
         if (allIt != deviceSettings.end() && allIt->second.overrideAllDevices) {
@@ -66,14 +68,14 @@ const DisplaySettingsManager::DisplaySettings& DisplaySettingsManager::getSettin
         }
     }
     
-    // X- If no override or getting ALL settings directly, return device-specific settings
+    // If no override or getting ALL settings directly, return device-specific settings
     auto it = deviceSettings.find(deviceName);
     if (it != deviceSettings.end()) {
         return it->second;
     }
     
-    // X- If no settings found, return default settings
-    return overrideAllDevices;
+    // If no settings found, return default settings
+    return defaultSettings;  // Use the static default settings
 }
 
 /**
@@ -136,6 +138,38 @@ juce::StringArray DisplaySettingsManager::getDevicesWithCustomSettings() const
         }
     }
     return devices;
+}
+
+// Add this method to store device settings when enabling override
+void DisplaySettingsManager::storeDeviceSettingsBeforeOverride()
+{
+    // Get all devices with custom settings
+    juce::StringArray devices = getDevicesWithCustomSettings();
+    
+    // Clear previous stored settings
+    deviceOriginalSettings.clear();
+    
+    // Store each device's settings
+    for (const auto& device : devices) {
+        if (device != "ALL") { // Don't store the ALL device settings
+            auto it = deviceSettings.find(device);
+            if (it != deviceSettings.end()) {
+                deviceOriginalSettings[device] = it->second;
+            }
+        }
+    }
+}
+
+// Add this method to restore device settings when disabling override
+void DisplaySettingsManager::restoreDeviceSettingsAfterOverride()
+{
+    // Restore each device's settings
+    for (const auto& [device, settings] : deviceOriginalSettings) {
+        deviceSettings[device] = settings;
+    }
+    
+    // Notify listeners about the change
+    sendChangeMessage();
 }
 
 } // namespace MidiPortal 

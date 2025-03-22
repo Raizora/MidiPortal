@@ -175,10 +175,15 @@ void MidiLogDisplay::changeListenerCallback(juce::ChangeBroadcaster* source)
  */
 void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
-    // X- Get settings for this device (override will be handled by DisplaySettingsManager::getSettings)
+    // X- Get settings for this device
     const auto& settings = settingsManager.getSettings(deviceName);
 
-    // X- Check mute flags based on message type
+    // Debug pitch bend messages
+    if (message.isPitchWheel()) {
+        DBG("PitchBend message received, mute state: " + juce::String(settings.mutePitchBend ? "true" : "false"));
+    }
+    
+    // X- Check mute flags based on message type - ensure correct check for PitchBend
     if ((message.isNoteOn() && settings.muteNoteOn) ||
         (message.isNoteOff() && settings.muteNoteOff) ||
         (message.isController() && settings.muteController) ||
@@ -187,7 +192,9 @@ void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::St
         (message.isProgramChange() && settings.muteProgramChange) ||
         ((message.isMidiClock() || message.isMidiStart() || message.isMidiStop() || message.isMidiContinue()) && settings.muteClock) ||
         (message.isSysEx() && settings.muteSysEx))
+    {
         return; // Skip muted message types
+    }
 
     auto text = formatMidiMessage(message, deviceName);
     auto color = getColorForMessage(message, deviceName);

@@ -593,51 +593,36 @@ void LogDisplaySettingsComponent::setupColorSection(ColorSection& section, const
  */
 void LogDisplaySettingsComponent::handleApplyButton()
 {
-    // Don't access logDisplay if we're being destroyed
-    if (!isBeingDestroyed) {
-        // Cache the previous settings before applying new ones
-        if (hasAppliedOnce) {
-            previousSettings = currentSettings;
+    // Get current override state from previous settings
+    bool wasOverrideEnabled = previousSettings.overrideAllDevices;
+    
+    // Get new settings from UI
+    DisplaySettingsManager::DisplaySettings newSettings = getCurrentSettings();
+    
+    // If override setting is changing
+    if (currentDevice == "ALL" && newSettings.overrideAllDevices != wasOverrideEnabled) {
+        // If enabling override, store device settings
+        if (newSettings.overrideAllDevices) {
+            logDisplay.getSettingsManager().storeDeviceSettingsBeforeOverride();
         }
-        
-        // X- Get the current background color to preserve it
-        juce::Colour currentBgColor = currentSettings.backgroundColor;
-        
-        // Update current settings from all controls
-        currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-        
-        // X- Update override state
-        currentSettings.overrideAllDevices = overrideToggle.getToggleState();
-        
-        // Update colors
-        currentSettings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
-        currentSettings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
-        currentSettings.controllerColor = controllerColorSection.selector->getCurrentColour();
-        currentSettings.pitchBendColor = pitchBendColorSection.selector->getCurrentColour();
-        currentSettings.pressureColor = pressureColorSection.selector->getCurrentColour();
-        currentSettings.programChangeColor = programChangeColorSection.selector->getCurrentColour();
-        currentSettings.clockColor = clockColorSection.selector->getCurrentColour();
-        currentSettings.sysExColor = sysExColorSection.selector->getCurrentColour();
-        currentSettings.defaultColor = defaultColorSection.selector->getCurrentColour();
-        
-        // Update mute states
-        currentSettings.muteNoteOn = noteOnColorSection.muteButton.getToggleState();
-        currentSettings.muteNoteOff = noteOffColorSection.muteButton.getToggleState();
-        currentSettings.muteController = controllerColorSection.muteButton.getToggleState();
-        currentSettings.mutePitchBend = pitchBendColorSection.muteButton.getToggleState();
-        currentSettings.mutePressure = pressureColorSection.muteButton.getToggleState();
-        currentSettings.muteProgramChange = programChangeColorSection.muteButton.getToggleState();
-        currentSettings.muteClock = clockColorSection.muteButton.getToggleState();
-        currentSettings.muteSysEx = sysExColorSection.muteButton.getToggleState();
-        currentSettings.muteDefault = defaultColorSection.muteButton.getToggleState();
-        
-        // X- Preserve the background color
-        currentSettings.backgroundColor = currentBgColor;
-        
-        // Apply the settings
-        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
-        hasAppliedOnce = true;
+        // If disabling override, restore device settings after applying new "ALL" settings
+        else {
+            // Apply the ALL settings first without override
+            newSettings.overrideAllDevices = false;
+            logDisplay.getSettingsManager().setSettings(newSettings, currentDevice);
+            
+            // Then restore device-specific settings
+            logDisplay.getSettingsManager().restoreDeviceSettingsAfterOverride();
+            return; // Return here as we've already done the updates
+        }
     }
+    
+    // Normal apply behavior
+    logDisplay.getSettingsManager().setSettings(newSettings, currentDevice);
+    
+    // Update previousSettings for potential resets
+    previousSettings = newSettings;
+    hasAppliedOnce = true;
 }
 
 /**
@@ -753,6 +738,43 @@ void LogDisplaySettingsComponent::cacheCurrentSettings()
 {
     // X- Cache the current settings before switching devices
     previousSettings = currentSettings;
+}
+
+DisplaySettingsManager::DisplaySettings LogDisplaySettingsComponent::getCurrentSettings()
+{
+    DisplaySettingsManager::DisplaySettings settings = currentSettings;
+    
+    // Update with current UI state
+    settings.fontSize = fontSizeSlider.getValue();
+    
+    // Get colors from color selectors
+    settings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
+    settings.noteOffColor = noteOffColorSection.selector->getCurrentColour();
+    settings.controllerColor = controllerColorSection.selector->getCurrentColour();
+    settings.pitchBendColor = pitchBendColorSection.selector->getCurrentColour();
+    settings.pressureColor = pressureColorSection.selector->getCurrentColour();
+    settings.programChangeColor = programChangeColorSection.selector->getCurrentColour();
+    settings.clockColor = clockColorSection.selector->getCurrentColour();
+    settings.sysExColor = sysExColorSection.selector->getCurrentColour();
+    settings.defaultColor = defaultColorSection.selector->getCurrentColour();
+    
+    // Get mute states
+    settings.muteNoteOn = noteOnColorSection.muteButton.getToggleState();
+    settings.muteNoteOff = noteOffColorSection.muteButton.getToggleState();
+    settings.muteController = controllerColorSection.muteButton.getToggleState();
+    settings.mutePitchBend = pitchBendColorSection.muteButton.getToggleState();
+    settings.mutePressure = pressureColorSection.muteButton.getToggleState();
+    settings.muteProgramChange = programChangeColorSection.muteButton.getToggleState();
+    settings.muteClock = clockColorSection.muteButton.getToggleState();
+    settings.muteSysEx = sysExColorSection.muteButton.getToggleState();
+    settings.muteDefault = defaultColorSection.muteButton.getToggleState();
+    
+    // For "ALL" device, check the override setting
+    if (currentDevice == "ALL") {
+        settings.overrideAllDevices = overrideToggle.getToggleState();
+    }
+    
+    return settings;
 }
 
 } // namespace MidiPortal 
