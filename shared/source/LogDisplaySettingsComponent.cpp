@@ -622,6 +622,8 @@ void LogDisplaySettingsComponent::handleApplyButton()
     
     // Update previousSettings for potential resets
     previousSettings = newSettings;
+    // Also update device-specific previous settings map
+    devicePreviousSettings[currentDevice] = newSettings;
     hasAppliedOnce = true;
 }
 
@@ -642,11 +644,17 @@ void LogDisplaySettingsComponent::handleResetButton()
         // Get the current device name
         juce::String deviceName = deviceSelector.getItemText(deviceSelector.getSelectedItemIndex());
         
-        // X- If "Default" is selected, reset to the default settings
-        // X- Otherwise, reset to the device-specific settings from the DisplaySettingsManager
+        // Check if we have previous settings for this specific device in the map
+        auto it = devicePreviousSettings.find(deviceName);
+        
         if (hasAppliedOnce) {
-            // Reset to previous settings if we've applied at least once
-            currentSettings = previousSettings;
+            // If device-specific settings exist in the map, use those
+            if (it != devicePreviousSettings.end()) {
+                currentSettings = it->second;
+            } else {
+                // Otherwise fall back to the general previousSettings
+                currentSettings = previousSettings;
+            }
         } else {
             // Otherwise reset to default settings
             if (deviceName == "Default") {
@@ -738,6 +746,8 @@ void LogDisplaySettingsComponent::cacheCurrentSettings()
 {
     // X- Cache the current settings before switching devices
     previousSettings = currentSettings;
+    // Also update device-specific previous settings map
+    devicePreviousSettings[currentDevice] = currentSettings;
 }
 
 DisplaySettingsManager::DisplaySettings LogDisplaySettingsComponent::getCurrentSettings()

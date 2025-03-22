@@ -285,11 +285,18 @@ private:
     DisplaySettingsManager::DisplaySettings currentSettings;
     
     /**
-     * @brief Previous display settings for reset functionality.
+     * @brief Previous display settings for the current device.
      * 
      * Stores the previous state of the display settings for the reset button.
      */
-    DisplaySettingsManager::DisplaySettings previousSettings;  // For reset functionality
+    DisplaySettingsManager::DisplaySettings previousSettings;
+    
+    /**
+     * @brief Map of previous display settings for each device.
+     * 
+     * Stores the previous state of display settings for each device for reset functionality.
+     */
+    std::map<juce::String, DisplaySettingsManager::DisplaySettings> devicePreviousSettings;
     
     /**
      * @brief Default display settings.
