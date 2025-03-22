@@ -86,5 +86,4 @@ lldb ./build/standalone/MidiPortalStandalone
 (lldb) run
 
 ## Notes
-For detailed information about the build system and common issues, see the "Common Issues & Fixes" 
-section in the README.md file.
+For detailed information about the build system and common issues, see the "Common Issues & Fixes" section in the README.md file.
