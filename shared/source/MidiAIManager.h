@@ -184,7 +184,22 @@ public:
      */
     void timerCallback() override;
     
+    // Add file path member and file IO methods
+    void setMidiDataFilePath(const juce::String& path);
+    juce::String getMidiDataFilePath() const;
+    
+    // Add raw MIDI data recording
+    void recordMidiData(const juce::MidiMessage& message, const juce::String& deviceName);
+    
 private:
+    /**
+     * @brief Records an insight to the MIDI data file.
+     * @param insight The insight to record.
+     *
+     * Records an AI insight to be later written to the MIDI data file.
+     */
+    void recordInsight(const AIInsight& insight);
+    
     /**
      * @brief The Rust ML context.
      * 
@@ -212,6 +227,19 @@ private:
      * The last time insights were generated, in milliseconds.
      */
     juce::int64 lastInsightTime;
+    
+    // Add file path and file stream
+    juce::String midiDataFilePath;
+    std::unique_ptr<juce::FileOutputStream> midiDataFile;
+    
+    // Add method to open/create the file
+    bool openMidiDataFile();
+    
+    // Add tracking flag for JSON file formatting
+    bool midiEventWritten = false;
+    
+    // Add vector for insights to record at shutdown
+    std::vector<AIInsight> insightsToRecord;
 };
 
 } // namespace MidiPortal 

@@ -59,6 +59,7 @@ public:
   static constexpr int kSettingsMenuItemId = 1;
   static constexpr int kLogDisplaySettingsMenuItemId = 2;
   static constexpr int kWindowRoutingMenuItemId = 3;
+  static constexpr int kSaveFileLocationMenuItemId = 4;
   static constexpr int kViewModeListId = 100;
   static constexpr int kViewModeGridId = 101;
   static constexpr int kViewModeTimelineId = 102;
