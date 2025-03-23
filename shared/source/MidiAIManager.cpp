@@ -17,7 +17,8 @@ namespace MidiPortal {
  */
 MidiAIManager::MidiAIManager()
     : mlContext(nullptr),
-      lastInsightTime(0)
+      lastInsightTime(0),
+      midiEventWritten(false)
 {
     // Initialize the ML context
     mlContext = create_ml_context();
@@ -27,6 +28,19 @@ MidiAIManager::MidiAIManager()
     
     // Load default models
     loadModel("models/pattern_recognition.model");
+    
+    // X- Set default file path in user documents folder
+    juce::File appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                               .getChildFile("MidiPortal");
+    
+    // Ensure directory exists
+    appDataDir.createDirectory();
+    
+    // Set the file path
+    setMidiDataFilePath(appDataDir.getChildFile("MidiData.json").getFullPathName());
+    
+    // Open the file
+    openMidiDataFile();
 }
 
 /**
@@ -38,6 +52,62 @@ MidiAIManager::~MidiAIManager()
 {
     // Stop the timer
     stopTimer();
+    
+    // Close the MIDI data file
+    if (midiDataFile != nullptr)
+    {
+        // Write the JSON footer for MIDI events
+        midiDataFile->writeText("\n  ],\n", false, false, nullptr);
+        
+        // Write the insights section if we have any
+        midiDataFile->writeText("  \"insights\": [\n", false, false, nullptr);
+        
+        bool firstInsight = true;
+        for (const auto& insight : insightsToRecord)
+        {
+            if (!firstInsight)
+                midiDataFile->writeText(",\n", false, false, nullptr);
+            else
+                firstInsight = false;
+                
+            // Start insight JSON object
+            midiDataFile->writeText("    {\n", false, false, nullptr);
+            
+            // Write insight type
+            midiDataFile->writeText("      \"type\": \"", false, false, nullptr);
+            switch (insight.type)
+            {
+                case AIInsight::Type::Pattern:
+                    midiDataFile->writeText("Pattern", false, false, nullptr);
+                    break;
+                case AIInsight::Type::Performance:
+                    midiDataFile->writeText("Performance", false, false, nullptr);
+                    break;
+                case AIInsight::Type::Style:
+                    midiDataFile->writeText("Style", false, false, nullptr);
+                    break;
+            }
+            midiDataFile->writeText("\",\n", false, false, nullptr);
+            
+            // Write description
+            midiDataFile->writeText("      \"description\": \"", false, false, nullptr);
+            midiDataFile->writeText(insight.description, false, false, nullptr);
+            midiDataFile->writeText("\",\n", false, false, nullptr);
+            
+            // Write score
+            midiDataFile->writeText("      \"score\": ", false, false, nullptr);
+            midiDataFile->writeText(juce::String(insight.score), false, false, nullptr);
+            midiDataFile->writeText("\n", false, false, nullptr);
+            
+            // Close insight JSON object
+            midiDataFile->writeText("    }", false, false, nullptr);
+        }
+        
+        // Close the insights section and the entire JSON document
+        midiDataFile->writeText("\n  ]\n}", false, false, nullptr);
+        midiDataFile->flush();
+        midiDataFile.reset();
+    }
     
     // Clean up the ML context
     if (mlContext != nullptr)
@@ -56,7 +126,7 @@ MidiAIManager::~MidiAIManager()
  */
 void MidiAIManager::processMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
-    // Process the message with the ML context
+    // Process with ML context as before
     if (mlContext != nullptr)
     {
         // Convert the MIDI message to a format that the Rust code can understand
@@ -74,10 +144,13 @@ void MidiAIManager::processMidiMessage(const juce::MidiMessage& message, const j
                 buffer[i] = message.getRawData()[i];
             }
             
-            // Process the message
+            // Process the message with the ML context
             process_midi_message_ml(mlContext, buffer, size, deviceName.toRawUTF8());
         }
     }
+    
+    // X- Record the MIDI data to file
+    recordMidiData(message, deviceName);
 }
 
 /**
@@ -333,10 +406,188 @@ void MidiAIManager::timerCallback()
                     
                     // Add the insight
                     insights.push_back(insight);
+                    
+                    // X- Write insight to file
+                    recordInsight(insight);
                 }
             }
         }
     }
+}
+
+// New method to set file path
+void MidiAIManager::setMidiDataFilePath(const juce::String& path)
+{
+    // Set the file path
+    midiDataFilePath = path;
+    
+    // Close existing file if open
+    midiDataFile.reset();
+    
+    // Open the new file
+    openMidiDataFile();
+}
+
+// New method to get file path
+juce::String MidiAIManager::getMidiDataFilePath() const
+{
+    return midiDataFilePath;
+}
+
+// New method to open/create the file
+bool MidiAIManager::openMidiDataFile()
+{
+    // Create the file
+    juce::File file(midiDataFilePath);
+    
+    // Create parent directory if it doesn't exist
+    file.getParentDirectory().createDirectory();
+    
+    // Open the file for writing (overwrite existing file)
+    midiDataFile = std::make_unique<juce::FileOutputStream>(file);
+    
+    // Check if the file was opened successfully
+    if (midiDataFile == nullptr || !midiDataFile->openedOk())
+    {
+        DBG("Failed to open MIDI data file: " + midiDataFilePath);
+        midiDataFile.reset();
+        return false;
+    }
+    
+    // Write the JSON header
+    midiDataFile->writeText("{\n  \"midi_events\": [\n", false, false, nullptr);
+    
+    // Add flag to track if we've written any events
+    midiEventWritten = false;
+    
+    return true;
+}
+
+// New method to record MIDI data
+void MidiAIManager::recordMidiData(const juce::MidiMessage& message, const juce::String& deviceName)
+{
+    // Check if the file is open
+    if (midiDataFile == nullptr || !midiDataFile->openedOk())
+    {
+        return;
+    }
+    
+    // Format the MIDI data as JSON
+    juce::String jsonEvent;
+    
+    // Add comma if this isn't the first event
+    if (midiEventWritten)
+    {
+        jsonEvent = ",\n";
+    }
+    else
+    {
+        midiEventWritten = true;
+    }
+    
+    // Get the current time
+    juce::Time now = juce::Time::getCurrentTime();
+    
+    // Start the JSON object
+    jsonEvent += "    {\n";
+    
+    // Add timestamp
+    jsonEvent += "      \"timestamp\": \"" + now.formatted("%Y-%m-%d %H:%M:%S.%ms") + "\",\n";
+    
+    // Add device name
+    jsonEvent += "      \"device\": \"" + deviceName + "\",\n";
+    
+    // Add message type
+    if (message.isNoteOn())
+        jsonEvent += "      \"type\": \"NoteOn\",\n";
+    else if (message.isNoteOff())
+        jsonEvent += "      \"type\": \"NoteOff\",\n";
+    else if (message.isController())
+        jsonEvent += "      \"type\": \"ControlChange\",\n";
+    else if (message.isPitchWheel())
+        jsonEvent += "      \"type\": \"PitchBend\",\n";
+    else if (message.isProgramChange())
+        jsonEvent += "      \"type\": \"ProgramChange\",\n";
+    else if (message.isChannelPressure() || message.isAftertouch())
+        jsonEvent += "      \"type\": \"Aftertouch\",\n";
+    else if (message.isMidiClock())
+        jsonEvent += "      \"type\": \"Clock\",\n";
+    else if (message.isSysEx())
+        jsonEvent += "      \"type\": \"SysEx\",\n";
+    else
+        jsonEvent += "      \"type\": \"Other\",\n";
+    
+    // Add channel
+    jsonEvent += "      \"channel\": " + juce::String(message.getChannel()) + ",\n";
+    
+    // Add message-specific data
+    if (message.isNoteOn() || message.isNoteOff())
+    {
+        jsonEvent += "      \"note\": " + juce::String(message.getNoteNumber()) + ",\n";
+        jsonEvent += "      \"velocity\": " + juce::String(message.getVelocity()) + ",\n";
+        
+        // Add note name
+        jsonEvent += "      \"noteName\": \"" + juce::MidiMessage::getMidiNoteName(message.getNoteNumber(), true, true, 4) + "\",\n";
+    }
+    else if (message.isController())
+    {
+        jsonEvent += "      \"controller\": " + juce::String(message.getControllerNumber()) + ",\n";
+        jsonEvent += "      \"value\": " + juce::String(message.getControllerValue()) + ",\n";
+    }
+    else if (message.isPitchWheel())
+    {
+        jsonEvent += "      \"value\": " + juce::String(message.getPitchWheelValue()) + ",\n";
+    }
+    else if (message.isProgramChange())
+    {
+        jsonEvent += "      \"program\": " + juce::String(message.getProgramChangeNumber()) + ",\n";
+    }
+    else if (message.isChannelPressure())
+    {
+        jsonEvent += "      \"pressure\": " + juce::String(message.getChannelPressureValue()) + ",\n";
+    }
+    else if (message.isAftertouch())
+    {
+        jsonEvent += "      \"note\": " + juce::String(message.getNoteNumber()) + ",\n";
+        jsonEvent += "      \"pressure\": " + juce::String(message.getAfterTouchValue()) + ",\n";
+    }
+    
+    // Add raw data
+    jsonEvent += "      \"rawData\": [";
+    
+    for (int i = 0; i < message.getRawDataSize(); ++i)
+    {
+        if (i > 0) jsonEvent += ", ";
+        jsonEvent += juce::String(message.getRawData()[i]);
+    }
+    
+    jsonEvent += "]\n";
+    
+    // Close the JSON object
+    jsonEvent += "    }";
+    
+    // Write to file
+    midiDataFile->writeText(jsonEvent, false, false, nullptr);
+    
+    // Flush to ensure data is written
+    midiDataFile->flush();
+}
+
+// New method to record insights
+void MidiAIManager::recordInsight(const AIInsight& insight)
+{
+    // Check if the file is open
+    if (midiDataFile == nullptr || !midiDataFile->openedOk())
+    {
+        return;
+    }
+    
+    // We won't include insights in the main MIDI event array
+    // Instead, we'll add them to a separate section at the end of the file
+    // This will happen when the file is closed in the destructor
+    
+    // For now, just store the insights
+    insightsToRecord.push_back(insight);
 }
 
 } // namespace MidiPortal 

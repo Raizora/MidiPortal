@@ -130,30 +130,19 @@ class MainComponent::Impl
 public:
     Impl(MainComponent& owner, SettingsManager& settingsManager, WindowManager& windowManager)
         : owner(owner),
-          aiManager(std::make_unique<MidiAIManager>()),
-          aiInsightComponent(std::make_unique<AIInsightComponent>()),
-          aiInsightTimer(std::make_unique<AIInsightTimer>(*aiManager, *aiInsightComponent))
+          aiManager(std::make_unique<MidiAIManager>())
     {
-        // X- Added AI manager and insight component
-        
-        // Add the AI insight component
-        owner.addAndMakeVisible(*aiInsightComponent);
-        
-        // Start the timer to check for insights every 500ms
-        aiInsightTimer->startTimer(500);
+        // X- Removed AI insight component and timer in favor of file-based recording
     }
     
     ~Impl()
     {
-        // Stop the AI insight timer
-        aiInsightTimer->stopTimer();
+        // Clean up any resources as needed
     }
     
     void resized()
     {
-        // Position the AI insight component at the bottom of the window
-        const int insightHeight = 150;
-        aiInsightComponent->setBounds(0, owner.getHeight() - insightHeight, owner.getWidth(), insightHeight);
+        // X- No UI components to resize
     }
     
     void processMidiMessage(const juce::MidiMessage& message, const juce::String& deviceName)
@@ -164,11 +153,26 @@ public:
         }
     }
     
+    void setMidiDataFilePath(const juce::String& filePath)
+    {
+        // Set the file path in the AI manager
+        if (aiManager != nullptr) {
+            aiManager->setMidiDataFilePath(filePath);
+        }
+    }
+    
+    juce::String getMidiDataFilePath() const
+    {
+        // Get the file path from the AI manager
+        if (aiManager != nullptr) {
+            return aiManager->getMidiDataFilePath();
+        }
+        return {};
+    }
+    
 private:
     MainComponent& owner;
     std::unique_ptr<MidiAIManager> aiManager;
-    std::unique_ptr<AIInsightComponent> aiInsightComponent;
-    std::unique_ptr<AIInsightTimer> aiInsightTimer;
 };
 
 /**
@@ -351,7 +355,10 @@ void MainComponent::paint(juce::Graphics& g) {
  */
 void MainComponent::resized()
 {
-    impl->resized();
+    // X- Fill the entire window with the MidiLogDisplay
+    if (midiLogDisplay != nullptr) {
+        midiLogDisplay->setBounds(0, 0, getWidth(), getHeight());
+    }
 }
 
 /**
@@ -393,12 +400,14 @@ juce::PopupMenu MainComponent::getMenuForIndex(int /*index*/, const juce::String
     }
     else if (name == "File")
     {
+        menu.addItem(kSaveFileLocationMenuItemId, "Save File Location...", true, false);
         menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
     }
     #else
     if (name == "MidiPortal")
     {
         menu.addItem(kSettingsMenuItemId, "Settings...", true, false);
+        menu.addItem(kSaveFileLocationMenuItemId, "Save File Location...", true, false);
         menu.addItem(kLogDisplaySettingsMenuItemId, "Log Display Settings...", true, false);
     }
     else if (name == "View")
@@ -437,6 +446,64 @@ void MainComponent::menuItemSelected(int menuItemID, int topLevelMenuIndex)
         }
         
         settingsWindow->toFront(true);
+    }
+    else if (menuItemID == kSaveFileLocationMenuItemId)
+    {
+        // Get the current file path
+        juce::File currentFile;
+        
+        if (impl != nullptr) {
+            juce::String currentPath = impl->getMidiDataFilePath();
+            if (currentPath.isNotEmpty()) {
+                currentFile = juce::File(currentPath);
+            }
+        }
+        
+        // If there's no current path, use the application data directory
+        if (!currentFile.exists()) {
+            currentFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                             .getChildFile("MidiPortal");
+        }
+        
+        // Create a file chooser for selecting a directory
+        auto fileChooser = std::make_shared<juce::FileChooser>(
+            "Select Save File Location",
+            currentFile,
+            "*.json",
+            true
+        );
+        
+        // Show the dialog asynchronously
+        fileChooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, fileChooser](const juce::FileChooser& chooser)
+            {
+                if (chooser.getResult().existsAsFile() || chooser.getResult().getParentDirectory().isDirectory())
+                {
+                    // Get the selected file/path
+                    juce::File selectedFile = chooser.getResult();
+                    
+                    // Ensure the file has .json extension
+                    if (!selectedFile.getFileName().endsWithIgnoreCase(".json"))
+                    {
+                        selectedFile = selectedFile.getSiblingFile(selectedFile.getFileNameWithoutExtension() + ".json");
+                    }
+                    
+                    // Set the new file path in the AI manager
+                    if (impl != nullptr)
+                    {
+                        impl->setMidiDataFilePath(selectedFile.getFullPathName());
+                        
+                        // Show confirmation dialog
+                        juce::AlertWindow::showMessageBoxAsync(
+                            juce::AlertWindow::InfoIcon,
+                            "Save Location Updated",
+                            "MIDI data will now be saved to:\n" + selectedFile.getFullPathName(),
+                            "OK"
+                        );
+                    }
+                }
+            }
+        );
     }
     else if (menuItemID == kLogDisplaySettingsMenuItemId) // Log Display Settings
     {
