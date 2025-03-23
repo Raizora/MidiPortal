@@ -22,7 +22,7 @@ MidiLogDisplay::MidiLogDisplay(DisplaySettingsManager& manager)
     : settingsManager(manager)
 {
     // Initialize default settings
-    settingsManager.addSettings("Default", DisplaySettingsManager::DisplaySettings());
+    settingsManager.addSettings("ALL", DisplaySettingsManager::DisplaySettings());
     setSize(800, 600);
     
     // X- Start the timer to update animations (30fps)
@@ -175,27 +175,27 @@ void MidiLogDisplay::changeListenerCallback(juce::ChangeBroadcaster* source)
  */
 void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
-    // Check if this message type is muted based on settings
+    // X- Get settings for this device
     const auto& settings = settingsManager.getSettings(deviceName);
+
+    // Debug pitch bend messages
+    if (message.isPitchWheel()) {
+        DBG("PitchBend message received, mute state: " + juce::String(settings.mutePitchBend ? "true" : "false"));
+    }
     
-    // Check mute settings based on message type
+    // X- Check mute flags based on message type - ensure correct check for PitchBend
     if ((message.isNoteOn() && settings.muteNoteOn) ||
         (message.isNoteOff() && settings.muteNoteOff) ||
-        (message.isPitchWheel() && settings.mutePitchBend) ||
         (message.isController() && settings.muteController) ||
+        (message.isPitchWheel() && settings.mutePitchBend) ||
         ((message.isChannelPressure() || message.isAftertouch()) && settings.mutePressure) ||
         (message.isProgramChange() && settings.muteProgramChange) ||
         ((message.isMidiClock() || message.isMidiStart() || message.isMidiStop() || message.isMidiContinue()) && settings.muteClock) ||
-        (message.isSysEx() && settings.muteSysEx) ||
-        ((!message.isNoteOn() && !message.isNoteOff() && !message.isPitchWheel() && 
-          !message.isController() && !message.isChannelPressure() && !message.isAftertouch() && 
-          !message.isProgramChange() && !message.isMidiClock() && !message.isMidiStart() && 
-          !message.isMidiStop() && !message.isMidiContinue() && !message.isSysEx()) && settings.muteDefault))
+        (message.isSysEx() && settings.muteSysEx))
     {
-        // Message type is muted, don't display it
-        return;
+        return; // Skip muted message types
     }
-    
+
     auto text = formatMidiMessage(message, deviceName);
     auto color = getColorForMessage(message, deviceName);
     
@@ -305,6 +305,7 @@ juce::String MidiLogDisplay::formatMidiMessage(const juce::MidiMessage& message,
  */
 juce::Colour MidiLogDisplay::getColorForMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
+    // X- Get settings for this device (override will be handled by DisplaySettingsManager::getSettings)
     const auto& settings = settingsManager.getSettings(deviceName);
     
     if (message.isNoteOn())

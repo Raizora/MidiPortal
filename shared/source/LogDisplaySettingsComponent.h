@@ -192,6 +192,7 @@ private:
  */
 class LogDisplaySettingsComponent : public juce::Component,
                                   private juce::ComboBox::Listener
+                                  
 {
 public:
     /**
@@ -284,18 +285,25 @@ private:
     DisplaySettingsManager::DisplaySettings currentSettings;
     
     /**
-     * @brief Previous display settings for reset functionality.
+     * @brief Previous display settings for the current device.
      * 
      * Stores the previous state of the display settings for the reset button.
      */
-    DisplaySettingsManager::DisplaySettings previousSettings;  // For reset functionality
+    DisplaySettingsManager::DisplaySettings previousSettings;
+    
+    /**
+     * @brief Map of previous display settings for each device.
+     * 
+     * Stores the previous state of display settings for each device for reset functionality.
+     */
+    std::map<juce::String, DisplaySettingsManager::DisplaySettings> devicePreviousSettings;
     
     /**
      * @brief Default display settings.
      * 
      * Stores the default display settings for reference.
      */
-    DisplaySettingsManager::DisplaySettings defaultSettings;   // Original defaults
+    DisplaySettingsManager::DisplaySettings overrideAllDevices;   // Original defaults
     
     /**
      * @brief Name of the current device being edited.
@@ -316,28 +324,28 @@ private:
      * 
      * Displays a label for the device selector dropdown.
      */
-    juce::Label deviceLabel;
+    juce::Label deviceLabel{"Device Label", "Device:"};
     
     /**
      * @brief Dropdown for selecting which device's settings to edit.
      * 
      * Allows the user to select which device's settings to edit.
      */
-    juce::ComboBox deviceSelector;
+    juce::ComboBox deviceSelector{"Device Selector"};
     
     /**
      * @brief Label for the font size slider.
      * 
      * Displays a label for the font size slider.
      */
-    juce::Label fontSizeLabel;
+    juce::Label fontSizeLabel{"Font Size Label", "Font Size:"};
     
     /**
      * @brief Slider for adjusting font size.
      * 
      * Allows the user to adjust the font size used in the log display.
      */
-    juce::Slider fontSizeSlider;
+    juce::Slider fontSizeSlider{"Font Size Slider"};
 
     /**
      * @brief Container for color selectors.
@@ -488,6 +496,26 @@ private:
      * Updates the log display with the specified settings.
      */
     void applySettings(const DisplaySettingsManager::DisplaySettings& settings);
+    
+    // X- Added override toggle button for ALL device settings
+    juce::ToggleButton overrideToggle{"Override Toggle"};
+    
+    /**
+     * @brief Label for the override description.
+     * 
+     * Displays a label for the override description.
+     */
+    juce::Label overrideDescription{"Override Description"};
+    
+    /**
+     * @brief Gets the current settings.
+     * 
+     * Returns the current settings of the component.
+     */
+    DisplaySettingsManager::DisplaySettings getCurrentSettings();
+    
+    // Add this member variable
+    std::map<juce::String, DisplaySettingsManager::DisplaySettings> deviceOriginalSettings;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LogDisplaySettingsComponent)
 };

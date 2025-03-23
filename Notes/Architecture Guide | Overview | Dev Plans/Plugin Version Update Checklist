@@ -1,0 +1,49 @@
+PLUGIN UPDATE CHECKLIST
+=======================
+
+1. CMake Setup
+   ------------
+   - Ensure your plugin’s CMake references the latest shared code.
+   - Confirm 'target_link_libraries' includes:
+       * MidiPortalShared
+       * The necessary JUCE modules (juce_audio_processors, etc.)
+   - Check 'target_include_directories' covers all new shared source folders.
+   - If you use Rust code in shared, confirm the plugin can locate the Rust library at runtime.
+
+2. Plugin Editor & Processor
+   -------------------------
+   - Decide if the plugin should display the same UI as the standalone (MainComponent) or a custom UI.
+   - If using MainComponent in the plugin:
+       * Create an instance of MainComponent in PluginEditor and add it as a child.
+       * Ensure window resizing logic and device manager code are adapted (plugins often don’t manage devices directly).
+   - If using a custom plugin UI, confirm it is updated to reflect any new features from shared code (e.g., new logging or components).
+
+3. Device/Audio Manager Differences
+   --------------------------------
+   - Standalone uses AudioDeviceManager for MIDI/Audio I/O.
+   - In a plugin, the DAW typically handles I/O. 
+   - Any code that calls deviceManager.initialiseWithDefaultDevices(...) might be disabled or adapted in plugin mode.
+
+4. Rust FFI Integration
+   ---------------------
+   - If shared code depends on a Rust library (midi_engine), ensure the plugin also has access.
+   - Typically, linking to MidiPortalShared is enough, but be aware of runtime library paths (the .dylib/.so must be accessible in a DAW).
+
+5. Standalone-Only Code in Shared
+   ------------------------------
+   - Check for calls or references that are strictly for standalone (e.g., top-level windows, user settings dialogs).
+   - Conditional compilation (#ifdef JUCE_PLUGINBUILD) can help avoid conflicts in plugin builds.
+
+6. Testing in a DAW
+   ----------------
+   - Rebuild the plugin with your updated CMake settings.
+   - Copy or load the resulting .vst3 (or .component/.so) into a DAW (Ableton, Reaper, etc.).
+   - Verify the GUI and functionality (MIDI logging, messages) are as expected.
+   - Check for runtime or dependency errors (e.g., missing Rust library, missing assets).
+
+Summary:
+========
+- Make sure your plugin's CMake is up-to-date and references the new code.
+- Confirm the plugin either uses or bypasses device management from MainComponent.
+- Adapt or disable any standalone-only features in shared code.
+- Test thoroughly inside a DAW to confirm everything works.

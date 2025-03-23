@@ -327,4 +327,4 @@ DisplaySettingsManager& WindowManager::getSettingsManager()
     return displaySettingsManager;
 }
 
-} // namespace MidiPortal 
+} // namespace MidiPortal ./build/standalone/MidiPortalStandalone
