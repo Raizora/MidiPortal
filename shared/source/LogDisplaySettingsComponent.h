@@ -348,6 +348,27 @@ private:
     juce::Slider fontSizeSlider{"Font Size Slider"};
 
     /**
+     * @brief Label for the fade rate slider.
+     * 
+     * Displays a label for the fade rate slider.
+     */
+    juce::Label fadeRateLabel{"Fade Rate Label", "Fade Rate:"};
+    
+    /**
+     * @brief Slider for adjusting fade rate.
+     * 
+     * Allows the user to adjust how quickly messages fade out.
+     */
+    juce::Slider fadeRateSlider{"Fade Rate Slider"};
+    
+    /**
+     * @brief Toggle button for enabling/disabling message fading.
+     * 
+     * Allows the user to enable or disable message fading.
+     */
+    juce::ToggleButton fadeRateToggle{"Enable Fading"};
+
+    /**
      * @brief Container for color selectors.
      * 
      * Contains all the color selectors for different MIDI message types.
@@ -452,6 +473,13 @@ private:
      * Updates the current settings with the new font size.
      */
     void fontSizeChanged();
+    
+    /**
+     * @brief Handles changes to the fade rate slider.
+     * 
+     * Updates the current settings with the new fade rate.
+     */
+    void fadeRateChanged();
     
     /**
      * @brief Updates all controls to reflect the current settings.

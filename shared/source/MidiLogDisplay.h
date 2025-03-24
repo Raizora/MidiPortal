@@ -17,22 +17,20 @@
 #include <deque>
 #include <memory>
 #include <map>
+#include <juce_gui_extra/juce_gui_extra.h>
+#include <juce_events/juce_events.h>
 
 namespace MidiPortal {
 
 /**
  * @class MidiLogDisplay
- * @brief A component that displays a scrolling log of MIDI messages with fading effect.
+ * @brief Displays a scrolling log of MIDI messages with visual formatting.
  * 
- * This component displays MIDI messages in a scrolling log format, with different
- * colors for different types of messages. It supports fading effects for older
- * messages and can be customized through the DisplaySettingsManager.
- * 
- * The display is updated in real-time as new MIDI messages are received, and
- * automatically scrolls to show the most recent messages.
+ * This component displays a scrolling log of MIDI messages with customizable
+ * visual formatting. Each message is displayed with a color based on its type
+ * and fades out over time.
  */
-class MidiLogDisplay : public juce::Component,
-                      public juce::Timer,
+class MidiLogDisplay : public juce::AnimatedAppComponent,
                       public juce::ChangeListener
 {
 public:
@@ -40,19 +38,18 @@ public:
      * @brief Constructor that takes a reference to the DisplaySettingsManager.
      * @param manager Reference to the DisplaySettingsManager that will be used for display settings.
      * 
-     * Initializes the MidiLogDisplay with a reference to the DisplaySettingsManager
-     * and sets up default visual properties.
+     * Initializes the MidiLogDisplay with a reference to the DisplaySettingsManager,
+     * sets up default visual properties, and starts the animation.
      */
-    explicit MidiLogDisplay(DisplaySettingsManager& manager);
+    MidiLogDisplay(DisplaySettingsManager& manager);
     
     /**
-     * @brief Destructor that cleans up resources and unregisters from the DisplaySettingsManager.
+     * @brief Destructor that cleans up resources.
      * 
-     * Stops the timer and unregisters from the DisplaySettingsManager to prevent
-     * memory leaks and dangling references.
+     * Stops the animation and cleans up resources.
      */
     ~MidiLogDisplay() override;
-
+    
     /**
      * @brief Paints the component with the current MIDI message log.
      * @param g The Graphics context to paint into.
@@ -65,17 +62,17 @@ public:
     /**
      * @brief Handles component resizing.
      * 
-     * Currently empty as the layout is handled in the paint method.
+     * Called when the component is resized, allowing layout adjustments.
      */
     void resized() override;
     
     /**
-     * @brief Timer callback that updates message animations.
+     * @brief Animation update callback that updates message animations.
      * 
-     * Called regularly by the timer to update message opacities and scroll position,
-     * creating a fading effect for older messages.
+     * Called regularly by the AnimatedAppComponent to update message opacities
+     * and scroll position, creating a fading effect for older messages.
      */
-    void timerCallback() override;
+    void update() override;
     
     /**
      * @brief Handles change notifications from the DisplaySettingsManager.
@@ -156,6 +153,7 @@ private:
         float opacity;           ///< Current opacity of the message (1.0 = fully opaque)
         juce::Time timestamp;    ///< When the message was received
         juce::String deviceName; ///< Name of the device that sent the message
+        juce::String uniqueId;   ///< Unique identifier to link with LogEntryData
         
         /**
          * @brief Constructor that initializes a LogEntry.
@@ -165,7 +163,7 @@ private:
          * @param deviceNameIn The name of the device that sent the message.
          */
         LogEntry(const juce::String& textIn, const juce::Colour& colorIn, const juce::Time& timestampIn, const juce::String& deviceNameIn)
-            : text(textIn), color(colorIn), opacity(1.0f), timestamp(timestampIn), deviceName(deviceNameIn) {}
+            : text(textIn), color(colorIn), opacity(1.0f), timestamp(timestampIn), deviceName(deviceNameIn), uniqueId("") {}
     };
     
     /**
@@ -206,14 +204,6 @@ private:
     size_t maxMessages = 100;
     
     /**
-     * @brief Rate at which messages fade out.
-     * 
-     * Controls how quickly messages fade out after being displayed.
-     * Higher values make messages fade faster.
-     */
-    float fadeRate = 0.02f;
-    
-    /**
      * @brief Speed at which the display scrolls.
      * 
      * Controls how quickly the display scrolls when new messages are added.
@@ -247,11 +237,12 @@ private:
         juce::String text;       ///< Formatted text representation of the MIDI message
         juce::Colour color;      ///< Color to display the message in
         juce::String deviceName; ///< Name of the device that sent the message
+        juce::String uniqueId;   ///< Unique identifier to link with LogEntry
         
         /**
          * @brief Default constructor.
          */
-        LogEntryData() : text(), color(juce::Colours::white), deviceName() {}
+        LogEntryData() : text(), color(juce::Colours::white), deviceName(), uniqueId("") {}
         
         /**
          * @brief Constructor that initializes a LogEntryData.
@@ -260,7 +251,7 @@ private:
          * @param d The name of the device that sent the message.
          */
         LogEntryData(const juce::String& t, const juce::Colour& c, const juce::String& d)
-            : text(t), color(c), deviceName(d) {}
+            : text(t), color(c), deviceName(d), uniqueId("") {}
     };
     
     /**

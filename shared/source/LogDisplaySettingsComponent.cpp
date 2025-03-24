@@ -101,12 +101,9 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     overrideToggle.setButtonText("Override all device settings");
     overrideToggle.setToggleState(currentSettings.overrideAllDevices, juce::dontSendNotification);
     overrideToggle.onClick = [this] {
-        // X- Update the override state in ALL settings
+        // X- Update the override state in currentSettings
         currentSettings.overrideAllDevices = overrideToggle.getToggleState();
-        // X- Apply the change immediately so it takes effect
-        logDisplay.getSettingsManager().setSettings(currentSettings, "ALL");
-        // X- Only show the override toggle when "ALL" is selected
-        overrideToggle.setVisible(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()) == "ALL");
+        // X- Remove immediate application - will be applied when user clicks Apply
     };
     deviceSection->addAndMakeVisible(overrideToggle);
     
@@ -131,9 +128,45 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     fontSizeSlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
     fontSizeSlider.setColour(juce::Slider::trackColourId, juce::Colours::darkgrey);
     
+    // Set up font size slider callback
+    fontSizeSlider.onValueChange = [this] {
+        fontSizeChanged();
+    };
+    
+    // X- Set up fade rate controls
+    fadeRateLabel.setText("Fade Rate:", juce::dontSendNotification);
+    fadeRateLabel.setFont(juce::Font(options));
+    fadeRateLabel.setJustificationType(juce::Justification::right);
+    
+    // X- Define range from 1ms (0.001) to 30s (dividing by 30fps timer rate)
+    // Using a logarithmic scale to make slider more usable
+    fadeRateSlider.setRange(0.001, 1.0, 0.001);
+    fadeRateSlider.setSkewFactor(0.3); // Logarithmic scale for better control
+    fadeRateSlider.setValue(currentSettings.fadeRate, juce::dontSendNotification);
+    fadeRateSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    fadeRateSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+    fadeRateSlider.setColour(juce::Slider::thumbColourId, juce::Colours::lightblue);
+    fadeRateSlider.setColour(juce::Slider::trackColourId, juce::Colours::darkgrey);
+    
+    // X- Set up fade rate slider callback
+    fadeRateSlider.onValueChange = [this] {
+        fadeRateChanged();
+    };
+    
+    // X- Set up fade rate toggle
+    fadeRateToggle.setToggleState(currentSettings.fadeRateEnabled, juce::dontSendNotification);
+    fadeRateToggle.onClick = [this] {
+        // Only update the current settings, don't apply to the display yet
+        currentSettings.fadeRateEnabled = fadeRateToggle.getToggleState();
+        // Removed immediate application to settings manager
+    };
+    
     // Add components to the appearance section
     appearanceSection->addAndMakeVisible(fontSizeLabel);
     appearanceSection->addAndMakeVisible(fontSizeSlider);
+    appearanceSection->addAndMakeVisible(fadeRateLabel);
+    appearanceSection->addAndMakeVisible(fadeRateSlider);
+    appearanceSection->addAndMakeVisible(fadeRateToggle);
     
     // Set up all color sections with their initial mute states
     setupColorSection(noteOnColorSection, "Note On Color", currentSettings.noteOnColor, currentSettings.muteNoteOn);
@@ -315,32 +348,54 @@ void LogDisplaySettingsComponent::resized()
     const int buttonHeight = 40;
     
     // Device section
-    auto deviceBounds = bounds.removeFromTop(80);
+    auto deviceBounds = bounds.removeFromTop(80); // X- Increased from 60 to 80 for more padding
     deviceSection->setBounds(deviceBounds);
     auto innerDeviceBounds = deviceBounds.reduced(10);
-    deviceLabel.setBounds(innerDeviceBounds.removeFromLeft(100));  // Increased from 80 to 100
-    deviceSelector.setBounds(innerDeviceBounds.removeFromLeft(200).reduced(5, 0));  // Add 5px padding from label
+    
+    // X- Create a smaller area for the actual controls, positioned at the top
+    auto deviceControlArea = innerDeviceBounds.removeFromTop(40);
+    
+    // X- Position components in the control area
+    deviceLabel.setBounds(deviceControlArea.removeFromLeft(100));
+    deviceSelector.setBounds(deviceControlArea.removeFromLeft(200).reduced(5, 0));
     
     // X- Position override toggle button to the right of the device selector
-    overrideToggle.setBounds(innerDeviceBounds.removeFromLeft(200).reduced(5, 0));
+    overrideToggle.setBounds(deviceControlArea.removeFromLeft(200).reduced(5, 0));
     // Only show the override toggle when "ALL" is selected
     overrideToggle.setVisible(deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()) == "ALL");
+    
+    // X- Add description under the controls with better positioning
+    overrideDescription.setBounds(innerDeviceBounds);
     
     bounds.removeFromTop(sectionSpacing);
     
     // Appearance section
-    auto appearanceBounds = bounds.removeFromTop(80);
+    auto appearanceBounds = bounds.removeFromTop(120); // Reduced from 140px to eliminate excess space
     appearanceSection->setBounds(appearanceBounds);
     
-    // X- Completely revised font size control layout to ensure visibility
-    // Get the inner bounds of the appearance section for our controls
+    // X- Create more precisely spaced control areas
     auto innerAppearanceBounds = appearanceSection->getLocalBounds().reduced(10);
     
-    // Position the label on the left side
-    fontSizeLabel.setBounds(innerAppearanceBounds.removeFromLeft(100).withHeight(30).withY(innerAppearanceBounds.getY() + 25));
+    // Add spacing between section title and first control row
+    innerAppearanceBounds.removeFromTop(15); // Add 15px padding after the section title
     
-    // Position the slider to fill the remaining width
-    fontSizeSlider.setBounds(innerAppearanceBounds.withHeight(30).withY(innerAppearanceBounds.getY() + 25));
+    // Create first row for font size
+    auto fontSizeRow = innerAppearanceBounds.removeFromTop(40);
+    fontSizeLabel.setBounds(fontSizeRow.removeFromLeft(100).withHeight(30).withY(fontSizeRow.getY() + 5));
+    fontSizeSlider.setBounds(fontSizeRow.withHeight(30).withY(fontSizeRow.getY() + 5));
+    
+    // Add spacing between rows
+    innerAppearanceBounds.removeFromTop(10);
+    
+    // Create second row for fade rate
+    auto fadeRateRow = innerAppearanceBounds.removeFromTop(40);
+    fadeRateLabel.setBounds(fadeRateRow.removeFromLeft(100).withHeight(30).withY(fadeRateRow.getY() + 5));
+    
+    // Split remaining area between slider and toggle
+    auto fadeRateControlArea = fadeRateRow.withHeight(30).withY(fadeRateRow.getY() + 5);
+    int toggleWidth = 120;
+    fadeRateSlider.setBounds(fadeRateControlArea.withTrimmedRight(toggleWidth + 5));
+    fadeRateToggle.setBounds(fadeRateControlArea.removeFromRight(toggleWidth));
     
     bounds.removeFromTop(sectionSpacing);
     
@@ -445,8 +500,25 @@ void LogDisplaySettingsComponent::fontSizeChanged()
 {
     // Don't access logDisplay if we're being destroyed
     if (!isBeingDestroyed) {
+        // Only update the current settings, don't apply to the display yet
         currentSettings.fontSize = static_cast<float>(fontSizeSlider.getValue());
-        logDisplay.getSettingsManager().setSettings(currentSettings, deviceSelector.getItemText(deviceSelector.getSelectedItemIndex()));
+        // Removed immediate application to settings manager
+    }
+}
+
+/**
+ * @brief Handles changes to the fade rate slider.
+ * 
+ * Updates the current settings with the new fade rate and applies the change
+ * to the settings manager for the selected device.
+ */
+void LogDisplaySettingsComponent::fadeRateChanged()
+{
+    // Don't access logDisplay if we're being destroyed
+    if (!isBeingDestroyed) {
+        // Only update the current settings, don't apply to the display yet
+        currentSettings.fadeRate = static_cast<float>(fadeRateSlider.getValue());
+        // Removed immediate application to settings manager
     }
 }
 
@@ -459,6 +531,10 @@ void LogDisplaySettingsComponent::fontSizeChanged()
 void LogDisplaySettingsComponent::updateControls()
 {
     fontSizeSlider.setValue(currentSettings.fontSize, juce::dontSendNotification);
+    
+    // X- Update fade rate controls
+    fadeRateSlider.setValue(currentSettings.fadeRate, juce::dontSendNotification);
+    fadeRateToggle.setToggleState(currentSettings.fadeRateEnabled, juce::dontSendNotification);
     
     // X- Update override toggle state
     overrideToggle.setToggleState(currentSettings.overrideAllDevices, juce::dontSendNotification);
@@ -756,6 +832,10 @@ DisplaySettingsManager::DisplaySettings LogDisplaySettingsComponent::getCurrentS
     
     // Update with current UI state
     settings.fontSize = fontSizeSlider.getValue();
+    
+    // X- Get fade rate settings
+    settings.fadeRate = fadeRateSlider.getValue();
+    settings.fadeRateEnabled = fadeRateToggle.getToggleState();
     
     // Get colors from color selectors
     settings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
