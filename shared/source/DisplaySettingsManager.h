@@ -67,6 +67,10 @@ public:
         bool muteSysEx = false;            ///< Whether to mute System Exclusive messages
         bool muteDefault = false;          ///< Whether to mute other message types
         
+        // X- Added fade rate settings
+        bool fadeRateEnabled = true;       ///< Whether to enable message fading
+        float fadeRate = 0.02f;            ///< Rate at which messages fade (0.001f to 1.0f)
+        
         // X- Added override flag to control whether these settings override all device-specific settings
         bool overrideAllDevices = false;
     };

@@ -25,8 +25,8 @@ MidiLogDisplay::MidiLogDisplay(DisplaySettingsManager& manager)
     settingsManager.addSettings("ALL", DisplaySettingsManager::DisplaySettings());
     setSize(800, 600);
     
-    // X- Start the timer to update animations (30fps)
-    startTimerHz(30);
+    // X- Set animation frame rate (30fps)
+    setFramesPerSecond(30);
     
     // X- Set background color
     setOpaque(true);
@@ -44,9 +44,6 @@ MidiLogDisplay::MidiLogDisplay(DisplaySettingsManager& manager)
  */
 MidiLogDisplay::~MidiLogDisplay()
 {
-    // X- Stop the timer
-    stopTimer();
-    
     // X- Unregister from settings manager
     settingsManager.unregisterDisplay(this);
     settingsManager.removeChangeListener(this);
@@ -92,7 +89,30 @@ void MidiLogDisplay::paint(juce::Graphics& g)
         const auto& settings = settingsManager.getSettings(entry.deviceName);
         
         g.setFont(settings.fontSize);
-        g.setColour(entry.color);
+        
+        // Find the matching message using uniqueId
+        float opacity = 1.0f; // Default to fully opaque if no matching message or fading disabled
+        
+        if (settings.fadeRateEnabled) {
+            // Only look for matching message if fading is enabled
+            bool foundMatch = false;
+            for (const auto& msg : messages) {
+                if (msg.uniqueId == entry.uniqueId) {
+                    opacity = msg.opacity;
+                    foundMatch = true;
+                    break;
+                }
+            }
+            
+            // If no matching message found in the animation queue, don't display this entry at all
+            if (!foundMatch) {
+                continue;  // Skip this message as it has faded out completely
+            }
+        }
+        
+        // Apply opacity to the color
+        juce::Colour colorWithOpacity = entry.color.withAlpha(opacity);
+        g.setColour(colorWithOpacity);
         
         float messageHeight = g.getCurrentFont().getHeight();
         y -= messageHeight;
@@ -116,36 +136,47 @@ void MidiLogDisplay::resized()
 }
 
 /**
- * @brief Timer callback that updates message animations.
+ * @brief Animation update callback that updates message animations.
  * 
- * Called regularly by the timer to update message opacities and scroll position,
- * creating a fading effect for older messages and smooth scrolling.
- * Triggers a repaint when animations are updated.
+ * Called regularly by the AnimatedAppComponent to update message opacities
+ * and scroll position, creating a fading effect for older messages.
  */
-void MidiLogDisplay::timerCallback()
+void MidiLogDisplay::update()
 {
-    bool needsRepaint = false;
-    
     // Update message opacities and remove fully faded messages
     for (auto it = messages.begin(); it != messages.end();)
     {
-        it->opacity -= fadeRate;
-        if (it->opacity <= 0.0f)
+        // X- Get device-specific settings for fade rate
+        const auto& settings = settingsManager.getSettings(it->deviceName);
+        
+        // X- Only fade if fading is enabled
+        if (settings.fadeRateEnabled) {
+            // Invert the fade rate so 0.001 = fast fade and 1.0 = slow fade
+            // At 30fps, we want 0.001 to fade almost instantly (large decrement)
+            // and 1.0 to fade over ~30 seconds (tiny decrement)
+            
+            // Calculate frames for a full fade (at 30fps):
+            // fadeRate 0.001: around 3 frames (0.1 seconds)
+            // fadeRate 1.0: around 900 frames (30 seconds)
+            float fadeAmount = (1.0f - settings.fadeRate) * 0.033f + 0.001f;
+            
+            it->opacity -= fadeAmount;
+        }
+        
+        if (it->opacity <= 0.0f) {
             it = messages.erase(it);
+        }
         else
             ++it;
-        needsRepaint = true;
     }
     
     // Update scroll position
     if (yOffset > 0.0f)
     {
         yOffset = std::max(0.0f, yOffset - scrollSpeed);
-        needsRepaint = true;
     }
     
-    if (needsRepaint)
-        repaint();
+    // No need to call repaint() - AnimatedAppComponent does this automatically
 }
 
 /**
@@ -178,11 +209,6 @@ void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::St
     // X- Get settings for this device
     const auto& settings = settingsManager.getSettings(deviceName);
 
-    // Debug pitch bend messages
-    if (message.isPitchWheel()) {
-        DBG("PitchBend message received, mute state: " + juce::String(settings.mutePitchBend ? "true" : "false"));
-    }
-    
     // X- Check mute flags based on message type - ensure correct check for PitchBend
     if ((message.isNoteOn() && settings.muteNoteOn) ||
         (message.isNoteOff() && settings.muteNoteOff) ||
@@ -199,11 +225,22 @@ void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::St
     auto text = formatMidiMessage(message, deviceName);
     auto color = getColorForMessage(message, deviceName);
     
-    logEntries.add(LogEntryData(text, color, deviceName));
+    // Use a unique ID to link entries in logEntries with messages in the deque
+    juce::String uniqueId = juce::String(juce::Time::getMillisecondCounter()) + "_" + deviceName;
+    
+    // Create a log entry with the unique ID
+    LogEntryData entry(text, color, deviceName);
+    entry.uniqueId = uniqueId;
+    logEntries.add(entry);
+    
     if (static_cast<size_t>(logEntries.size()) > maxEntries)
         logEntries.remove(0);
     
-    messages.emplace_back(text, color, juce::Time::getCurrentTime(), deviceName);
+    // Create a message with the same unique ID and full opacity
+    LogEntry msg(text, color, juce::Time::getCurrentTime(), deviceName);
+    msg.uniqueId = uniqueId;
+    messages.push_back(msg);
+    
     if (static_cast<size_t>(messages.size()) > maxMessages)
         messages.pop_front();
     
