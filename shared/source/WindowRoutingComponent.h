@@ -551,7 +551,47 @@ private:
             : window(windowName), isOpen(isWindowOpen)
         {
             updateButtonText();
+            
+            // X- Set button font to be smaller but bold for better readability in the compact space
+            // X- Using JUCE 8 API for font handling on buttons
+            juce::FontOptions fontOptions;
+            fontOptions = fontOptions.withHeight(12.0f).withStyle("bold");
+            
+            // X- Set button font using LookAndFeel properties
+            setLookAndFeel(&customLookAndFeel);
+            customLookAndFeel.setButtonFont(fontOptions);
+            
+            // Set colors based on the state
+            updateButtonColors();
         }
+        
+        // X- Add destructor to clean up LookAndFeel
+        ~WindowRemoveButton()
+        {
+            setLookAndFeel(nullptr);
+        }
+        
+        // X- Custom LookAndFeel to handle font
+        class ButtonLookAndFeel : public juce::LookAndFeel_V4
+        {
+        public:
+            void setButtonFont(const juce::FontOptions& options)
+            {
+                buttonFont = juce::Font(options);
+            }
+            
+            juce::Font getTextButtonFont(juce::TextButton&, int) override
+            {
+                return buttonFont;
+            }
+            
+        private:
+            // X- Using FontOptions for default font to avoid deprecation warning
+            juce::Font buttonFont = juce::Font(juce::FontOptions().withHeight(12.0f));
+        };
+        
+        // X- Custom LookAndFeel instance
+        ButtonLookAndFeel customLookAndFeel;
         
         /**
          * @brief Updates the button text based on the window state.
@@ -564,6 +604,92 @@ private:
         }
         
         /**
+         * @brief Sets the button colors based on its state.
+         * 
+         * Uses a subtle red for "Remove" and green for "Recreate".
+         */
+        void updateButtonColors()
+        {
+            if (isOpen) {
+                // For "Remove" button - subtle red
+                setColour(juce::TextButton::buttonColourId, juce::Colour(220, 70, 70).withAlpha(0.7f));
+                setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+            } else {
+                // For "Recreate" button - subtle green
+                setColour(juce::TextButton::buttonColourId, juce::Colour(70, 180, 70).withAlpha(0.7f));
+                setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+            }
+        }
+        
+        /**
+         * @brief Toggles the window state with a smooth animation.
+         * 
+         * Animates the color change when toggling between Remove and Recreate states.
+         */
+        void toggleStateWithAnimation()
+        {
+            // First change state
+            isOpen = !isOpen;
+            
+            // Update button text immediately
+            updateButtonText();
+            
+            // Create animation effect for color transition
+            auto currentColor = findColour(juce::TextButton::buttonColourId);
+            juce::Colour targetColor;
+            
+            if (isOpen) {
+                // Transitioning to Remove (red)
+                targetColor = juce::Colour(220, 70, 70).withAlpha(0.7f);
+            } else {
+                // Transitioning to Recreate (green)
+                targetColor = juce::Colour(70, 180, 70).withAlpha(0.7f);
+            }
+            
+            // Create a timer to animate the color change
+            class ColorAnimator : public juce::Timer
+            {
+            public:
+                ColorAnimator(juce::TextButton& button, juce::Colour startColor, juce::Colour endColor) 
+                    : targetButton(button), startColour(startColor), endColour(endColor), progress(0.0f)
+                {
+                    startTimerHz(60); // 60fps animation
+                }
+                
+                void timerCallback() override
+                {
+                    progress += 0.1f; // Increment by 10% each frame
+                    
+                    if (progress >= 1.0f)
+                    {
+                        // Animation complete
+                        targetButton.setColour(juce::TextButton::buttonColourId, endColour);
+                        stopTimer();
+                        delete this; // Self-cleanup
+                    }
+                    else
+                    {
+                        // Interpolate between colors
+                        auto currentColour = startColour.interpolatedWith(endColour, progress);
+                        targetButton.setColour(juce::TextButton::buttonColourId, currentColour);
+                        targetButton.repaint();
+                    }
+                }
+                
+            private:
+                juce::TextButton& targetButton;
+                juce::Colour startColour, endColour;
+                float progress;
+            };
+            
+            // Start animation (will self-delete when complete)
+            new ColorAnimator(*this, currentColor, targetColor);
+            
+            // Set text color immediately
+            setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        }
+        
+        /**
          * @brief Toggles the window state between open and closed.
          * 
          * Changes the window state and updates the button text accordingly.
@@ -572,6 +698,7 @@ private:
         {
             isOpen = !isOpen;
             updateButtonText();
+            updateButtonColors();
         }
         
         /**

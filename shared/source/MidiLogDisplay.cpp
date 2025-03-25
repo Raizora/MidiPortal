@@ -81,6 +81,9 @@ void MidiLogDisplay::paint(juce::Graphics& g)
     float y = getHeight() - 10.0f;  // Start from bottom
     
     // Draw messages from bottom to top
+    // Count visible messages to ensure proper spacing and scrolling
+    int visibleMessageCount = 0;
+    
     for (int i = logEntries.size() - 1; i >= 0; --i)
     {
         const auto& entry = logEntries[i];
@@ -117,11 +120,20 @@ void MidiLogDisplay::paint(juce::Graphics& g)
         float messageHeight = g.getCurrentFont().getHeight();
         y -= messageHeight;
         
+        // Count this as a visible message
+        visibleMessageCount++;
+        
         if (y < 0)  // Stop if we've reached the top
             break;
             
         g.drawText(entry.text, 10.0f, y, getWidth() - 20.0f, messageHeight, 
                   juce::Justification::left, true);
+    }
+    
+    // If we don't have enough visible messages to fill the view, make sure we reset yOffset
+    // This ensures messages always scroll from the bottom even with fade rate enabled
+    if (visibleMessageCount * g.getCurrentFont().getHeight() < getHeight()) {
+        yOffset = 0.0f;
     }
 }
 
@@ -254,6 +266,7 @@ void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::St
     if (static_cast<size_t>(messages.size()) > maxMessages)
         messages.pop_front();
     
+    // When a new message is added, always force a complete redraw
     repaint();
 }
 

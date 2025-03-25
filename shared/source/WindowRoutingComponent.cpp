@@ -180,7 +180,7 @@ void WindowRoutingComponent::resized()
         else // Other windows (A, B, C, etc.)
         {
             // Reduced width to make room for remove button
-            int labelWidth = cellWidth - 60; // Leave 60px for button
+            int labelWidth = cellWidth - 90; // Leave 90px for button (increased from 75px)
             windowLabels[i]->setBounds(windowLabelArea.getX() + i * cellWidth,
                                      windowLabelArea.getY(),
                                      labelWidth,
@@ -192,9 +192,9 @@ void WindowRoutingComponent::resized()
             {
                 windowRemoveButtons[buttonIndex]->setBounds(
                     windowLabelArea.getX() + i * cellWidth + labelWidth,
-                    windowLabelArea.getY() + 2, // Small vertical offset
-                    50, // 50px width
-                    windowLabelHeight - 4 // Small vertical padding
+                    windowLabelArea.getY() + 1, // Reduced vertical offset from 2 to 1
+                    80, // 80px width (increased from 65px)
+                    windowLabelHeight - 2 // Less vertical padding (reduced from 4 to 2)
                 );
             }
         }
@@ -328,8 +328,7 @@ void WindowRoutingComponent::buttonClicked(juce::Button* button)
             recreateWindow(removeButton->window);
         }
         
-        // Toggle the button state
-        removeButton->toggleWindowState();
+        // Animation is handled inside removeWindow/recreateWindow methods
     }
     else
     {
@@ -616,7 +615,7 @@ void WindowRoutingComponent::createNewWindow()
     if (newName.isEmpty())
         return;
         
-    // X- Store existing window colors before creating a new window
+    // Store existing window colors before creating a new window
     std::map<juce::String, juce::Colour> existingColors;
     auto& settingsManager = windowManager.getSettingsManager();
     
@@ -635,10 +634,13 @@ void WindowRoutingComponent::createNewWindow()
     // Create the new window using the window manager
     windowManager.createWindow(newName);
     
-    // X- Update the grid to include the new window
+    // Give a short delay to let the window creation finish
+    juce::Thread::sleep(50);
+    
+    // Update the grid to include the new window
     updateGrid();
     
-    // X- Restore existing window colors
+    // Restore existing window colors
     for (const auto& [window, color] : existingColors)
     {
         // Find the RGB sliders for this window
@@ -655,6 +657,9 @@ void WindowRoutingComponent::createNewWindow()
             }
         }
     }
+    
+    // Force a resize to ensure all components are properly positioned
+    resized();
 }
 
 /**
@@ -784,6 +789,16 @@ void WindowRoutingComponent::removeWindow(const juce::String& windowName)
         
     // Close the window but keep its settings
     windowManager.closeWindow(windowName);
+    
+    // Update button appearance in the UI - find and update the button
+    for (auto* btn : windowRemoveButtons)
+    {
+        if (btn->window == windowName)
+        {
+            btn->toggleStateWithAnimation();
+            break;
+        }
+    }
 }
 
 /**
@@ -800,6 +815,16 @@ void WindowRoutingComponent::recreateWindow(const juce::String& windowName)
         
     // Recreate the window with the same name and settings
     windowManager.reopenWindow(windowName);
+    
+    // Update button appearance in the UI - find and update the button
+    for (auto* btn : windowRemoveButtons)
+    {
+        if (btn->window == windowName)
+        {
+            btn->toggleStateWithAnimation();
+            break;
+        }
+    }
 }
 
 } // namespace MidiPortal 
