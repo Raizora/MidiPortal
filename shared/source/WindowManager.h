@@ -152,6 +152,32 @@ public:
      * @return A reference to the DisplaySettingsManager.
      */
     DisplaySettingsManager& getSettingsManager();
+    
+    /**
+     * @brief Checks if a window is currently open (visible).
+     * @param windowName The name of the window to check.
+     * @return true if the window is open, false if it's closed or doesn't exist.
+     * 
+     * Checks if a window with the specified name is currently open and visible.
+     */
+    bool isWindowOpen(const juce::String& windowName) const;
+    
+    /**
+     * @brief Closes a window without removing its settings.
+     * @param windowName The name of the window to close.
+     * 
+     * Closes the window with the specified name, hiding it from view but
+     * preserving its settings so it can be reopened later.
+     */
+    void closeWindowWithoutRemovingSettings(const juce::String& windowName);
+    
+    /**
+     * @brief Reopens a previously closed window.
+     * @param windowName The name of the window to reopen.
+     * 
+     * Reopens a window that was previously closed, using the same name and settings.
+     */
+    void reopenWindow(const juce::String& windowName);
 
 private:
     /**
@@ -188,6 +214,14 @@ private:
      * This tracks windows that aren't LogDisplayWindows.
      */
     juce::Array<juce::Component*> registeredWindows;
+    
+    /**
+     * @brief Map of window names to their open/closed state.
+     * 
+     * Tracks whether each window is currently open (visible) or closed (hidden).
+     * This allows windows to be closed and reopened without losing their settings.
+     */
+    std::map<juce::String, bool> windowOpenState;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WindowManager)
 };

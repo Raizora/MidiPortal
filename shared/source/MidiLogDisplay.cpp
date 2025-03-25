@@ -151,14 +151,24 @@ void MidiLogDisplay::update()
         
         // X- Only fade if fading is enabled
         if (settings.fadeRateEnabled) {
-            // Invert the fade rate so 0.001 = fast fade and 1.0 = slow fade
-            // At 30fps, we want 0.001 to fade almost instantly (large decrement)
-            // and 1.0 to fade over ~30 seconds (tiny decrement)
+            // Revised fading algorithm - create more granular control across the full range:
+            // - Near minimum (0.01): Messages disappear almost instantly (within ~3 frames or 0.1s)
+            // - At around 0.25: Messages fade in approximately 2-3 seconds
+            // - At around 0.5: Messages fade in approximately 7-8 seconds
+            // - At around 0.75: Messages fade in approximately 15 seconds
+            // - At maximum (1.0): Messages fade over the full 30 seconds
             
-            // Calculate frames for a full fade (at 30fps):
-            // fadeRate 0.001: around 3 frames (0.1 seconds)
-            // fadeRate 1.0: around 900 frames (30 seconds)
-            float fadeAmount = (1.0f - settings.fadeRate) * 0.033f + 0.001f;
+            // X- Use exponential curve for more even distribution of fade rates
+            // This creates more perceptible differences in the lower half of the slider
+            float fadeRateCubed = settings.fadeRate * settings.fadeRate * settings.fadeRate;
+            
+            // X- Base formula: 
+            // - At fadeRate = 0.01: fadeAmount ≈ 0.33 (disappears in ~3 frames)
+            // - At fadeRate = 0.25: fadeAmount ≈ 0.015 (disappears in ~66 frames or ~2.2s)
+            // - At fadeRate = 0.5: fadeAmount ≈ 0.004 (disappears in ~250 frames or ~8.3s)
+            // - At fadeRate = 0.75: fadeAmount ≈ 0.0016 (disappears in ~625 frames or ~20.8s)
+            // - At fadeRate = 1.0: fadeAmount ≈ 0.001 (disappears in ~1000 frames or ~33.3s)
+            float fadeAmount = 0.33f * std::exp(-6.5f * fadeRateCubed);
             
             it->opacity -= fadeAmount;
         }

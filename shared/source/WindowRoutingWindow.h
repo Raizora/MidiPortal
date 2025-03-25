@@ -51,12 +51,17 @@ public:
         : DialogWindow(name, juce::Colours::lightgrey, true, true)
     {
         auto* content = new WindowRoutingComponent(windowManager);
-        
         setContentOwned(content, true);
+
+        // Use native or JUCE-drawn title bar
+        setUsingNativeTitleBar(true);
+
+        // Show all window buttons: close, minimize, maximize
+        setTitleBarButtonsRequired(juce::DocumentWindow::allButtons, false);
+
+        setResizable(true, true);
         setResizeLimits(400, 300, 1200, 1200);
         centreWithSize(600, 400);
-        
-        setResizable(true, true);
         setVisible(true);
         setAlwaysOnTop(true);
     }

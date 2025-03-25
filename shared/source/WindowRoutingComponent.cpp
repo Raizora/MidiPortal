@@ -61,6 +61,7 @@ void WindowRoutingComponent::paint(juce::Graphics& g)
     
     // The remaining area is for the grid
     auto gridArea = bounds;
+    gridArea.removeFromTop(40); // 30px for button + 10px spacing
     
     // Calculate grid dimensions based on number of windows and devices
     int numDevices = deviceLabels.size();
@@ -75,27 +76,52 @@ void WindowRoutingComponent::paint(juce::Graphics& g)
     int cellWidth = gridArea.getWidth() / numWindows;
     int cellHeight = gridArea.getHeight() / (numDevices + 1);
     
-    // Draw vertical grid lines
+    // Reserve space for window labels and RGB sliders
+    int windowLabelHeight = 30;
+    int windowLabelPadding = 5;
+    int totalWindowLabelHeight = windowLabelHeight + windowLabelPadding;
+    
+    int rgbSliderHeight = 100;
+    int rgbSliderPadding = 10;
+    int totalRgbHeight = rgbSliderHeight + rgbSliderPadding;
+    
+    // Define areas for different sections
+    auto windowLabelArea = gridArea.removeFromTop(totalWindowLabelHeight);
+    auto rgbArea = gridArea.removeFromTop(totalRgbHeight);
+    auto deviceArea = gridArea;
+    
+    // Draw vertical grid lines - these span the entire height
     for (int i = 0; i <= numWindows; ++i)
     {
         int x = gridArea.getX() + i * cellWidth;
-        g.drawLine(x, gridArea.getY(), x, gridArea.getBottom());
+        g.drawLine(x, bounds.getY() + 40, x, bounds.getBottom()); // Start after button area
     }
     
-    // Draw horizontal grid lines
-    for (int i = 0; i <= numDevices + 1; ++i)
-    {
-        int y = gridArea.getY() + i * cellHeight;
-        g.drawLine(gridArea.getX(), y, gridArea.getRight(), y);
+    // Draw horizontal grid lines with proper section spacing
+    
+    // Line below "New Window" button (already handled by gridArea starting point)
+    
+    // Line below window labels
+    g.drawLine(gridArea.getX(), windowLabelArea.getBottom(), gridArea.getRight(), windowLabelArea.getBottom());
+    
+    // Line below RGB sliders - this is the line that should align with Apply buttons
+    g.drawLine(gridArea.getX(), rgbArea.getBottom(), gridArea.getRight(), rgbArea.getBottom());
+    
+    // Device section grid lines
+    if (numDevices > 0) {
+        int deviceCellHeight = deviceArea.getHeight() / numDevices;
+        for (int i = 1; i <= numDevices; ++i) {
+            int y = deviceArea.getY() + i * deviceCellHeight;
+            g.drawLine(deviceArea.getX(), y, deviceArea.getRight(), y);
+        }
     }
 }
 
 /**
  * @brief Handles component resizing and positions all child components.
  * 
- * Positions the "New Window" button, window labels, device labels, routing cells,
- * and RGB sliders based on the new size of the component. The layout is organized
- * as a grid with one column for each window and one row for each MIDI device.
+ * Positions the "New Window" button, window labels, remove/recreate buttons,
+ * device labels, routing cells, and RGB sliders based on the new size of the component.
  */
 void WindowRoutingComponent::resized()
 {
@@ -131,41 +157,59 @@ void WindowRoutingComponent::resized()
     int rgbSliderPadding = 10;
     int totalRgbHeight = rgbSliderHeight + rgbSliderPadding;
     
-    // Calculate the remaining height for the device grid
-    int remainingHeight = bounds.getHeight() - totalRgbHeight - totalWindowLabelHeight;
-    int cellHeight = remainingHeight / numDevices;
-    
-    // Create a separate area for the window labels at the top
+    // Create section areas
     auto windowLabelArea = bounds.removeFromTop(totalWindowLabelHeight);
-    
-    // Create a separate area for the RGB sliders below the window labels
     auto rgbArea = bounds.removeFromTop(totalRgbHeight);
+    auto deviceArea = bounds;
+    
+    // Calculate the cell height for device rows - ensure it fills the remaining space evenly
+    int deviceCellHeight = numDevices > 0 ? deviceArea.getHeight() / numDevices : 0;
     
     // Position window labels (column headers)
-    // Each window gets its own column
     for (int i = 0; i < numWindows; ++i)
     {
-        // Position the window label in the center of its cell in the window label area
-        windowLabels[i]->setBounds(windowLabelArea.getX() + i * cellWidth,
-                                 windowLabelArea.getY(),
-                                 cellWidth,
-                                 windowLabelHeight);
+        // Position the window label, leaving space for remove button if needed
+        if (i == 0) // MAIN window
+        {
+            // Full width for MAIN
+            windowLabels[i]->setBounds(windowLabelArea.getX() + i * cellWidth,
+                                     windowLabelArea.getY(),
+                                     cellWidth,
+                                     windowLabelHeight);
+        }
+        else // Other windows (A, B, C, etc.)
+        {
+            // Reduced width to make room for remove button
+            int labelWidth = cellWidth - 60; // Leave 60px for button
+            windowLabels[i]->setBounds(windowLabelArea.getX() + i * cellWidth,
+                                     windowLabelArea.getY(),
+                                     labelWidth,
+                                     windowLabelHeight);
+                                     
+            // Position the remove/recreate button next to the label
+            int buttonIndex = i - 1; // Adjust index since MAIN has no button
+            if (buttonIndex < windowRemoveButtons.size())
+            {
+                windowRemoveButtons[buttonIndex]->setBounds(
+                    windowLabelArea.getX() + i * cellWidth + labelWidth,
+                    windowLabelArea.getY() + 2, // Small vertical offset
+                    50, // 50px width
+                    windowLabelHeight - 4 // Small vertical padding
+                );
+            }
+        }
     }
     
     // Position device labels (row headers)
-    // Each device gets its own row
     for (int i = 0; i < numDevices; ++i)
     {
-        // Position the device label in the first column of its row
-        deviceLabels[i]->setBounds(bounds.getX(),
-                                 bounds.getY() + i * cellHeight,
-                                 cellWidth,
-                                 cellHeight);
+        deviceLabels[i]->setBounds(deviceArea.getX(),
+                                  deviceArea.getY() + i * deviceCellHeight,
+                                  cellWidth,
+                                  deviceCellHeight);
     }
     
     // Position routing cells (toggle buttons)
-    // Each cell represents a connection between a device and a window
-    // Note: We don't have toggle buttons for the MAIN window
     for (auto* cell : routingCells)
     {
         // Find the window and device indices for this cell
@@ -195,19 +239,16 @@ void WindowRoutingComponent::resized()
         // If both window and device were found, position the cell
         if (windowIndex >= 0 && deviceIndex >= 0)
         {
-            // Position the cell at the intersection of the window column and device row
-            cell->setBounds(bounds.getX() + windowIndex * cellWidth,
-                          bounds.getY() + deviceIndex * cellHeight,
-                          cellWidth,
-                          cellHeight);
+            cell->setBounds(deviceArea.getX() + windowIndex * cellWidth,
+                           deviceArea.getY() + deviceIndex * deviceCellHeight,
+                           cellWidth,
+                           deviceCellHeight);
         }
     }
     
-    // Position RGB sliders below the window labels
-    // Each window gets RGB sliders for changing its background color
+    // Position RGB sliders with proper alignment to ensure Apply buttons are at the exact bottom of their section
     for (int i = 0; i < rgbSliders.size(); ++i)
     {
-        // Find the window index for this RGB slider
         int windowIndex = -1;
         for (int j = 0; j < windowLabels.size(); ++j)
         {
@@ -218,34 +259,37 @@ void WindowRoutingComponent::resized()
             }
         }
         
-        // If the window was found, position the RGB sliders
         if (windowIndex >= 0)
         {
-            // Position the sliders in the RGB area, in the same column as its window
+            // Position the sliders in the RGB area, ensuring the Apply button will align with the bottom grid line
             int x = rgbArea.getX() + windowIndex * cellWidth + 10; // Add 10px padding
             int y = rgbArea.getY();
+            int width = cellWidth - 20;
             
-            // Make the sliders slightly narrower than the cell
-            rgbSliders[i]->setBounds(x, y, cellWidth - 20, rgbSliderHeight);
+            // Make sure the RGB slider component is exactly the right height to position the Apply button at the bottom
+            rgbSliders[i]->setBounds(x, y, width, rgbSliderHeight);
         }
     }
     
-    // We no longer need the color buttons since we have RGB sliders
-    // But if we want to keep them for some reason, position them off-screen
+    // We no longer need the color buttons
     for (auto* btn : colorButtons)
     {
         btn->setBounds(-1000, -1000, 1, 1);
     }
+    
+    // Repaint to ensure grid lines are redrawn in the correct positions
+    repaint();
 }
 
 /**
- * @brief Handles button clicks from the "New Window" button and routing cells.
+ * @brief Handles button clicks from buttons in the routing grid.
  * @param button Pointer to the button that was clicked.
  * 
  * Handles different actions based on the button that was clicked:
  * - If the "New Window" button was clicked, creates a new window
  * - If a routing cell was clicked, updates the routing between the device and window
  * - If an Apply button from an RGB slider was clicked, applies the color to the window
+ * - If a remove/recreate button was clicked, removes or recreates the associated window
  */
 void WindowRoutingComponent::buttonClicked(juce::Button* button)
 {
@@ -269,6 +313,23 @@ void WindowRoutingComponent::buttonClicked(juce::Button* button)
             // If the toggle is now off, unroute the device from the window
             windowManager.unrouteDeviceFromWindow(cell->device, cell->window);
         }
+    }
+    else if (auto* removeButton = dynamic_cast<WindowRemoveButton*>(button))
+    {
+        // Handle remove/recreate button clicks
+        if (removeButton->isWindowOpen())
+        {
+            // Remove (close) the window
+            removeWindow(removeButton->window);
+        }
+        else
+        {
+            // Recreate the window
+            recreateWindow(removeButton->window);
+        }
+        
+        // Toggle the button state
+        removeButton->toggleWindowState();
     }
     else
     {
@@ -362,7 +423,8 @@ void WindowRoutingComponent::changeListenerCallback(juce::ChangeBroadcaster* sou
  * 
  * Clears all existing components and rebuilds the grid based on the current
  * windows and MIDI devices. Creates labels for windows and devices, routing cells
- * for device-window combinations, and RGB sliders for window background colors.
+ * for device-window combinations, RGB sliders for window background colors, and
+ * remove/recreate buttons for closing and reopening windows.
  */
 void WindowRoutingComponent::updateGrid()
 {
@@ -373,6 +435,7 @@ void WindowRoutingComponent::updateGrid()
     routingCells.clear();
     colorButtons.clear();
     rgbSliders.clear();
+    windowRemoveButtons.clear();
     
     // Get current windows and devices from the window manager
     auto windows = windowManager.getWindowNames();
@@ -394,6 +457,19 @@ void WindowRoutingComponent::updateGrid()
         label->setJustificationType(juce::Justification::centred);
         addAndMakeVisible(label);
         windowLabels.add(label);
+        
+        // Create remove/recreate buttons for each window except MAIN
+        if (window != "MAIN")
+        {
+            // Check if the window is currently open (visible)
+            bool isWindowOpen = windowManager.isWindowOpen(window);
+            
+            // Create a new remove/recreate button for this window
+            auto* removeButton = new WindowRemoveButton(window, isWindowOpen);
+            removeButton->addListener(this);
+            addAndMakeVisible(removeButton);
+            windowRemoveButtons.add(removeButton);
+        }
     }
     
     // Create device labels for each MIDI input device
@@ -691,6 +767,39 @@ void WindowRoutingComponent::applyRGBSlidersToWindow(const juce::String& windowN
         settings.backgroundColor = newColor;
         settingsManager.setSettings(settings, windowName);
     }
+}
+
+/**
+ * @brief Closes a window while preserving its settings.
+ * @param windowName The name of the window to close.
+ * 
+ * Closes the specified window without removing it from the grid or forgetting
+ * its settings. The window can be recreated later with the same name and settings.
+ */
+void WindowRoutingComponent::removeWindow(const juce::String& windowName)
+{
+    // Don't allow removing the MAIN window
+    if (windowName == "MAIN")
+        return;
+        
+    // Close the window but keep its settings
+    windowManager.closeWindow(windowName);
+}
+
+/**
+ * @brief Recreates a previously closed window.
+ * @param windowName The name of the window to recreate.
+ * 
+ * Recreates a window that was previously closed, using the same name and settings.
+ */
+void WindowRoutingComponent::recreateWindow(const juce::String& windowName)
+{
+    // Don't attempt to recreate the MAIN window
+    if (windowName == "MAIN")
+        return;
+        
+    // Recreate the window with the same name and settings
+    windowManager.reopenWindow(windowName);
 }
 
 } // namespace MidiPortal 

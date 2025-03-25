@@ -138,10 +138,10 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     fadeRateLabel.setFont(juce::Font(options));
     fadeRateLabel.setJustificationType(juce::Justification::right);
     
-    // X- Define range from 1ms (0.001) to 30s (dividing by 30fps timer rate)
-    // Using a logarithmic scale to make slider more usable
-    fadeRateSlider.setRange(0.001, 1.0, 0.001);
-    fadeRateSlider.setSkewFactor(0.3); // Logarithmic scale for better control
+    // X- Define range from 0.01 (almost instant) to 1.0 (30 seconds)
+    // Use a strong logarithmic scale to match our exponential fade formula
+    fadeRateSlider.setRange(0.01, 1.0, 0.001);
+    fadeRateSlider.setSkewFactor(0.65); // Stronger logarithmic scale for better control in lower ranges
     fadeRateSlider.setValue(currentSettings.fadeRate, juce::dontSendNotification);
     fadeRateSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     fadeRateSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);

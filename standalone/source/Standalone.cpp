@@ -28,6 +28,13 @@ StandaloneWindow::StandaloneWindow()
   setContentOwned(new MidiPortal::MainComponent(), true);
   setResizable(true, true);
   setUsingNativeTitleBar(true);
+  
+  // X- Retrieve current display info and apply DPI-scaled sizing
+  auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+  auto userArea = mainDisplay.userArea;
+  setResizeLimits(600, 400, userArea.getWidth(), userArea.getHeight());
+  centreWithSize(userArea.getWidth(), userArea.getHeight());
+  
   setVisible(true);
 }
 
