@@ -154,6 +154,8 @@ private:
         juce::Time timestamp;    ///< When the message was received
         juce::String deviceName; ///< Name of the device that sent the message
         juce::String uniqueId;   ///< Unique identifier to link with LogEntryData
+        bool shouldFade;         ///< Whether this message should fade (set at creation time)
+        float fadeRate;          ///< The fade rate for this message (set at creation time)
         
         /**
          * @brief Constructor that initializes a LogEntry.
@@ -163,7 +165,8 @@ private:
          * @param deviceNameIn The name of the device that sent the message.
          */
         LogEntry(const juce::String& textIn, const juce::Colour& colorIn, const juce::Time& timestampIn, const juce::String& deviceNameIn)
-            : text(textIn), color(colorIn), opacity(1.0f), timestamp(timestampIn), deviceName(deviceNameIn), uniqueId("") {}
+            : text(textIn), color(colorIn), opacity(1.0f), timestamp(timestampIn), deviceName(deviceNameIn), 
+              uniqueId(""), shouldFade(false), fadeRate(0.5f) {}
     };
     
     /**

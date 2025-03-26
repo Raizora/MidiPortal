@@ -457,6 +457,13 @@ private:
     juce::TextButton resetButton;
     
     /**
+     * @brief Button to clear all messages from the display.
+     * 
+     * When clicked, clears all messages from the display.
+     */
+    juce::TextButton clearButton;
+    
+    /**
      * @brief Sets up a color section with a label and color selector.
      * @param section The ColorSection to set up.
      * @param name The name to display in the label.

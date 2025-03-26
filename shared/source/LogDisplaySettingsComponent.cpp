@@ -221,7 +221,7 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     colorViewport.setScrollBarsShown(true, false);  // Disable horizontal scrollbar, keep vertical
     addAndMakeVisible(colorViewport);
     
-    // Set up Apply and Reset buttons
+    // Set up Apply, Reset, and Clear buttons
     applyButton.setButtonText("Apply Settings");
     applyButton.onClick = [this] { handleApplyButton(); };
     addAndMakeVisible(applyButton);
@@ -229,6 +229,30 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
     resetButton.setButtonText("Reset");
     resetButton.onClick = [this] { handleResetButton(); };
     addAndMakeVisible(resetButton);
+    
+    // Add the Clear button
+    clearButton.setButtonText("Clear Messages");
+    clearButton.onClick = [this] { 
+        if (logDisplay.getSettingsManager().getSettings("ALL").overrideAllDevices) {
+            // Show confirmation dialog
+            juce::AlertWindow::showOkCancelBox(
+                juce::AlertWindow::QuestionIcon,
+                "Clear Messages",
+                "This will clear all messages from all displays. Continue?",
+                "Clear",
+                "Cancel",
+                nullptr,
+                juce::ModalCallbackFunction::create([this](int result) {
+                    if (result == 1) { // OK was clicked
+                        logDisplay.clear();
+                    }
+                })
+            );
+        } else {
+            logDisplay.clear();
+        }
+    };
+    addAndMakeVisible(clearButton);
     
     // Initial update
     updateControls();
@@ -400,19 +424,22 @@ void LogDisplaySettingsComponent::resized()
     bounds.removeFromTop(sectionSpacing);
     
     // BUTTON ROW - At bottom, Height: 40px
-    // Example: If window width is 600px, button area is 580px wide (after 10px padding each side)
     auto buttonRow = bounds.removeFromBottom(buttonHeight);
-    // Each button width = (580 - 20) / 2 = 280px
-    auto buttonWidth = (buttonRow.getWidth() - 20) / 2; // 20px gap between buttons
-    applyButton.setBounds(buttonRow.removeFromLeft(buttonWidth));  // Left button: 280x40
-    buttonRow.removeFromLeft(20);  // 20px gap between buttons
-    resetButton.setBounds(buttonRow);  // Right button: 280x40
+    
+    // Split button row into 3 equal parts
+    int buttonWidth = (buttonRow.getWidth() - 40) / 3; // 40px for gaps (20px each)
+    
+    applyButton.setBounds(buttonRow.removeFromLeft(buttonWidth));
+    buttonRow.removeFromLeft(20); // 20px gap
+    
+    resetButton.setBounds(buttonRow.removeFromLeft(buttonWidth));
+    buttonRow.removeFromLeft(20); // 20px gap
+    
+    clearButton.setBounds(buttonRow.removeFromLeft(buttonWidth));
+    
     bounds.removeFromBottom(sectionSpacing); // 20px gap above buttons
     
     // COLOR VIEWPORT - Takes remaining vertical space
-    // If window is 800px tall:
-    // 800 - (10+10) padding - 80 device - 20 gap - 80 appearance - 20 gap - 40 buttons - 20 gap
-    // = ~520px height for viewport
     colorViewport.setBounds(bounds);
     
     // COLOR SECTIONS CONTAINER
