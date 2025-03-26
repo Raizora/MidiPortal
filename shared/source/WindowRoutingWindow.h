@@ -51,12 +51,20 @@ public:
         : DialogWindow(name, juce::Colours::lightgrey, true, true)
     {
         auto* content = new WindowRoutingComponent(windowManager);
-        
         setContentOwned(content, true);
-        setResizeLimits(400, 300, 1200, 1200);
-        centreWithSize(600, 400);
+
+        // X- Use native title bar with all window buttons
+        setUsingNativeTitleBar(true);
+        setTitleBarButtonsRequired(juce::DocumentWindow::allButtons, false);
+
+        // X- Get the current display dimensions for proper resize limits
+        auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+        auto userArea = mainDisplay.userArea;
         
+        // X- Set resize limits based on the current display's dimensions
         setResizable(true, true);
+        setResizeLimits(400, 300, userArea.getWidth(), userArea.getHeight());
+        centreWithSize(600, 400);
         setVisible(true);
         setAlwaysOnTop(true);
     }

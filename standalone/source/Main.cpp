@@ -173,12 +173,18 @@ public:
             setUsingNativeTitleBar (true);
             setContentOwned (new MidiPortal::MainComponent(), true);
 
+            //  changes to implement the DPI‐aware scaling for your main window and to add maximize (and minimize) buttons to additional windows
             #if JUCE_IOS || JUCE_ANDROID
                 setFullScreen (true);
             #else
                 setResizable (true, true);
-                setResizeLimits(600, 400, 1600, 1200);
-                centreWithSize (800, 600);
+                // X- Retrieve the current main display's user area (DPI-scaled)
+                auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+                auto userArea = mainDisplay.userArea;
+                // X- Set the resize limits to use the display's full resolution
+                setResizeLimits(600, 400, userArea.getWidth(), userArea.getHeight());
+                // X- Center the window using the full display resolution
+                centreWithSize(userArea.getWidth(), userArea.getHeight());
             #endif
 
             setVisible (true);

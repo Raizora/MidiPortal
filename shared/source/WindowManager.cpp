@@ -50,74 +50,119 @@ void WindowManager::createWindow(const juce::String& windowName)
             closeWindow(windowName);
         };
         
-        // Create custom settings for this window
-        // Start with a fresh set of settings rather than copying from default
-        // This ensures changes to default settings won't affect this window
-        DisplaySettingsManager::DisplaySettings newSettings;
+        // Assign a unique background color based on the window name
+        // This helps visually distinguish different windows
+        juce::Colour color;
         
-        // Set default colors for message types (these should be the same for all windows)
-        newSettings.fontSize = 12.0f;
-        newSettings.noteOnColor = juce::Colours::green;
-        newSettings.noteOffColor = juce::Colours::red;
-        newSettings.controllerColor = juce::Colours::yellow;
-        newSettings.pitchBendColor = juce::Colours::orange;
-        newSettings.pressureColor = juce::Colours::purple;
-        newSettings.programChangeColor = juce::Colours::blue;
-        newSettings.clockColor = juce::Colours::grey;
-        newSettings.sysExColor = juce::Colours::white;
-        newSettings.defaultColor = juce::Colours::lightgrey;
+        // Generate different colors for different windows
+        if (windowName == "A")
+            color = juce::Colours::darkblue;
+        else if (windowName == "B")
+            color = juce::Colours::darkgreen;
+        else if (windowName == "C")
+            color = juce::Colours::darkred;
+        else if (windowName == "D")
+            color = juce::Colours::darkorange;
+        else if (windowName == "E")
+            color = juce::Colours::darkmagenta;
+        else if (windowName == "F")
+            color = juce::Colours::darkcyan;
+        else
+            color = juce::Colours::darkgrey;
         
-        // Generate a unique color based on the window name
-        // This ensures each window gets its own color
-        juce::Random random(windowName.hashCode());
-        juce::Colour uniqueColor = juce::Colour::fromHSV(
-            random.nextFloat(), // Hue (0.0 - 1.0)
-            0.7f,               // Saturation (0.7 for vibrant colors)
-            0.3f,               // Brightness (0.3 for darker colors)
-            1.0f                // Alpha (fully opaque)
-        );
+        // Set the window's background color
+        auto settings = displaySettingsManager.getSettings(windowName);
+        settings.backgroundColor = color;
+        displaySettingsManager.setSettings(settings, windowName);
         
-        // Set the unique background color
-        newSettings.backgroundColor = uniqueColor;
-        
-        // Add the settings to the settings manager
-        displaySettingsManager.addSettings(windowName, newSettings);
-        
-        // Store the window
+        // Store the window in the map
         windows[windowName] = std::move(window);
+        
+        // Mark the window as open
+        windowOpenState[windowName] = true;
+    }
+    else if (windowOpenState.find(windowName) != windowOpenState.end() && !windowOpenState[windowName])
+    {
+        // If the window exists in our records but is closed, reopen it
+        reopenWindow(windowName);
     }
 }
 
 /**
- * @brief Closes and destroys a window with the specified name.
+ * @brief Checks if a window is currently open (visible).
+ * @param windowName The name of the window to check.
+ * @return true if the window is open, false if it's closed or doesn't exist.
+ * 
+ * Checks if a window with the specified name is currently open and visible.
+ */
+bool WindowManager::isWindowOpen(const juce::String& windowName) const
+{
+    // The MAIN window is always considered open
+    if (windowName == "MAIN")
+        return true;
+        
+    // Check if the window exists and is open
+    auto it = windowOpenState.find(windowName);
+    if (it != windowOpenState.end())
+        return it->second;
+        
+    // If the window doesn't exist in our state map, check if it exists in the windows map
+    return windows.find(windowName) != windows.end();
+}
+
+/**
+ * @brief Closes a window without removing its settings.
  * @param windowName The name of the window to close.
  * 
- * Closes the specified window and removes all device routings to it.
- * If the window doesn't exist or if the name is "MAIN", this method does nothing.
- * The "MAIN" window cannot be closed as it's the main application window.
+ * Closes the window with the specified name, hiding it from view but
+ * preserving its settings so it can be reopened later.
  */
 void WindowManager::closeWindow(const juce::String& windowName)
 {
-    // Don't allow closing the MAIN window as it's the main application window
+    // Don't allow closing the MAIN window
     if (windowName == "MAIN")
         return;
         
-    // Remove all device routings for this window
-    auto devicesIt = windowToDevices.find(windowName);
-    if (devicesIt != windowToDevices.end())
+    // Check if the window exists
+    auto it = windows.find(windowName);
+    if (it != windows.end())
     {
-        for (const auto& deviceName : devicesIt->second)
-        {
-            auto& windowSet = deviceToWindows[deviceName];
-            windowSet.erase(windowName);
-            if (windowSet.empty())
-                deviceToWindows.erase(deviceName);
-        }
-        windowToDevices.erase(devicesIt);
+        // Hide the window
+        it->second->setVisible(false);
+        
+        // Mark the window as closed
+        windowOpenState[windowName] = false;
     }
+}
 
-    // Close and remove the window
-    windows.erase(windowName);
+/**
+ * @brief Reopens a previously closed window.
+ * @param windowName The name of the window to reopen.
+ * 
+ * Reopens a window that was previously closed, using the same name and settings.
+ */
+void WindowManager::reopenWindow(const juce::String& windowName)
+{
+    // Don't attempt to reopen the MAIN window
+    if (windowName == "MAIN")
+        return;
+        
+    // Check if the window exists and is closed
+    auto it = windows.find(windowName);
+    if (it != windows.end() && !isWindowOpen(windowName))
+    {
+        // Show the window
+        it->second->setVisible(true);
+        it->second->toFront(true);
+        
+        // Mark the window as open
+        windowOpenState[windowName] = true;
+    }
+    else if (it == windows.end())
+    {
+        // If the window doesn't exist, create it
+        createWindow(windowName);
+    }
 }
 
 /**

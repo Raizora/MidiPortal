@@ -80,47 +80,43 @@ void MidiLogDisplay::paint(juce::Graphics& g)
     
     float y = getHeight() - 10.0f;  // Start from bottom
     
-    // Draw messages from bottom to top
-    for (int i = logEntries.size() - 1; i >= 0; --i)
+    // IMPORTANT: Only draw messages that are still in the animation queue
+    // Create a list of visible entries in reverse order (most recent first)
+    std::vector<std::pair<LogEntry*, float>> visibleEntries;
+    
+    // First, collect all visible messages with their y-positions
+    for (auto& msg : messages)
     {
-        const auto& entry = logEntries[i];
+        // Get settings for font size only
+        const auto& settings = settingsManager.getSettings(msg.deviceName);
+        float messageHeight = juce::Font(settings.fontSize).getHeight();
         
-        // Get settings for this message's device
-        const auto& settings = settingsManager.getSettings(entry.deviceName);
+        y -= messageHeight;
         
+        // If we've reached the top of the screen, stop adding entries
+        if (y < 0)
+            break;
+            
+        visibleEntries.push_back(std::make_pair(&msg, y));
+    }
+    
+    // Now draw the visible messages
+    for (const auto& entry : visibleEntries)
+    {
+        LogEntry* msg = entry.first;
+        float yPos = entry.second;
+        
+        // Get settings for this message's device (for font size only)
+        const auto& settings = settingsManager.getSettings(msg->deviceName);
         g.setFont(settings.fontSize);
         
-        // Find the matching message using uniqueId
-        float opacity = 1.0f; // Default to fully opaque if no matching message or fading disabled
-        
-        if (settings.fadeRateEnabled) {
-            // Only look for matching message if fading is enabled
-            bool foundMatch = false;
-            for (const auto& msg : messages) {
-                if (msg.uniqueId == entry.uniqueId) {
-                    opacity = msg.opacity;
-                    foundMatch = true;
-                    break;
-                }
-            }
-            
-            // If no matching message found in the animation queue, don't display this entry at all
-            if (!foundMatch) {
-                continue;  // Skip this message as it has faded out completely
-            }
-        }
-        
         // Apply opacity to the color
-        juce::Colour colorWithOpacity = entry.color.withAlpha(opacity);
+        juce::Colour colorWithOpacity = msg->color.withAlpha(msg->opacity);
         g.setColour(colorWithOpacity);
         
         float messageHeight = g.getCurrentFont().getHeight();
-        y -= messageHeight;
         
-        if (y < 0)  // Stop if we've reached the top
-            break;
-            
-        g.drawText(entry.text, 10.0f, y, getWidth() - 20.0f, messageHeight, 
+        g.drawText(msg->text, 10.0f, yPos, getWidth() - 20.0f, messageHeight, 
                   juce::Justification::left, true);
     }
 }
@@ -146,28 +142,31 @@ void MidiLogDisplay::update()
     // Update message opacities and remove fully faded messages
     for (auto it = messages.begin(); it != messages.end();)
     {
-        // X- Get device-specific settings for fade rate
-        const auto& settings = settingsManager.getSettings(it->deviceName);
-        
-        // X- Only fade if fading is enabled
-        if (settings.fadeRateEnabled) {
-            // Invert the fade rate so 0.001 = fast fade and 1.0 = slow fade
-            // At 30fps, we want 0.001 to fade almost instantly (large decrement)
-            // and 1.0 to fade over ~30 seconds (tiny decrement)
-            
-            // Calculate frames for a full fade (at 30fps):
-            // fadeRate 0.001: around 3 frames (0.1 seconds)
-            // fadeRate 1.0: around 900 frames (30 seconds)
-            float fadeAmount = (1.0f - settings.fadeRate) * 0.033f + 0.001f;
+        // Each message carries its own fade settings from when it was created
+        // If it was created with fading enabled, it will always fade
+        if (it->shouldFade) {
+            // Calculate fade amount - smaller fadeRate = faster fade
+            // 0.01 = very fast fade, 1.0 = very slow fade
+            float fadeAmount = 0.33f * std::exp(-6.5f * it->fadeRate);
             
             it->opacity -= fadeAmount;
+            
+            // If opacity reaches 0, message is gone forever
+            if (it->opacity <= 0.0f) {
+                // Remove from logEntries too to ensure it's completely gone
+                for (int i = 0; i < logEntries.size(); ++i) {
+                    if (logEntries[i].uniqueId == it->uniqueId) {
+                        logEntries.remove(i);
+                        break;
+                    }
+                }
+                
+                it = messages.erase(it);
+                continue;
+            }
         }
         
-        if (it->opacity <= 0.0f) {
-            it = messages.erase(it);
-        }
-        else
-            ++it;
+        ++it;
     }
     
     // Update scroll position
@@ -184,11 +183,24 @@ void MidiLogDisplay::update()
  * @param source The ChangeBroadcaster that triggered the notification.
  * 
  * Called when display settings change, triggering a repaint with the new settings.
+ * Also applies fade settings to existing messages when fade rate is enabled.
  */
 void MidiLogDisplay::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &settingsManager)
     {
+        // Get the ALL settings to check fade rate state
+        const auto& allSettings = settingsManager.getSettings("ALL");
+        
+        // If fade rate is enabled, apply it to all existing messages
+        if (allSettings.fadeRateEnabled) {
+            for (auto& msg : messages) {
+                // Apply the new fade settings to existing messages
+                msg.shouldFade = true;
+                msg.fadeRate = allSettings.fadeRate;
+            }
+        }
+        
         // Settings have changed, repaint with new settings
         repaint();
     }
@@ -206,10 +218,10 @@ void MidiLogDisplay::changeListenerCallback(juce::ChangeBroadcaster* source)
  */
 void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::String& deviceName)
 {
-    // X- Get settings for this device
+    // Get settings for this device
     const auto& settings = settingsManager.getSettings(deviceName);
 
-    // X- Check mute flags based on message type - ensure correct check for PitchBend
+    // Check mute flags based on message type
     if ((message.isNoteOn() && settings.muteNoteOn) ||
         (message.isNoteOff() && settings.muteNoteOff) ||
         (message.isController() && settings.muteController) ||
@@ -233,16 +245,24 @@ void MidiLogDisplay::addMessage(const juce::MidiMessage& message, const juce::St
     entry.uniqueId = uniqueId;
     logEntries.add(entry);
     
-    if (static_cast<size_t>(logEntries.size()) > maxEntries)
-        logEntries.remove(0);
-    
     // Create a message with the same unique ID and full opacity
     LogEntry msg(text, color, juce::Time::getCurrentTime(), deviceName);
     msg.uniqueId = uniqueId;
-    messages.push_back(msg);
     
-    if (static_cast<size_t>(messages.size()) > maxMessages)
-        messages.pop_front();
+    // Store current fade settings with the message at creation time
+    // These will be used regardless of later settings changes
+    msg.shouldFade = settings.fadeRateEnabled;
+    msg.fadeRate = settings.fadeRate;
+    
+    // Add to front of deque so newest messages are drawn first
+    messages.push_front(msg);
+    
+    // Fixed queue size - just make sure it's large enough for display
+    maxMessages = 1000; // Plenty for any display
+    
+    // Remove oldest messages if we exceed the max queue size
+    while (messages.size() > maxMessages)
+        messages.pop_back();
     
     repaint();
 }
@@ -271,7 +291,7 @@ void MidiLogDisplay::setMaxMessages(size_t max)
 {
     maxMessages = max;
     while (messages.size() > maxMessages)
-        messages.pop_front();
+        messages.pop_back();
 }
 
 /**

@@ -27,6 +27,7 @@ namespace MidiPortal {
  * - Creating new display windows
  * - Routing MIDI devices to specific windows
  * - Customizing window background colors
+ * - Removing and recreating windows
  * 
  * The component works with the WindowManager to create and manage windows and
  * update routing information.
@@ -129,6 +130,23 @@ private:
      * of the specified window.
      */
     void applyRGBSlidersToWindow(const juce::String& windowName);
+
+    /**
+     * @brief Closes a window while preserving its settings.
+     * @param windowName The name of the window to close.
+     * 
+     * Closes the specified window without removing it from the grid or forgetting
+     * its settings. The window can be recreated later with the same name and settings.
+     */
+    void removeWindow(const juce::String& windowName);
+    
+    /**
+     * @brief Recreates a previously closed window.
+     * @param windowName The name of the window to recreate.
+     * 
+     * Recreates a window that was previously closed, using the same name and settings.
+     */
+    void recreateWindow(const juce::String& windowName);
 
     /**
      * @brief Reference to the WindowManager.
@@ -242,16 +260,30 @@ private:
         {
             auto bounds = getLocalBounds();
             
-            // Position the sliders vertically, one below the other
-            redSlider.setBounds(bounds.removeFromTop(20));
-            bounds.removeFromTop(5); // Add a small gap
-            greenSlider.setBounds(bounds.removeFromTop(20));
-            bounds.removeFromTop(5); // Add a small gap
-            blueSlider.setBounds(bounds.removeFromTop(20));
-            bounds.removeFromTop(5); // Add a small gap
+            // Calculate heights to ensure Apply button is at the bottom
+            int buttonHeight = 25;
+            int sliderHeight = 20;
+            int gap = 5;
+            int totalSliderAreaHeight = bounds.getHeight() - buttonHeight - gap;
             
-            // Position the Apply button at the bottom
-            applyButton.setBounds(bounds.removeFromTop(25));
+            // Ensure there's space for all sliders with equal gaps
+            int availableHeight = totalSliderAreaHeight;
+            int sliderSectionHeight = sliderHeight + gap;
+            
+            // Position the sliders vertically
+            redSlider.setBounds(bounds.getX(), bounds.getY(), bounds.getWidth(), sliderHeight);
+            availableHeight -= sliderSectionHeight;
+            
+            greenSlider.setBounds(bounds.getX(), bounds.getY() + sliderSectionHeight, 
+                                 bounds.getWidth(), sliderHeight);
+            availableHeight -= sliderSectionHeight;
+            
+            blueSlider.setBounds(bounds.getX(), bounds.getY() + 2 * sliderSectionHeight, 
+                                bounds.getWidth(), sliderHeight);
+            
+            // Position the Apply button at the exact bottom
+            applyButton.setBounds(bounds.getX(), bounds.getBottom() - buttonHeight, 
+                                 bounds.getWidth(), buttonHeight);
         }
         
         /**
@@ -496,6 +528,212 @@ private:
      * with the color selector.
      */
     juce::String currentWindowForColorSelection;
+    
+    /**
+     * @class WindowRemoveButton
+     * @brief Button for removing or recreating windows.
+     * 
+     * This component displays a button that allows removing (closing) a window
+     * or recreating a previously closed window. The button's text and function
+     * toggle between "Remove" and "Recreate" based on whether the window is currently open.
+     */
+    class WindowRemoveButton : public juce::TextButton
+    {
+    public:
+        /**
+         * @brief Constructor that initializes a window remove/recreate button.
+         * @param windowName The name of the window this button controls.
+         * @param isWindowOpen Whether the window is currently open.
+         * 
+         * Creates a new button for removing or recreating the specified window.
+         */
+        WindowRemoveButton(const juce::String& windowName, bool isWindowOpen)
+            : window(windowName), isOpen(isWindowOpen)
+        {
+            updateButtonText();
+            
+            // X- Set button font to be smaller but bold for better readability in the compact space
+            // X- Using JUCE 8 API for font handling on buttons
+            juce::FontOptions fontOptions;
+            fontOptions = fontOptions.withHeight(12.0f).withStyle("bold");
+            
+            // X- Set button font using LookAndFeel properties
+            setLookAndFeel(&customLookAndFeel);
+            customLookAndFeel.setButtonFont(fontOptions);
+            
+            // Set colors based on the state
+            updateButtonColors();
+        }
+        
+        // X- Add destructor to clean up LookAndFeel
+        ~WindowRemoveButton()
+        {
+            setLookAndFeel(nullptr);
+        }
+        
+        // X- Custom LookAndFeel to handle font
+        class ButtonLookAndFeel : public juce::LookAndFeel_V4
+        {
+        public:
+            void setButtonFont(const juce::FontOptions& options)
+            {
+                buttonFont = juce::Font(options);
+            }
+            
+            juce::Font getTextButtonFont(juce::TextButton&, int) override
+            {
+                return buttonFont;
+            }
+            
+        private:
+            // X- Using FontOptions for default font to avoid deprecation warning
+            juce::Font buttonFont = juce::Font(juce::FontOptions().withHeight(12.0f));
+        };
+        
+        // X- Custom LookAndFeel instance
+        ButtonLookAndFeel customLookAndFeel;
+        
+        /**
+         * @brief Updates the button text based on the window state.
+         * 
+         * Sets the button text to "Remove" if the window is open, or "Recreate" if it's closed.
+         */
+        void updateButtonText()
+        {
+            setButtonText(isOpen ? "Remove" : "Recreate");
+        }
+        
+        /**
+         * @brief Sets the button colors based on its state.
+         * 
+         * Uses a subtle red for "Remove" and green for "Recreate".
+         */
+        void updateButtonColors()
+        {
+            if (isOpen) {
+                // For "Remove" button - subtle red
+                setColour(juce::TextButton::buttonColourId, juce::Colour(220, 70, 70).withAlpha(0.7f));
+                setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+            } else {
+                // For "Recreate" button - subtle green
+                setColour(juce::TextButton::buttonColourId, juce::Colour(70, 180, 70).withAlpha(0.7f));
+                setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+            }
+        }
+        
+        /**
+         * @brief Toggles the window state with a smooth animation.
+         * 
+         * Animates the color change when toggling between Remove and Recreate states.
+         */
+        void toggleStateWithAnimation()
+        {
+            // First change state
+            isOpen = !isOpen;
+            
+            // Update button text immediately
+            updateButtonText();
+            
+            // Create animation effect for color transition
+            auto currentColor = findColour(juce::TextButton::buttonColourId);
+            juce::Colour targetColor;
+            
+            if (isOpen) {
+                // Transitioning to Remove (red)
+                targetColor = juce::Colour(220, 70, 70).withAlpha(0.7f);
+            } else {
+                // Transitioning to Recreate (green)
+                targetColor = juce::Colour(70, 180, 70).withAlpha(0.7f);
+            }
+            
+            // Create a timer to animate the color change
+            class ColorAnimator : public juce::Timer
+            {
+            public:
+                ColorAnimator(juce::TextButton& button, juce::Colour startColor, juce::Colour endColor) 
+                    : targetButton(button), startColour(startColor), endColour(endColor), progress(0.0f)
+                {
+                    startTimerHz(60); // 60fps animation
+                }
+                
+                void timerCallback() override
+                {
+                    progress += 0.1f; // Increment by 10% each frame
+                    
+                    if (progress >= 1.0f)
+                    {
+                        // Animation complete
+                        targetButton.setColour(juce::TextButton::buttonColourId, endColour);
+                        stopTimer();
+                        delete this; // Self-cleanup
+                    }
+                    else
+                    {
+                        // Interpolate between colors
+                        auto currentColour = startColour.interpolatedWith(endColour, progress);
+                        targetButton.setColour(juce::TextButton::buttonColourId, currentColour);
+                        targetButton.repaint();
+                    }
+                }
+                
+            private:
+                juce::TextButton& targetButton;
+                juce::Colour startColour, endColour;
+                float progress;
+            };
+            
+            // Start animation (will self-delete when complete)
+            new ColorAnimator(*this, currentColor, targetColor);
+            
+            // Set text color immediately
+            setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        }
+        
+        /**
+         * @brief Toggles the window state between open and closed.
+         * 
+         * Changes the window state and updates the button text accordingly.
+         */
+        void toggleWindowState()
+        {
+            isOpen = !isOpen;
+            updateButtonText();
+            updateButtonColors();
+        }
+        
+        /**
+         * @brief Checks if the window is currently open.
+         * @return true if the window is open, false if it's closed.
+         * 
+         * Returns the current state of the window.
+         */
+        bool isWindowOpen() const
+        {
+            return isOpen;
+        }
+        
+        /**
+         * @brief The name of the window this button controls.
+         * 
+         * Used to identify which window to remove or recreate.
+         */
+        juce::String window;
+        
+    private:
+        /**
+         * @brief Whether the window is currently open.
+         * 
+         * Tracks whether the window is open (true) or closed (false).
+         */
+        bool isOpen;
+    };
+    
+    /**
+     * @brief Array of remove/recreate buttons.
+     * 
+     * These buttons allow removing and recreating windows in the grid.
+     */
+    juce::OwnedArray<WindowRemoveButton> windowRemoveButtons;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WindowRoutingComponent)
 };

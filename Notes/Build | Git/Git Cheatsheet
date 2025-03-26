@@ -156,3 +156,14 @@ git checkout cursor-development && git branch -D cursor-development-backup && gi
 # Note: Always make changes to cursor-development first, then update cursor-development-backup.
 # cursor-development-backup should be treated as a read-only backup that mirrors cursor-development.
 
+# Delete the local cursor-development-backup branch
+# Push the deletion to the remote repository
+# Create a new local cursor-development-backup branch based on the current state
+# Push the new cursor-development-backup branch to the remote repository and set it to track the remote branch
+git branch -d cursor-development-backup && git push origin --delete cursor-development-backup && git checkout -b cursor-development-backup && git push -u origin cursor-development-backup
+
+# Delete the local cursor-development branch
+# Push the deletion to the remote repository
+# Create a new local cursor-development branch based on the current state
+# Push the new cursor-development branch to the remote repository and set it to track the remote branch
+git branch -d cursor-development && git push origin --delete cursor-development && git checkout -b cursor-development && git push -u origin cursor-development
