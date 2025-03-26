@@ -53,14 +53,17 @@ public:
         auto* content = new WindowRoutingComponent(windowManager);
         setContentOwned(content, true);
 
-        // Use native or JUCE-drawn title bar
+        // X- Use native title bar with all window buttons
         setUsingNativeTitleBar(true);
-
-        // Show all window buttons: close, minimize, maximize
         setTitleBarButtonsRequired(juce::DocumentWindow::allButtons, false);
 
+        // X- Get the current display dimensions for proper resize limits
+        auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+        auto userArea = mainDisplay.userArea;
+        
+        // X- Set resize limits based on the current display's dimensions
         setResizable(true, true);
-        setResizeLimits(400, 300, 1200, 1200);
+        setResizeLimits(400, 300, userArea.getWidth(), userArea.getHeight());
         centreWithSize(600, 400);
         setVisible(true);
         setAlwaysOnTop(true);

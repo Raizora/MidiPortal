@@ -61,7 +61,17 @@ public:
         viewport->setSize(550, 400);
         
         setContentOwned(viewport, true);
-        setResizeLimits(500, 300, 1200, 1200);
+        
+        // X- Use native title bar with all window buttons
+        setUsingNativeTitleBar(true);
+        setTitleBarButtonsRequired(juce::DocumentWindow::allButtons, false);
+        
+        // X- Get the current display dimensions for proper resize limits
+        auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+        auto userArea = mainDisplay.userArea;
+        
+        // X- Set resize limits based on the current display's dimensions
+        setResizeLimits(500, 300, userArea.getWidth(), userArea.getHeight());
         centreWithSize(550, 400);
         
         // X- Make sure content gets viewport's width

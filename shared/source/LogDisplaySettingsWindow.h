@@ -50,10 +50,20 @@ public:
         auto* content = new LogDisplaySettingsComponent(logDisplay);
         
         setContentOwned(content, true);
-        setResizeLimits(600, 600, 600, 1800);
-        centreWithSize(600, 1200);
         
-        setResizable(true, true);  // Allow both horizontal and vertical resizing
+        // X- Use native title bar with all window buttons
+        setUsingNativeTitleBar(true);
+        setTitleBarButtonsRequired(juce::DocumentWindow::allButtons, false);
+        
+        // X- Get the current display dimensions for proper resize limits
+        auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+        auto userArea = mainDisplay.userArea;
+        
+        // X- Set resize limits based on the current display's dimensions
+        setResizable(true, true);  
+        setResizeLimits(600, 600, userArea.getWidth(), userArea.getHeight());
+        centreWithSize(600, 600);
+        
         setVisible(true);
         setAlwaysOnTop(true);
     }

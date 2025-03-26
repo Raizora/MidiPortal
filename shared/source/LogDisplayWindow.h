@@ -50,7 +50,9 @@ public:
      * with the appropriate settings from the DisplaySettingsManager.
      */
     LogDisplayWindow(const juce::String& name, DisplaySettingsManager& settingsManager)
-        : DocumentWindow(name + " - MIDI Log", juce::Colours::darkgrey, true),
+        : DocumentWindow(name + " - MIDI Log", juce::Colours::darkgrey, 
+                         true, // use native title bar
+                         juce::DocumentWindow::allButtons), // X- Enable all buttons including maximize
           displaySettingsManager(settingsManager)
     {
         // Create a new MidiLogDisplay that uses the settings manager
@@ -60,9 +62,17 @@ public:
         display->setWindowName(name);
         
         setContentOwned(display, true);
-        setResizeLimits(400, 300, 1200, 1200);
+        
+        // X- Get the current display dimensions for proper resize limits
+        auto mainDisplay = juce::Desktop::getInstance().getDisplays().getMainDisplay();
+        auto userArea = mainDisplay.userArea;
+        
+        // X- Set resize limits based on the current display's dimensions
+        setResizeLimits(400, 300, userArea.getWidth(), userArea.getHeight());
         centreWithSize(600, 400);
         
+        // X- Enable fullscreen mode and proper window behavior
+        setUsingNativeTitleBar(true);
         setResizable(true, true);
         setVisible(true);
         

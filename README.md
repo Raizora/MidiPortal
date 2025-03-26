@@ -1,4 +1,4 @@
-# **MidiPortal - Version 0.2.0**
+# **MidiPortal - Version 0.3.0**
 
 **Peer through the MidiPortal to observe all traffic on your system.**
 
@@ -29,6 +29,17 @@ MidiPortal is a JUCE-based MIDI monitoring utility that allows you to visualize 
   - Pattern recognition for compositional assistance.
 
 ## **Version History**
+### **0.3.0** (Feature and UI Overhaul):
+- Added override mode for MIDI message handling
+- Implemented message fading functionality with toggle and rate control
+- Enhanced settings cache/save logic
+- Improved fade logic with persistent fade rate tagging
+- Added "Clear" buttons for individual and all MIDI device displays
+- Added "Remove" and "Recreate" buttons for additional display windows
+- Refreshed UI design and window sizing constraints
+- Improved window management with maximization support
+- Enhanced user control over display windows
+
 ### **0.2.0** (Machine Learning Integration):
 - Added AI-powered MIDI analysis capabilities
 - Implemented shared memory buffer for efficient data exchange between C++ and Rust
