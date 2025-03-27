@@ -54,50 +54,82 @@ MidiLogDisplay::~MidiLogDisplay()
  * @param g The Graphics context to paint into.
  * 
  * Draws all visible MIDI messages with their appropriate colors and opacity,
- * based on the current display settings. Messages are drawn from bottom to top,
- * with the most recent messages at the bottom.
+ * based on the current display settings. Messages can be drawn either from bottom to top
+ * (standard) or from top to bottom (reverse direction) based on settings.
  */
 void MidiLogDisplay::paint(juce::Graphics& g)
 {
     // Get the correct settings for background based on window name
     juce::Colour backgroundColor;
+    bool reverseDirection = false;
     
-    if (windowName.isEmpty() || windowName == "MAIN")
-    {
-        // For MAIN window or if no window name is set, use the Default settings
-        const auto& defaultSettings = settingsManager.getSettings("Default");
-        backgroundColor = defaultSettings.backgroundColor;
-    }
-    else
-    {
-        // For other windows, use their specific settings
-        const auto& windowSettings = settingsManager.getSettings(windowName);
-        backgroundColor = windowSettings.backgroundColor;
+    // First check if ALL settings exist and have override enabled
+    const auto& allSettings = settingsManager.getSettings("ALL");
+    if (allSettings.overrideAllDevices) {
+        // Use ALL settings if override is enabled
+        backgroundColor = allSettings.backgroundColor;
+        reverseDirection = allSettings.reverseDirection;
+    } else {
+        // For background color, use window-specific settings
+        if (windowName.isEmpty() || windowName == "MAIN") {
+            const auto& defaultSettings = settingsManager.getSettings("Default");
+            backgroundColor = defaultSettings.backgroundColor;
+        } else {
+            const auto& windowSettings = settingsManager.getSettings(windowName);
+            backgroundColor = windowSettings.backgroundColor;
+        }
+        
+        // For reverse direction, use device-specific settings
+        // If we have messages, use the settings from the first message's device
+        if (!messages.empty()) {
+            const auto& deviceSettings = settingsManager.getSettings(messages.front().deviceName);
+            reverseDirection = deviceSettings.reverseDirection;
+        }
     }
     
     // Fill the background with the correct color
     g.fillAll(backgroundColor);
     
-    float y = getHeight() - 10.0f;  // Start from bottom
-    
-    // IMPORTANT: Only draw messages that are still in the animation queue
-    // Create a list of visible entries in reverse order (most recent first)
+    // Collect visible messages with their y-positions
     std::vector<std::pair<LogEntry*, float>> visibleEntries;
     
-    // First, collect all visible messages with their y-positions
-    for (auto& msg : messages)
-    {
-        // Get settings for font size only
-        const auto& settings = settingsManager.getSettings(msg.deviceName);
-        float messageHeight = juce::Font(settings.fontSize).getHeight();
+    if (!reverseDirection) {
+        // STANDARD DIRECTION: Bottom-to-top (newest at bottom)
+        float y = getHeight() - 10.0f;  // Start from bottom
         
-        y -= messageHeight;
-        
-        // If we've reached the top of the screen, stop adding entries
-        if (y < 0)
-            break;
+        // First, collect all visible messages with their y-positions
+        for (auto& msg : messages)
+        {
+            // Get settings for this specific device
+            const auto& settings = settingsManager.getSettings(msg.deviceName);
+            float messageHeight = juce::Font(settings.fontSize).getHeight();
             
-        visibleEntries.push_back(std::make_pair(&msg, y));
+            y -= messageHeight;
+            
+            // If we've reached the top of the screen, stop adding entries
+            if (y < 0)
+                break;
+                
+            visibleEntries.push_back(std::make_pair(&msg, y));
+        }
+    } else {
+        // REVERSE DIRECTION: Top-to-bottom (newest at top)
+        float y = 10.0f;  // Start from top
+        
+        // First, collect all visible messages with their y-positions
+        for (auto& msg : messages)
+        {
+            // Get settings for this specific device
+            const auto& settings = settingsManager.getSettings(msg.deviceName);
+            float messageHeight = juce::Font(settings.fontSize).getHeight();
+            
+            // If we've reached the bottom of the screen, stop adding entries
+            if (y + messageHeight > getHeight())
+                break;
+                
+            visibleEntries.push_back(std::make_pair(&msg, y));
+            y += messageHeight;
+        }
     }
     
     // Now draw the visible messages
@@ -106,7 +138,7 @@ void MidiLogDisplay::paint(juce::Graphics& g)
         LogEntry* msg = entry.first;
         float yPos = entry.second;
         
-        // Get settings for this message's device (for font size only)
+        // Get settings for this message's device
         const auto& settings = settingsManager.getSettings(msg->deviceName);
         g.setFont(settings.fontSize);
         
