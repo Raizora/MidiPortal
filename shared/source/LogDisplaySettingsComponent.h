@@ -355,6 +355,13 @@ private:
     juce::Label fadeRateLabel{"Fade Rate Label", "Fade Rate:"};
     
     /**
+     * @brief Label for the reverse direction toggle.
+     * 
+     * Displays a label for the reverse direction toggle.
+     */
+    juce::Label reverseDirectionLabel{"Reverse Direction Label", "Flow Direction:"};
+    
+    /**
      * @brief Slider for adjusting fade rate.
      * 
      * Allows the user to adjust how quickly messages fade out.
@@ -367,6 +374,13 @@ private:
      * Allows the user to enable or disable message fading.
      */
     juce::ToggleButton fadeRateToggle{"Enable Fading"};
+
+    /**
+     * @brief Toggle button for reversing message display direction.
+     * 
+     * Allows the user to display messages in reverse direction (top to bottom).
+     */
+    juce::ToggleButton reverseDirectionToggle{"Reverse Direction"};
 
     /**
      * @brief Container for color selectors.

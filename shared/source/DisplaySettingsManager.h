@@ -71,6 +71,9 @@ public:
         bool fadeRateEnabled = true;       ///< Whether to enable message fading
         float fadeRate = 0.2f;            ///< Rate at which messages fade (0.01f to 1.0f)
         
+        // X- Added reverseDirection flag for displaying messages from top to bottom instead of bottom to top
+        bool reverseDirection = false;     ///< Whether to display messages in reverse direction (top to bottom)
+        
         // X- Added override flag to control whether these settings override all device-specific settings
         bool overrideAllDevices = false;
     };

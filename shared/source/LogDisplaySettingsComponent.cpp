@@ -161,12 +161,28 @@ LogDisplaySettingsComponent::LogDisplaySettingsComponent(MidiLogDisplay& logDisp
         // Removed immediate application to settings manager
     };
     
+    // Set up reverse direction label
+    reverseDirectionLabel.setText("Flow Direction:", juce::dontSendNotification);
+    reverseDirectionLabel.setFont(juce::Font(options));
+    reverseDirectionLabel.setJustificationType(juce::Justification::right);
+    
+    // X- Set up reverse direction toggle
+    reverseDirectionToggle.setButtonText("Reverse Direction");
+    reverseDirectionToggle.setToggleState(currentSettings.reverseDirection, juce::dontSendNotification);
+    reverseDirectionToggle.onClick = [this] {
+        // Only update the current settings, don't apply to the display yet
+        currentSettings.reverseDirection = reverseDirectionToggle.getToggleState();
+        // No immediate application - will be applied when user clicks Apply
+    };
+    
     // Add components to the appearance section
     appearanceSection->addAndMakeVisible(fontSizeLabel);
     appearanceSection->addAndMakeVisible(fontSizeSlider);
     appearanceSection->addAndMakeVisible(fadeRateLabel);
     appearanceSection->addAndMakeVisible(fadeRateSlider);
     appearanceSection->addAndMakeVisible(fadeRateToggle);
+    appearanceSection->addAndMakeVisible(reverseDirectionLabel);
+    appearanceSection->addAndMakeVisible(reverseDirectionToggle);
     
     // Set up all color sections with their initial mute states
     setupColorSection(noteOnColorSection, "Note On Color", currentSettings.noteOnColor, currentSettings.muteNoteOn);
@@ -394,7 +410,7 @@ void LogDisplaySettingsComponent::resized()
     bounds.removeFromTop(sectionSpacing);
     
     // Appearance section
-    auto appearanceBounds = bounds.removeFromTop(120); // Reduced from 140px to eliminate excess space
+    auto appearanceBounds = bounds.removeFromTop(160); // Increased from 120 to 160 to accommodate the reverse direction toggle
     appearanceSection->setBounds(appearanceBounds);
     
     // X- Create more precisely spaced control areas
@@ -420,6 +436,15 @@ void LogDisplaySettingsComponent::resized()
     int toggleWidth = 120;
     fadeRateSlider.setBounds(fadeRateControlArea.withTrimmedRight(toggleWidth + 5));
     fadeRateToggle.setBounds(fadeRateControlArea.removeFromRight(toggleWidth));
+    
+    // Add spacing between rows
+    innerAppearanceBounds.removeFromTop(10);
+    
+    // Create third row for reverse direction toggle
+    auto reverseDirectionRow = innerAppearanceBounds.removeFromTop(40);
+    // Position the label and toggle
+    reverseDirectionLabel.setBounds(reverseDirectionRow.removeFromLeft(100).withHeight(30).withY(reverseDirectionRow.getY() + 5));
+    reverseDirectionToggle.setBounds(reverseDirectionRow.removeFromLeft(200).withHeight(30).withY(reverseDirectionRow.getY() + 5));
     
     bounds.removeFromTop(sectionSpacing);
     
@@ -562,6 +587,9 @@ void LogDisplaySettingsComponent::updateControls()
     // X- Update fade rate controls
     fadeRateSlider.setValue(currentSettings.fadeRate, juce::dontSendNotification);
     fadeRateToggle.setToggleState(currentSettings.fadeRateEnabled, juce::dontSendNotification);
+    
+    // X- Update reverse direction toggle
+    reverseDirectionToggle.setToggleState(currentSettings.reverseDirection, juce::dontSendNotification);
     
     // X- Update override toggle state
     overrideToggle.setToggleState(currentSettings.overrideAllDevices, juce::dontSendNotification);
@@ -863,6 +891,9 @@ DisplaySettingsManager::DisplaySettings LogDisplaySettingsComponent::getCurrentS
     // X- Get fade rate settings
     settings.fadeRate = fadeRateSlider.getValue();
     settings.fadeRateEnabled = fadeRateToggle.getToggleState();
+    
+    // X- Get reverse direction setting
+    settings.reverseDirection = reverseDirectionToggle.getToggleState();
     
     // Get colors from color selectors
     settings.noteOnColor = noteOnColorSection.selector->getCurrentColour();
