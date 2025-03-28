@@ -32,6 +32,7 @@ DisplaySettingsManager::DisplaySettingsManager()
     overrideAllDevices.clockColor = juce::Colours::grey;
     overrideAllDevices.sysExColor = juce::Colours::white;
     overrideAllDevices.defaultColor = juce::Colours::lightgrey;
+    overrideAllDevices.reverseDirection = false;
 }
 
 /**
